@@ -24,7 +24,11 @@ logger = logging.getLogger(__name__)
 class FileHeader(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
+        # list of offsets to section headers.
+        # order should line up with the SECTIONS definition (see below).
         self.offsets = []
+        # list of checksums of sections.
+        # order should line up with the SECTIONS definition.
         self.checksums = []
 
         self.signature = v_bytes(size=0x4)  # IDA1
@@ -159,8 +163,9 @@ class ID1(vstruct.VStruct):
         self.segment_count = v_uint32()
         self.unk0C = v_uint32()     # 0x800
         self.page_count = v_uint32()
-        # varrays are not actually very list-like, so the struct field will be ._segments
-        # and the property will be .segments.
+        # varrays are not actually very list-like,
+        #  so the struct field will be ._segments
+        #  and the property will be .segments.
         self._segments = vstruct.VArray()
         self.segments = []
         self.padding = v_bytes()
@@ -359,26 +364,24 @@ SECTIONS = [
 class IDB(vstruct.VStruct):
     def __init__(self, buf):
         vstruct.VStruct.__init__(self)
+        # we use a memoryview since we'll take a bunch of read-only subslices.
         self.buf = memoryview(buf)
 
-        self.header = FileHeader()
+        # list of parsed Section instances or None.
+        # the entries should line up with the SECTIONS definition.
         self.sections = []
 
-        '''
-        self.section_id0  = Section()
-        # not padding, because it doesn't align the following section.
-        self.unk1 = v_uint8()
-        self.section_id1  = Section()
-        self.unk2 = v_uint8()
-        self.section_nam  = Section()
-        self.unk3 = v_uint8()
-        self.section_til = Section()
+        # these fields will be parsed from self.buf once the header is parsed.
+        # they are *not* linearly parsed during .vsParse().
+        self.id0 = None  # type: ID0
+        self.id1 = None  # type: ID1
+        self.nam = None  # type: NAM
+        self.seg = None  # type: NotImplemented
+        self.til = None  # type: TIL
+        self.id2 = None  # type: NotImplemented
 
-        self.id0 = None
-        self.id1 = None
-        self.nam = None
-        self.til = None
-        '''
+        # these are the only true vstruct fields for this struct.
+        self.header = FileHeader()
 
     def pcb_header(self):
         # TODO: pass along checksum
@@ -445,7 +448,6 @@ class IDB(vstruct.VStruct):
 def from_file(path):
     with open(path, 'rb') as f:
         buf = memoryview(f.read())
-        #buf = f.read()
         db = IDB(buf)
         db.vsParse(buf)
         yield db
