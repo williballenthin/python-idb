@@ -166,8 +166,8 @@ class ID1(vstruct.VStruct):
             segment = self._segments[i]
             offset += 4 * (segment.end - segment.start)
             self.segments.append(ID1.SegmentDescriptor(segment, offset))
-        offset = 0x20 + (self.segment_count * (2 * self.wordsize))
-        padsize = ID1.PAGE_SIZE - offset + 0xC  # TODO: where does this 0xC come from???
+        offset = 0x14 + (self.segment_count * (2 * self.wordsize))
+        padsize = ID1.PAGE_SIZE - offset
         self['padding'].vsSetLength(padsize)
 
     def pcb_page_count(self):
@@ -259,7 +259,6 @@ class ID1(vstruct.VStruct):
             if segment.bounds.start > segment.bounds.end:
                 raise ValueError('segment ends before it starts')
         return True
-
 
 
 class NAM(vstruct.VStruct):
