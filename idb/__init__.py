@@ -2,6 +2,7 @@
 lots of inspiration from: https://github.com/nlitsme/pyidbutil
 '''
 import struct
+import logging
 import contextlib
 from collections import namedtuple
 
@@ -15,6 +16,9 @@ from vstruct.primitives import v_uint64
 
 # via: https://github.com/BinaryAnalysisPlatform/qira/blob/master/extra/parseida/parseidb.py
 BTREE_PAGE_SIZE = 8192
+
+
+logger = logging.getLogger(__name__)
 
 
 class FileHeader(vstruct.VStruct):
@@ -33,13 +37,13 @@ class FileHeader(vstruct.VStruct):
         self.offset3 = v_uint64()
         self.offset4 = v_uint64()
         self.offset5 = v_uint64()
-        self.checksum1 = v_uint16()
-        self.checksum2 = v_uint16()
-        self.checksum3 = v_uint16()
-        self.checksum4 = v_uint16()
-        self.checksum5 = v_uint16()
+        self.checksum1 = v_uint32()
+        self.checksum2 = v_uint32()
+        self.checksum3 = v_uint32()
+        self.checksum4 = v_uint32()
+        self.checksum5 = v_uint32()
         self.offset6 = v_uint64()
-        self.checksum6 = v_uint16()
+        self.checksum6 = v_uint32()
 
     def pcb_version(self):
         if self.version != 0x6:
@@ -71,21 +75,29 @@ class FileHeader(vstruct.VStruct):
         return True
 
 
+class SectionHeader(vstruct.VStruct):
+    def __init__(self):
+        vstruct.VStruct.__init__(self)
+        self.is_compressed = v_uint8()
+        self.length = v_uint64()
+
+
 class Section(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
-        self.length = v_uint32()
-        self.unk4 = v_uint32()
+        self.header = SectionHeader()
         self.contents = v_bytes()
 
-    def pcb_length(self):
-        self['contents'].vsSetLength(self.length)
+    def pcb_header(self):
+        if self.header.is_compressed:
+            # TODO: support this.
+            raise NotImplementedError('compressed section')
+
+        self['contents'].vsSetLength(self.header.length)
 
     def validate(self):
-        if self.length == 0:
+        if self.header.length == 0:
             raise ValueError('zero size')
-        if self.length != len(self.contents):
-            raise ValueError('bad size')
         return True
 
 
@@ -323,10 +335,35 @@ class TIL(vstruct.VStruct):
         return True
 
 
+SectionDescriptor = namedtuple('SectionDescriptor', ['name', 'cls'])
+
+# section order:
+#   - id0
+#   - id1
+#   - nam
+#   - seg
+#   - til
+#   - id2
+#
+# via: https://github.com/williballenthin/pyidbutil/blob/master/idblib.py#L262
+SECTIONS = [
+    SectionDescriptor('id0', ID0),
+    SectionDescriptor('id1', ID1),
+    SectionDescriptor('nam', NAM),
+    SectionDescriptor('seg', None),
+    SectionDescriptor('til', TIL),
+    SectionDescriptor('id2', None),
+]
+
+
 class IDB(vstruct.VStruct):
-    def __init__(self):
+    def __init__(self, buf):
         vstruct.VStruct.__init__(self)
+        self.buf = memoryview(buf)
+
         self.header = FileHeader()
+        self.sections = []
+
         '''
         self.section_id0  = Section()
         # not padding, because it doesn't align the following section.
@@ -343,32 +380,42 @@ class IDB(vstruct.VStruct):
         self.til = None
         '''
 
-    def pcb_section_til(self):
-        id0 = ID0()
-        id0.vsParse(self.section_id0.contents)
-        # vivisect doesn't allow you to assign vstructs to
-        #  attributes that are not part of the struct,
-        # so we need to override and use the default object behavior.
-        object.__setattr__(self, 'id0', id0)
+    def pcb_header(self):
+        # TODO: pass along checksum
+        for offset in self.header.offsets:
+            if offset == 0:
+                self.sections.append(None)
+                continue
 
-        id1 = ID1()
-        id1.vsParse(self.section_id1.contents)
-        object.__setattr__(self, 'id1', id1)
+            sectionbuf = self.buf[offset:]
+            section = Section()
+            section.vsParse(sectionbuf)
+            self.sections.append(section)
 
-        nam = NAM()
-        nam.vsParse(self.section_nam.contents)
-        object.__setattr__(self, 'nam', nam)
+        for i, sectiondef in enumerate(SECTIONS):
+            if i > len(self.sections):
+                logger.debug('missing section: %s', sectiondef.name)
+                continue
 
-        til = TIL()
-        til.vsParse(self.section_til.contents)
-        object.__setattr__(self, 'til', til)
+            section = self.sections[i]
+            if not section:
+                logger.debug('missing section: %s', sectiondef.name)
+                continue
+
+            if not sectiondef.cls:
+                logger.warn('section class not implemented: %s', sectiondef.name)
+                continue
+
+            s = sectiondef.cls()
+            s.vsParse(section.contents)
+            # vivisect doesn't allow you to assign vstructs to
+            #  attributes that are not part of the struct,
+            # so we need to override and use the default object behavior.
+            object.__setattr__(self, sectiondef.name, s)
+            logger.debug('parsed section: %s', sectiondef.name)
 
     def validate(self):
         self.header.validate()
-        self.section_id0.validate()
-        self.section_id1.validate()
-        self.section_nam.validate()
-        self.section_til.validate()
         self.id0.validate()
         self.id1.validate()
         self.nam.validate()
@@ -397,7 +444,8 @@ class IDB(vstruct.VStruct):
 @contextlib.contextmanager
 def from_file(path):
     with open(path, 'rb') as f:
-        buf = f.read()
-        db = IDB()
+        buf = memoryview(f.read())
+        #buf = f.read()
+        db = IDB(buf)
         db.vsParse(buf)
         yield db

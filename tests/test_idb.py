@@ -1,5 +1,8 @@
 from fixtures import *
 
+import logging
+#logging.basicConfig(level=logging.DEBUG)
+
 
 def test_validate(empty_idb, kernel32_idb):
     # should be no ValueErrors here.
@@ -12,13 +15,6 @@ def test_header(empty_idb):
     assert empty_idb.header.sig2 == 0xAABBCCDD
 
 
-def test_section_contents(empty_idb):
-    assert empty_idb.section_id0.contents[0x13:0x1C] == b'B-tree v2'
-    assert empty_idb.section_id1.contents[:0x4] == b'VA*\x00'
-    assert empty_idb.section_nam.contents[:0x4] == b'VA*\x00'
-    assert empty_idb.section_til.contents[:0x6] == b'IDATIL'
-
-
 def test_id1(kernel32_idb):
     segments = kernel32_idb.id1.segments
     # collected empirically
@@ -27,7 +23,6 @@ def test_id1(kernel32_idb):
         assert segment.bounds.start < segment.bounds.end
     assert segments[0].bounds.start == 0x68901000
     assert segments[1].bounds.start == 0x689DD000
-    #print(kernel32_idb.id1._segments.tree())
 
     id1 = kernel32_idb.id1
     assert id1.get_segment(0x68901000).bounds.start == 0x68901000
