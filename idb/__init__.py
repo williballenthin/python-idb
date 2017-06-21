@@ -3,6 +3,7 @@ lots of inspiration from: https://github.com/nlitsme/pyidbutil
 '''
 import struct
 import contextlib
+from collections import namedtuple
 
 import vstruct
 from vstruct.primitives import v_bytes
@@ -103,15 +104,161 @@ class ID0(vstruct.VStruct):
         return True
 
 
-class ID1(vstruct.VStruct):
-    def __init__(self):
+class SegmentBounds(vstruct.VStruct):
+    '''
+    specifies the range of a segment.
+    '''
+    def __init__(self, wordsize=4):
         vstruct.VStruct.__init__(self)
+
+        self.wordsize = wordsize
+        if wordsize == 4:
+            self.v_word = v_uint32
+            self.word_fmt = "I"
+        elif wordsize == 8:
+            self.v_word = v_uint64
+            self.word_fmt = "Q"
+        else:
+            raise RuntimeError('unexpected wordsize')
+
+        self.start = self.v_word()
+        self.end = self.v_word()
+
+
+class ID1(vstruct.VStruct):
+    '''
+    contains flags for each byte.
+    '''
+    PAGE_SIZE = 0x2000
+
+    def __init__(self, wordsize=4):
+        vstruct.VStruct.__init__(self)
+
+        self.wordsize = wordsize
+        if wordsize == 4:
+            self.v_word = v_uint32
+            self.word_fmt = "I"
+        elif wordsize == 8:
+            self.v_word = v_uint64
+            self.word_fmt = "Q"
+        else:
+            raise RuntimeError('unexpected wordsize')
+
         self.signature = v_bytes(size=0x04)
+        self.unk04 = v_uint32()     # 0x3
+        self.segment_count = v_uint32()
+        self.unk0C = v_uint32()     # 0x800
+        self.page_count = v_uint32()
+        # varrays are not actually very list-like, so the struct field will be ._segments
+        # and the property will be .segments.
+        self._segments = vstruct.VArray()
+        self.segments = []
+        self.padding = v_bytes()
+        self.buffer = v_bytes()
+
+    def pcb_segment_count(self):
+        # TODO: pass wordsize
+        self['_segments'].vsAddElements(self.segment_count, SegmentBounds)
+        for i in range(self.segment_count):
+            self.segments.append(self._segments[i])
+        offset = 0x20 + (self.segment_count * (2 * self.wordsize))
+        padsize = ID1.PAGE_SIZE - offset + 0xC  # TODO: where does this 0xC come from???
+        self['padding'].vsSetLength(padsize)
+
+    def pcb_page_count(self):
+        self['buffer'].vsSetLength(ID1.PAGE_SIZE * self.page_count)
 
     def validate(self):
         if self.signature != b'VA*\x00':
             raise ValueError('bad signature')
+        if self.unk04 != 0x3:
+            raise ValueError('unexpected unk04 value')
+        if self.unk0C != 0x800:
+            raise ValueError('unexpected unk0C value')
+        for segment in self.segments:
+            if segment.start > segment.end:
+                raise ValueError('segment ends before it starts')
         return True
+
+    SegmentDescriptor = namedtuple('SegmentDescriptor', ['bounds', 'offset'])
+
+    def get_segment(self, ea):
+        '''
+        find the segment that contains the given effective address.
+
+        Returns:
+          SegmentDescriptor: segment metadata and location.
+        '''
+        offset = 0
+        for segment in self.segments:
+            if segment.start <= ea < segment.end:
+                return ID1.SegmentDescriptor(segment, offset)
+            else:
+                offset += 4 * (segment.end - segment.start)
+
+    def get_next_segment(self, ea):
+        '''
+        Fetch the next segment.
+
+        Arguments:
+          ea (int): an effective address that should fall within a segment.
+
+        Returns:
+          int: the effective address of the start of a segment.
+
+        Raises:
+          IndexError: if no more segments are found after the given segment.
+          KeyError: if the given effective address does not fall within a segment.
+        '''
+        offset = 0
+        for i, segment in enumerate(self.segments):
+            if segment.start <= ea < segment.end:
+                if i == len(self.segments):
+                    # this is the last segment, there are no more.
+                    raise IndexError(ea)
+                else:
+                    # there's at least one more, and that's the next one.
+                    segment = self.segments[i + 1]
+                    return ID1.SegmentDescriptor(segment, offset)
+            else:
+                offset += 4 * (segment.end - segment.start)
+        raise KeyError(ea)
+
+    def get_flags(self, ea):
+        '''
+        Fetch the flags for the given effective address.
+
+        > Each byte of the program has 32-bit flags (low 8 bits keep the byte value).
+        > These 32 bits are used in GetFlags/SetFlags functions.
+        via: https://www.hex-rays.com/products/ida/support/idapython_docs/idc-module.html
+
+        Arguments:
+          ea (int): the effective address.
+
+        Returns:
+          int: the flags for the given address.
+
+        Raises:
+          KeyError: if the given address does not fall within a segment.
+        '''
+        seg = self.get_segment(ea)
+        offset = seg.offset + 4 * (ea - seg.bounds.start)
+        return struct.unpack_from('<I', self.buffer, offset)[0]
+
+    def get_byte(self, ea):
+        '''
+        Fetch the byte at the given effective address.
+
+        Arguments:
+          ea (int): the effective address.
+
+        Returns:
+          int: the byte at the given address.
+
+        Raises:
+          KeyError: if the given address does not fall within a segment.
+        '''
+        return self.get_flags(ea) & 0xFF
 
 
 class NAM(vstruct.VStruct):
@@ -134,11 +281,11 @@ class NAM(vstruct.VStruct):
             raise RuntimeError('unexpected wordsize')
 
         self.signature = v_bytes(size=0x04)
-        self.unk04 = v_uint32()     # 0x3
-        self.non_empty = v_uint32() # (0x1 non-empty) or (0x0 empty)
-        self.unk0C = v_uint32()     # 0x800
+        self.unk04 = v_uint32()      # 0x3
+        self.non_empty = v_uint32()  # (0x1 non-empty) or (0x0 empty)
+        self.unk0C = v_uint32()      # 0x800
         self.page_count = v_uint32()
-        self.unk14 = self.v_word()  # 0x0
+        self.unk14 = self.v_word()   # 0x0
         self.name_count = v_uint32()
         self.padding = v_bytes(size=NAM.PAGE_SIZE - (6 * 4 + wordsize))
         self.buffer = v_bytes()
@@ -227,6 +374,24 @@ class IDB(vstruct.VStruct):
         self.nam.validate()
         self.til.validate()
         return True
+
+    def SegStart(self, ea):
+        return self.id1.get_segment(ea).bounds.start
+
+    def SegEnd(self, ea):
+        return self.id1.get_segment(ea).bounds.end
+
+    def FirstSeg(self):
+        return self.id1.segments[0].bounds.start
+
+    def NextSeg(self, ea):
+        return self.id1.get_next_segment(ea).bounds.start
+
+    def GetFlags(self, ea):
+        return self.id1.get_flags(ea)
+
+    def IdbByte(self, ea):
+        return self.id1.get_byte(ea)
 
 
 @contextlib.contextmanager
