@@ -156,11 +156,16 @@ class ID1(vstruct.VStruct):
         self.padding = v_bytes()
         self.buffer = v_bytes()
 
+    SegmentDescriptor = namedtuple('SegmentDescriptor', ['bounds', 'offset'])
+
     def pcb_segment_count(self):
         # TODO: pass wordsize
         self['_segments'].vsAddElements(self.segment_count, SegmentBounds)
+        offset = 0
         for i in range(self.segment_count):
-            self.segments.append(self._segments[i])
+            segment = self._segments[i]
+            offset += 4 * (segment.end - segment.start)
+            self.segments.append(ID1.SegmentDescriptor(segment, offset))
         offset = 0x20 + (self.segment_count * (2 * self.wordsize))
         padsize = ID1.PAGE_SIZE - offset + 0xC  # TODO: where does this 0xC come from???
         self['padding'].vsSetLength(padsize)
@@ -168,33 +173,20 @@ class ID1(vstruct.VStruct):
     def pcb_page_count(self):
         self['buffer'].vsSetLength(ID1.PAGE_SIZE * self.page_count)
 
-    def validate(self):
-        if self.signature != b'VA*\x00':
-            raise ValueError('bad signature')
-        if self.unk04 != 0x3:
-            raise ValueError('unexpected unk04 value')
-        if self.unk0C != 0x800:
-            raise ValueError('unexpected unk0C value')
-        for segment in self.segments:
-            if segment.start > segment.end:
-                raise ValueError('segment ends before it starts')
-        return True
-
-    SegmentDescriptor = namedtuple('SegmentDescriptor', ['bounds', 'offset'])
-
     def get_segment(self, ea):
         '''
         find the segment that contains the given effective address.
 
         Returns:
           SegmentDescriptor: segment metadata and location.
+
+        Raises:
+          KeyError: if the given address is not in a segment.
         '''
-        offset = 0
         for segment in self.segments:
-            if segment.start <= ea < segment.end:
-                return ID1.SegmentDescriptor(segment, offset)
-            else:
-                offset += 4 * (segment.end - segment.start)
+            if segment.bounds.start <= ea < segment.bounds.end:
+                return segment
+        raise KeyError(ea)
 
     def get_next_segment(self, ea):
         '''
@@ -210,18 +202,14 @@ class ID1(vstruct.VStruct):
           IndexError: if no more segments are found after the given segment.
           KeyError: if the given effective address does not fall within a segment.
         '''
-        offset = 0
         for i, segment in enumerate(self.segments):
-            if segment.start <= ea < segment.end:
+            if segment.bounds.start <= ea < segment.bounds.end:
                 if i == len(self.segments):
                     # this is the last segment, there are no more.
                     raise IndexError(ea)
                 else:
                     # there's at least one more, and that's the next one.
-                    segment = self.segments[i + 1]
-                    return ID1.SegmentDescriptor(segment, offset)
-            else:
-                offset += 4 * (segment.end - segment.start)
+                    return self.segments[i + 1]
         raise KeyError(ea)
 
     def get_flags(self, ea):
@@ -259,6 +247,19 @@ class ID1(vstruct.VStruct):
           KeyError: if the given address does not fall within a segment.
         '''
         return self.get_flags(ea) & 0xFF
+
+    def validate(self):
+        if self.signature != b'VA*\x00':
+            raise ValueError('bad signature')
+        if self.unk04 != 0x3:
+            raise ValueError('unexpected unk04 value')
+        if self.unk0C != 0x800:
+            raise ValueError('unexpected unk0C value')
+        for segment in self.segments:
+            if segment.bounds.start > segment.bounds.end:
+                raise ValueError('segment ends before it starts')
+        return True
+
 
 
 class NAM(vstruct.VStruct):

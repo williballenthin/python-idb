@@ -24,9 +24,9 @@ def test_id1(kernel32_idb):
     # collected empirically
     assert len(segments) == 2
     for segment in segments:
-        assert segment.start < segment.end
-    assert segments[0].start == 0x68901000
-    assert segments[1].start == 0x689DD000
+        assert segment.bounds.start < segment.bounds.end
+    assert segments[0].bounds.start == 0x68901000
+    assert segments[1].bounds.start == 0x689DD000
     #print(kernel32_idb.id1._segments.tree())
 
     id1 = kernel32_idb.id1
