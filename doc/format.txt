@@ -1,3 +1,6 @@
+well there is an existing parser here:
+  https://github.com/nlitsme/pyidbutil
+
 file size: 0xE168
 
 signature:
@@ -34,6 +37,15 @@ csum? at 0x38 changes with reopen.
 csum? at 0x3C does not change.
   high entropy.
 
+sections:
+  id0 - contains contents of B-tree style database
+  id1 - contains flags that describe each program byte
+  nam - contains index information related to named program locations
+  til - contains information about local type definitions
+  via: https://github.com/BinaryAnalysisPlatform/qira/blob/master/extra/parseida/parseidb.py
+
+BTREE_PAGE_SIZE = 8192
+via: https://github.com/BinaryAnalysisPlatform/qira/blob/master/extra/parseida/parseidb.py
 
 file id0:
 length: 0x8000

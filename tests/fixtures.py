@@ -14,3 +14,10 @@ def empty_idb():
     path = os.path.join(CD, 'data', 'empty', 'empty.idb')
     with idb.from_file(path) as db:
         yield db
+
+
+@pytest.yield_fixture
+def kernel32_idb():
+    path = os.path.join(CD, 'data', 'kernel32', 'kernel32.idb')
+    with idb.from_file(path) as db:
+        yield db

@@ -1,10 +1,19 @@
+'''
+lots of inspiration from: https://github.com/nlitsme/pyidbutil
+'''
+import struct
 import contextlib
 
 import vstruct
+from vstruct.primitives import v_bytes
 from vstruct.primitives import v_uint8
 from vstruct.primitives import v_uint16
 from vstruct.primitives import v_uint32
-from vstruct.primitives import v_bytes
+from vstruct.primitives import v_uint64
+
+
+# via: https://github.com/BinaryAnalysisPlatform/qira/blob/master/extra/parseida/parseidb.py
+BTREE_PAGE_SIZE = 8192
 
 
 class FileHeader(vstruct.VStruct):
@@ -97,23 +106,53 @@ class ID0(vstruct.VStruct):
 class ID1(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
-        self.signature = v_bytes(size=0x03)
+        self.signature = v_bytes(size=0x04)
 
     def validate(self):
-        if self.signature != b'VA*':
+        if self.signature != b'VA*\x00':
             raise ValueError('bad signature')
         return True
 
 
 class NAM(vstruct.VStruct):
-    def __init__(self):
+    PAGE_SIZE = 0x2000
+    def __init__(self, wordsize=4):
         vstruct.VStruct.__init__(self)
-        self.signature = v_bytes(size=0x03)
+
+        self.wordsize = wordsize
+        if wordsize == 4:
+            self.v_word = v_uint32
+            self.word_fmt = "I"
+        elif wordsize == 8:
+            self.v_word = v_uint64
+            self.word_fmt = "Q"
+        else:
+            raise RuntimeError('unexpected wordsize')
+
+        self.signature = v_bytes(size=0x04)
+        self.unk04 = v_uint32()     # 0x3
+        self.unk08 = v_uint32()     # 0x1
+        self.unk0C = v_uint32()     # 0x800
+        self.page_count = v_uint32()
+        self.unk14 = self.v_word()  # 0x0
+        self.name_count = v_uint32()
+        self.padding = v_bytes(size=NAM.PAGE_SIZE - (6 * 4 + wordsize))
+        self.buffer = v_bytes()
+
+    def pcb_page_count(self):
+        self['buffer'].vsSetLength(self.page_count * NAM.PAGE_SIZE)
 
     def validate(self):
-        if self.signature != b'VA*':
+        if self.signature != b'VA*\x00':
             raise ValueError('bad signature')
         return True
+
+    def names(self):
+        fmt = "<{0.name_count:d}{0.word_fmt:s}".format(self)
+        size = struct.calcsize(fmt)
+        if size > len(self.buffer):
+            raise ValueError('buffer too small')
+        return struct.unpack(fmt, self.buffer[:size])
 
 
 class TIL(vstruct.VStruct):
@@ -148,7 +187,8 @@ class IDB(vstruct.VStruct):
     def pcb_section_til(self):
         id0 = ID0()
         id0.vsParse(self.section_id0.contents)
-        # vivisect doesn't allow you to assign vstructs to fields,
+        # vivisect doesn't allow you to assign vstructs to
+        #  attributes that are not part of the struct,
         # so we need to override and use the default object behavior.
         object.__setattr__(self, 'id0', id0)
 
