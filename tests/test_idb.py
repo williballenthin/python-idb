@@ -1,9 +1,10 @@
 from fixtures import *
 
 
-def test_validate(empty_idb):
+def test_validate(empty_idb, kernel32_idb):
     # should be no ValueErrors here.
     assert empty_idb.validate() is True
+    assert kernel32_idb.validate() is True
 
 
 def test_header(empty_idb):

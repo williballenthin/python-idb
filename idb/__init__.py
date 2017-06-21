@@ -115,7 +115,11 @@ class ID1(vstruct.VStruct):
 
 
 class NAM(vstruct.VStruct):
+    '''
+    contains pointers to named items.
+    '''
     PAGE_SIZE = 0x2000
+
     def __init__(self, wordsize=4):
         vstruct.VStruct.__init__(self)
 
@@ -131,7 +135,7 @@ class NAM(vstruct.VStruct):
 
         self.signature = v_bytes(size=0x04)
         self.unk04 = v_uint32()     # 0x3
-        self.unk08 = v_uint32()     # 0x1
+        self.non_empty = v_uint32() # (0x1 non-empty) or (0x0 empty)
         self.unk0C = v_uint32()     # 0x800
         self.page_count = v_uint32()
         self.unk14 = self.v_word()  # 0x0
@@ -145,6 +149,14 @@ class NAM(vstruct.VStruct):
     def validate(self):
         if self.signature != b'VA*\x00':
             raise ValueError('bad signature')
+        if self.unk04 != 0x3:
+            raise ValueError('unexpected unk04 value')
+        if self.non_empty not in (0x0, 0x1):
+            raise ValueError('unexpected non_empty value')
+        if self.unk0C != 0x800:
+            raise ValueError('unexpected unk0C value')
+        if self.unk14 != 0x0:
+            raise ValueError('unexpected unk14 value')
         return True
 
     def names(self):
