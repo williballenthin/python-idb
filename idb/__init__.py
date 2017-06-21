@@ -20,56 +20,54 @@ BTREE_PAGE_SIZE = 8192
 class FileHeader(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
+        self.offsets = []
+        self.checksums = []
+
         self.signature = v_bytes(size=0x4)  # IDA1
-        self.unk04 = v_uint32()
-        self.unk08 = v_uint32()
-        self.unk0C = v_uint32()
-        self.unk10 = v_uint32()
-        self.unk14 = v_uint32()
-        self.unk18 = v_uint16()
-        self.sig2  = v_uint32()  # | DD CC BB AA |
-        self.unk1E = v_uint16()
+        self.unk04 = v_uint16()
+        self.offset1 = v_uint64()
+        self.offset2 = v_uint64()
+        self.unk16 = v_uint32()
+        self.sig2 = v_uint32()  # | DD CC BB AA |
+        self.version = v_uint16()
+        self.offset3 = v_uint64()
+        self.offset4 = v_uint64()
+        self.offset5 = v_uint64()
+        self.checksum1 = v_uint16()
+        self.checksum2 = v_uint16()
+        self.checksum3 = v_uint16()
+        self.checksum4 = v_uint16()
+        self.checksum5 = v_uint16()
+        self.offset6 = v_uint64()
+        self.checksum6 = v_uint16()
 
-        # not exactly the file size
-        # smaller than size2?
-        self.size1 = v_uint32()
-        self.unk24 = v_uint32()
-        self.unk28 = v_uint32()
-        self.unk2C = v_uint32()
+    def pcb_version(self):
+        if self.version != 0x6:
+            raise NotImplementedError('unsupported version: %d' % (self.version))
 
-        # not exactly the file size
-        # larger than size1?
-        self.size2 = v_uint32()
-        self.unk34 = v_uint32()
+    def pcb_offset6(self):
+        self.offsets.append(self.offset1)
+        self.offsets.append(self.offset2)
+        self.offsets.append(self.offset3)
+        self.offsets.append(self.offset4)
+        self.offsets.append(self.offset5)
+        self.offsets.append(self.offset6)
 
-        # changes upon each save
-        self.csum1 = v_bytes(size=0x4)
-        # does not change upon each save
-        self.csum2 = v_bytes(size=0x8)
-
-        self.unk44 = v_uint32()
-        self.unk48 = v_uint32()
-        self.unk4C = v_uint32()
-        self.unk50 = v_uint32()
-        self.unk54 = v_uint32()
-        self.unk58 = v_uint32()
-        self.unk5C = v_uint32()
-        self.unk60 = v_bytes(size=0x10)
-        self.unk70 = v_bytes(size=0x10)
-        self.unk80 = v_bytes(size=0x10)
-        self.unk90 = v_bytes(size=0x10)
-        self.unkA0 = v_bytes(size=0x10)
-        self.unkB0 = v_bytes(size=0x10)
-        self.unkC0 = v_bytes(size=0x10)
-        self.unkD0 = v_bytes(size=0x10)
-        self.unkE0 = v_bytes(size=0x10)
-        self.unkF0 = v_bytes(size=0x0D)
+    def pcb_checksum6(self):
+        self.checksums.append(self.checksum1)
+        self.checksums.append(self.checksum2)
+        self.checksums.append(self.checksum3)
+        self.checksums.append(self.checksum4)
+        self.checksums.append(self.checksum5)
+        self.checksums.append(self.checksum6)
 
     def validate(self):
         if self.signature != b'IDA1':
             raise ValueError('bad signature')
         if self.sig2 != 0xAABBCCDD:
             raise ValueError('bad sig2')
+        if self.version != 0x6:
+            raise ValueError('unsupported version')
         return True
 
 
@@ -329,6 +327,7 @@ class IDB(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
         self.header = FileHeader()
+        '''
         self.section_id0  = Section()
         # not padding, because it doesn't align the following section.
         self.unk1 = v_uint8()
@@ -342,6 +341,7 @@ class IDB(vstruct.VStruct):
         self.id1 = None
         self.nam = None
         self.til = None
+        '''
 
     def pcb_section_til(self):
         id0 = ID0()
