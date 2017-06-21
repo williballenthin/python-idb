@@ -84,21 +84,47 @@ class Section(vstruct.VStruct):
 class ID0(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
+        self.unk00 = v_bytes(size=0x10)
+        self.unk10 = v_bytes(size=0x03)
+        self.signature = v_bytes(size=0x09)
+
+    def validate(self):
+        if self.signature != b'B-tree v2':
+            raise ValueError('bad signature')
+        return True
 
 
 class ID1(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
+        self.signature = v_bytes(size=0x03)
+
+    def validate(self):
+        if self.signature != b'VA*':
+            raise ValueError('bad signature')
+        return True
 
 
 class NAM(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
+        self.signature = v_bytes(size=0x03)
+
+    def validate(self):
+        if self.signature != b'VA*':
+            raise ValueError('bad signature')
+        return True
 
 
 class TIL(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
+        self.signature = v_bytes(size=0x06)
+
+    def validate(self):
+        if self.signature != b'IDATIL':
+            raise ValueError('bad signature')
+        return True
 
 
 class IDB(vstruct.VStruct):
@@ -114,12 +140,40 @@ class IDB(vstruct.VStruct):
         self.unk3 = v_uint8()
         self.section_til = Section()
 
+        self.id0 = None
+        self.id1 = None
+        self.nam = None
+        self.til = None
+
+    def pcb_section_til(self):
+        id0 = ID0()
+        id0.vsParse(self.section_id0.contents)
+        # vivisect doesn't allow you to assign vstructs to fields,
+        # so we need to override and use the default object behavior.
+        object.__setattr__(self, 'id0', id0)
+
+        id1 = ID1()
+        id1.vsParse(self.section_id1.contents)
+        object.__setattr__(self, 'id1', id1)
+
+        nam = NAM()
+        nam.vsParse(self.section_nam.contents)
+        object.__setattr__(self, 'nam', nam)
+
+        til = TIL()
+        til.vsParse(self.section_til.contents)
+        object.__setattr__(self, 'til', til)
+
     def validate(self):
         self.header.validate()
         self.section_id0.validate()
         self.section_id1.validate()
         self.section_nam.validate()
         self.section_til.validate()
+        self.id0.validate()
+        self.id1.validate()
+        self.nam.validate()
+        self.til.validate()
         return True
 
 
