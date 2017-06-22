@@ -6,6 +6,11 @@ import binascii
 
 #logging.basicConfig(level=logging.DEBUG)
 
+slow = pytest.mark.skipif(
+    not pytest.config.getoption("--runslow"),
+    reason="need --runslow option to run"
+    )
+
 
 def test_validate(empty_idb, kernel32_idb):
     # should be no ValueErrors here.
@@ -181,6 +186,7 @@ def test_cursor_max(kernel32_idb):
         cursor.next()
 
 
+@slow
 def test_cursor_enum_all_asc(kernel32_idb):
     minkey = binascii.unhexlify('24204d4158204c494e4b')
     cursor = kernel32_idb.id0.find(minkey)
@@ -195,6 +201,7 @@ def test_cursor_enum_all_asc(kernel32_idb):
     assert kernel32_idb.id0.record_count == count
 
 
+@slow
 def test_cursor_enum_all_desc(kernel32_idb):
     maxkey = binascii.unhexlify('4e776373737472')
     cursor = kernel32_idb.id0.find(maxkey)

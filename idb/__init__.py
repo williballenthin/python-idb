@@ -300,14 +300,16 @@ class Cursor(object):
         find the index of the exact match, or in the case of a branch node,
          the index of the least-greater entry.
         '''
+        # implementation note:
+        #  suprisingly, using a binary search here does not substantially improve performance.
+        #  this is probably the the dominating operations are parsing and allocating entries.
+        #  the linear scan below is simpler to read, so we'll use that until it becomes an issue.
         if page.is_leaf():
-            # TODO: should binary search here.
             for i, entry in enumerate(page.get_entries()):
                 # TODO: exact match only
                 if key == entry.key:
                     return i
         else:
-            # TODO: should binary search here.
             for i, entry in enumerate(page.get_entries()):
                 entry_key = bytes(entry.key)
                 # TODO: exact match only
