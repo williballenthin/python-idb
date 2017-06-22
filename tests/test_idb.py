@@ -64,6 +64,24 @@ def test_find_exact_match(kernel32_idb):
     assert binascii.hexlify(kernel32_idb.id0.find(key).value) == b'02'
 
 
+def test_cursor_easy_leaf(kernel32_idb):
+    # this is found on a leaf, second to last index.
+    # here's the surrounding layout:
+    #
+    #      00:00: 2eff00002253689cc95b = ff689cc95b40ff8000c00bd30201
+    #    > 00:01: 2eff00002253689cc99b = ff689cc99b32ff8000c00be35101
+    #      00:00: 2eff00002253689cc9cd = ff689cc9cd2bff8000c00be12f01
+    key = binascii.unhexlify('2eff00002253689cc99b')
+    cursor = kernel32_idb.id0.find(key)
+
+    cursor.next()
+    assert binascii.hexlify(cursor.key) == b'2eff00002253689cc9cd'
+
+    cursor.prev()
+    cursor.prev()
+    assert binascii.hexlify(cursor.key) == b'2eff00002253689cc95b'
+
+
 def test_id1(kernel32_idb):
     segments = kernel32_idb.id1.segments
     # collected empirically

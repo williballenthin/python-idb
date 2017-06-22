@@ -347,7 +347,20 @@ class Cursor(object):
         Raises:
           IndexError: if the entry does not exist.
         '''
-        pass
+        current_page = self.path[-1]
+        if current_page.is_leaf():
+            if self.entry_number == current_page.entry_count - 1:
+                raise NotImplementedError()
+            else:
+                # simple case: simply increment the entry number in the current node.
+                next_entry_number = self.entry_number + 1
+                next_entry = current_page.get_entry(next_entry_number)
+
+                self.entry = next_entry
+                self.entry_number = next_entry_number
+                return
+        else:
+            raise NotImplementedError()
 
     def prev(self):
         '''
@@ -356,7 +369,20 @@ class Cursor(object):
         Raises:
           IndexError: if the entry does not exist.
         '''
-        pass
+        current_page = self.path[-1]
+        if current_page.is_leaf():
+            if self.entry_number == 0:
+                raise NotImplementedError()
+            else:
+                # simple case: simply decrement the entry number in the current node.
+                next_entry_number = self.entry_number - 1
+                next_entry = current_page.get_entry(next_entry_number)
+
+                self.entry = next_entry
+                self.entry_number = next_entry_number
+                return
+        else:
+            raise NotImplementedError()
 
     @property
     def key(self):
