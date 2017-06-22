@@ -105,12 +105,224 @@ class Section(vstruct.VStruct):
         return True
 
 
-class ID0(vstruct.VStruct):
+# sizeof(BranchEntryPointer)
+# sizeof(BranchEntry)
+# sizeof(LeafEntry)
+# sizeof(LeafEntryPointer)
+SIZEOF_ENTRY = 0x6
+
+
+class BranchEntryPointer(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
-        self.unk00 = v_bytes(size=0x10)
-        self.unk10 = v_bytes(size=0x03)
+        self.page = v_uint32()
+        self.offset = v_uint16()
+
+
+class BranchEntry(vstruct.VStruct):
+    def __init__(self, page):
+        vstruct.VStruct.__init__(self)
+        self.page = page
+        self.key_length = v_uint16()
+        self.key = v_bytes()
+        self.value_length = v_uint16()
+        self.value = v_bytes()
+
+    def pcb_key_length(self):
+        self['key'].vsSetLength(self.key_length)
+
+    def pcb_value_length(self):
+        self['value'].vsSetLength(self.value_length)
+
+
+class LeafEntryPointer(vstruct.VStruct):
+    def __init__(self):
+        vstruct.VStruct.__init__(self)
+        self.common_prefix = v_uint16()
+        self.unk02 = v_uint16()
+        self.offset = v_uint16()
+
+
+class LeafEntry(vstruct.VStruct):
+    def __init__(self, key, common_prefix):
+        vstruct.VStruct.__init__(self)
+        self.pkey = key
+        self.common_prefix = common_prefix
+
+        self.key_length = v_uint16()
+        self._key = v_bytes()
+        self.value_length = v_uint16()
+        self.value = v_bytes()
+
+        self.key = None
+
+    def pcb_key_length(self):
+        self['_key'].vsSetLength(self.key_length)
+
+    def pcb_value_length(self):
+        self['value'].vsSetLength(self.value_length)
+
+    def pcb__key(self):
+        self.key = self.pkey[:self.common_prefix] + self._key
+
+
+class Page(vstruct.VStruct):
+    '''
+    single node in the b-tree.
+    has a bunch of key-value entries that may point to other pages.
+    binary search these keys and traverse pointers to efficienty query the index.
+    '''
+    def __init__(self, page_size):
+        vstruct.VStruct.__init__(self)
+        self.ppointer = v_uint32()
+        self.count = v_uint16()
+        self.contents = v_bytes(page_size)
+
+    def is_leaf(self):
+        '''
+        return True if this is a leaf node.
+
+        Returns:
+          bool: True if this is a leaf node.
+        '''
+        return self.ppointer == 0
+
+    def get_entries(self):
+        '''
+        generate the entries from this page in order.
+        each entry is guaranteed to have the following fields:
+          - key
+          - value
+
+        Yields:
+          Union[BranchEntry, LeafEntry]: the b-tree entries from this page.
+        '''
+        key = b''
+        for i in range(self.count):
+            if self.is_leaf():
+                ptr = LeafEntryPointer()
+                ptr.vsParse(self.contents, offset=i * SIZEOF_ENTRY)
+
+                entry = LeafEntry(key, ptr.common_prefix)
+                entry.vsParse(self.contents, offset=ptr.offset - SIZEOF_ENTRY)
+            else:
+                ptr = BranchEntryPointer()
+                ptr.vsParse(self.contents, offset=i * SIZEOF_ENTRY)
+
+                entry = BranchEntry(int(ptr.page))
+                entry.vsParse(self.contents, offset=ptr.offset - SIZEOF_ENTRY)
+            yield entry
+            key = entry.key
+
+    def validate(self):
+        last = None
+        for entry in self.get_entries():
+            if last is None:
+                continue
+
+            if last.key >= entry.key:
+                raise ValueError('bad page entry sort order')
+
+            last = entry
+        return True
+
+
+class Cursor(object):
+    '''
+    represents a particular location in the b-tree.
+    can be navigated "forward" and "backwards".
+    constructed by executing an initial query.
+    '''
+    def __init__(self, index, key):
+        super(Cursor, self).__init__()
+        self.index = index
+
+        # ordered list of pages from root to leaf that we traversed to get to this point
+        self.path = []
+
+        # populated once found
+        self.entry = None
+
+        self._find(self.index.root_page, key)
+
+    def _find(self, page_number, key):
+        page = self.index.get_page(page_number)
+        self.path.append(page)
+
+        if page.is_leaf():
+            # TODO: should binary search here.
+            for entry in page.get_entries():
+                # TODO: exact match only
+                if key == entry.key:
+                    self.entry = entry
+                    return
+        else:
+            last = page.ppointer
+            # TODO: should binary search here.
+            for i, entry in enumerate(page.get_entries()):
+                entry_key = bytes(entry.key)
+                # TODO: exact match only
+                if key == entry_key:
+                    self.entry = entry
+                    return
+                elif key < entry_key:
+                    self._find(last, key)
+                    return
+                else:
+                    last = entry.page
+
+    def next(self):
+        '''
+        traverse to the next entry.
+
+        Raises:
+          IndexError: if the entry does not exist.
+        '''
+        pass
+
+    def prev(self):
+        '''
+        traverse to the previous entry.
+
+        Raises:
+          IndexError: if the entry does not exist.
+        '''
+        pass
+
+    @property
+    def key(self):
+        return self.entry.key
+
+    @property
+    def value(self):
+        return self.entry.value
+
+
+class ID0(vstruct.VStruct):
+    def __init__(self, buf):
+        vstruct.VStruct.__init__(self)
+        self.buf = memoryview(buf)
+
+        self.next_free_offset = v_uint32()
+        self.page_size = v_uint16()
+        self.root_page = v_uint32()
+        self.record_count = v_uint32()
+        self.page_count = v_uint32()
+        self.unk12 = v_uint8()
         self.signature = v_bytes(size=0x09)
+
+    def get_page_buffer(self, page_number):
+        offset = self.page_size * page_number
+        return self.buf[offset:offset + self.page_size]
+
+    def get_page(self, page_number):
+        buf = self.get_page_buffer(page_number)
+        page = Page(self.page_size)
+        page.vsParse(buf)
+        return page
+
+    def find(self, key):
+        return Cursor(self, key)
 
     def validate(self):
         if self.signature != b'B-tree v2':
@@ -145,7 +357,7 @@ class ID1(vstruct.VStruct):
     '''
     PAGE_SIZE = 0x2000
 
-    def __init__(self, wordsize=4):
+    def __init__(self, wordsize=4, buf=None):
         vstruct.VStruct.__init__(self)
 
         self.wordsize = wordsize
@@ -282,7 +494,7 @@ class NAM(vstruct.VStruct):
     '''
     PAGE_SIZE = 0x2000
 
-    def __init__(self, wordsize=4):
+    def __init__(self, wordsize=4, buf=None):
         vstruct.VStruct.__init__(self)
 
         self.wordsize = wordsize
@@ -330,7 +542,7 @@ class NAM(vstruct.VStruct):
 
 
 class TIL(vstruct.VStruct):
-    def __init__(self):
+    def __init__(self, buf=None):
         vstruct.VStruct.__init__(self)
         self.signature = v_bytes(size=0x06)
 
@@ -409,7 +621,7 @@ class IDB(vstruct.VStruct):
                 logger.warn('section class not implemented: %s', sectiondef.name)
                 continue
 
-            s = sectiondef.cls()
+            s = sectiondef.cls(buf=section.contents)
             s.vsParse(section.contents)
             # vivisect doesn't allow you to assign vstructs to
             #  attributes that are not part of the struct,
