@@ -246,12 +246,16 @@ class Page(vstruct.VStruct):
 
         Returns:
           Union[BranchEntry, LeafEntry]: the b-tree entry.
+
+        Raises:
+          KeyError: if the entry number is not in the range of entries.
         '''
         # TODO: this is ripe for optimization, possibly via caching.
         # first want to ensure the caller's algorithms work, though.
         for i, entry in enumerate(self.get_entries()):
             if i == entry_number:
                 return entry
+        raise KeyError(entry_number)
 
     def validate(self):
         last = None
@@ -308,7 +312,7 @@ class Cursor(object):
                     return i
                 else:
                     continue
-        return KeyError(key)
+        raise KeyError(key)
 
     def _find(self, page_number, key):
         page = self.index.get_page(page_number)

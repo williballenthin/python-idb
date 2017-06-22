@@ -63,6 +63,13 @@ def test_find_exact_match(kernel32_idb):
     assert binascii.hexlify(kernel32_idb.id0.find(key).key) == binascii.hexlify(key)
     assert binascii.hexlify(kernel32_idb.id0.find(key).value) == b'02'
 
+    # exercise the max/min range
+    minkey = binascii.unhexlify('24204d4158204c494e4b')
+    assert binascii.hexlify(kernel32_idb.id0.find(minkey).key) == binascii.hexlify(minkey)
+
+    maxkey = binascii.unhexlify('4e776373737472')
+    assert binascii.hexlify(kernel32_idb.id0.find(maxkey).key) == binascii.hexlify(maxkey)
+
 
 def test_cursor_easy_leaf(kernel32_idb):
     # this is found on a leaf, second to last index.
