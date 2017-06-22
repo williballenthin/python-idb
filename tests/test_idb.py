@@ -75,6 +75,10 @@ def test_find_exact_match(kernel32_idb):
     maxkey = binascii.unhexlify('4e776373737472')
     assert binascii.hexlify(kernel32_idb.id0.find(maxkey).key) == binascii.hexlify(maxkey)
 
+    # check our error handling
+    with pytest.raises(KeyError):
+        kernel32_idb.id0.find(b'does not exist!')
+
 
 def test_cursor_easy_leaf(kernel32_idb):
     # this is found on a leaf, second to last index.
