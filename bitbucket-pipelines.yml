@@ -10,5 +10,5 @@ pipelines:
     - step:
         script: # Modify the commands below to build your repository.
           - python setup.py develop
-          - pip install pytest
-          - pytest ./tests/
+          - pip install pytest pytest-cov
+          - pytest --cov=idb ./tests/
