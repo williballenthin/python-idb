@@ -120,8 +120,8 @@ def test_root(kernel32_idb):
     assert get_string(kernel32_idb, root, 'S', ROOT_INDEX.VERSION_STRING) == '6.95'
     assert get_int(kernel32_idb, root, 'A', ROOT_INDEX.OPEN_COUNT) == 1
     ts = get_int(kernel32_idb, root, 'A', ROOT_INDEX.CREATED)
-    ts = datetime.datetime.fromtimestamp(ts)
-    assert ts.isoformat() == '2017-06-20T18:31:34'
+    ts = datetime.datetime.utcfromtimestamp(ts)
+    assert ts.isoformat() == '2017-06-20T22:31:34'
     assert get_int(kernel32_idb, root, 'A', ROOT_INDEX.CRC) == 0xdf9bdf12
     md5 = get_bytes(kernel32_idb, root, 'S', ROOT_INDEX.MD5)
     md5 = binascii.hexlify(md5).decode('ascii')
