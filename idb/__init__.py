@@ -14,10 +14,6 @@ from vstruct.primitives import v_uint32
 from vstruct.primitives import v_uint64
 
 
-# via: https://github.com/BinaryAnalysisPlatform/qira/blob/master/extra/parseida/parseidb.py
-BTREE_PAGE_SIZE = 8192
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -171,6 +167,33 @@ class Page(vstruct.VStruct):
     single node in the b-tree.
     has a bunch of key-value entries that may point to other pages.
     binary search these keys and traverse pointers to efficienty query the index.
+
+    branch node::
+
+                                      +-------------+
+        +-----------------------------+ ppointer    |  ----> [ node with keys less than entry1.key]
+        | entry1.key | entry1.value   |-------------+
+        +-----------------------------+ entry1.page |  ----> [ node with entry1.key < X < entry2.key]
+        | entry2.key | entry2.value   |-------------+
+        +-----------------------------+ entry2.page |  ----> [ node with entry2.key < X < entry3.key]
+        | ...        | ...            |-------------+
+        +-----------------------------+ ...         |
+        | entryN.key | entryN.value   |-------------+
+        +-----------------------------+ entryN.key  |  ----> [ node with keys greater than entryN.key]
+                                      +-------------+
+
+    leaf node::
+
+        +-----------------------------+
+        | entry1.key | entry1.value   |
+        +-----------------------------+
+        | entry2.key | entry2.value   |
+        +-----------------------------+
+        | ...        | ...            |
+        +-----------------------------+
+        | entryN.key | entryN.value   |
+        +-----------------------------+
+
     '''
     def __init__(self, page_size):
         vstruct.VStruct.__init__(self)
@@ -312,6 +335,8 @@ class ID0(vstruct.VStruct):
         self.signature = v_bytes(size=0x09)
 
     def get_page_buffer(self, page_number):
+        if page_number < 1:
+            logger.warning('unexpected page number requested: %d', page_number)
         offset = self.page_size * page_number
         return self.buf[offset:offset + self.page_size]
 
