@@ -435,7 +435,11 @@ class Cursor(object):
                     self.path = self.path[:-1]
 
                     current_page = self.path[-1]
-                    entry_number = self._find_index(current_page, start_key)
+                    try:
+                        entry_number = self._find_index(current_page, start_key)
+                    except KeyError:
+                        entry_number = current_page.entry_count
+
                     if entry_number == 0:
                         # not found, becaues its too small for this node.
                         # so we need to go higher.
