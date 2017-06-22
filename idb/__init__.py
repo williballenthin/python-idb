@@ -355,7 +355,35 @@ class Cursor(object):
         if current_page.is_leaf():
             if self.entry_number == current_page.entry_count - 1:
                 # complex case: have to traverse up and then around.
-                raise NotImplementedError()
+                # we are at the end of a leaf node. so we need to go to the parent and find the next entry.
+                # we may have to go up multiple parents.
+                start_key = self.entry.key
+
+                while True:
+                    # pop the current node off the path
+                    if len(self.path) <= 1:
+                        raise IndexError()
+                    self.path = self.path[:-1]
+
+                    current_page = self.path[-1]
+                    try:
+                        entry_number = self._find_index(current_page, start_key)
+                    except KeyError:
+                        # not found, becaues its too big for this node.
+                        # so we need to go higher.
+                        continue
+                    else:
+                        # found a valid entry, so lets process it.
+                        break
+
+                # entry_number now points to the least-greater entry relative to start key.
+                # this should be the entry that points to the page from which we just came.
+                # we'll want to return the key from this entry.
+
+                self.entry = current_page.get_entry(entry_number)
+                self.entry_number = entry_number
+                return
+
             else:
                 # simple case: simply increment the entry number in the current node.
                 next_entry_number = self.entry_number + 1
@@ -387,7 +415,35 @@ class Cursor(object):
         current_page = self.path[-1]
         if current_page.is_leaf():
             if self.entry_number == 0:
-                raise NotImplementedError()
+                # complex case: have to traverse up and then around.
+                # we are at the beginning of a leaf node.
+                # so we need to go to the parent and find the prev entry.
+                # we may have to go up multiple parents.
+                start_key = self.entry.key
+
+                while True:
+                    # pop the current node off the path
+                    if len(self.path) <= 1:
+                        raise IndexError()
+                    self.path = self.path[:-1]
+
+                    current_page = self.path[-1]
+                    entry_number = self._find_index(current_page, start_key)
+                    if entry_number == 0:
+                        # not found, becaues its too small for this node.
+                        # so we need to go higher.
+                        continue
+                    else:
+                        break
+
+                # entry_number now points to the least-greater entry relative to start key.
+                # this should be the entry that points to the page from which we just came.
+                # we'll want to return the key from the entry that is just smaller than this one.
+
+                self.entry = current_page.get_entry(entry_number - 1)
+                self.entry_number = entry_number - 1
+                return
+
             else:
                 # simple case: simply decrement the entry number in the current node.
                 next_entry_number = self.entry_number - 1

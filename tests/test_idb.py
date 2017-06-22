@@ -90,6 +90,9 @@ def test_cursor_easy_leaf(kernel32_idb):
 
 
 def test_cursor_branch(kernel32_idb):
+    # starting at a key that is found in a branch node, test next and prev.
+    # these should traverse to leaf nodes and pick the min/max entries, respectively.
+    #
     #   576 contents (branch):
     #     ...
     #     000638: 2eff00002253689b9535 = ff689b953573ff441098aa0c040c16000000000000
@@ -125,6 +128,22 @@ def test_cursor_branch(kernel32_idb):
     cursor = kernel32_idb.id0.find(key)
     cursor.prev()
     assert binascii.hexlify(cursor.key) == b'2eff00002253689bea26'
+
+
+def test_cursor_complex_leaf_next(kernel32_idb):
+    # see the scenario in `test_cursor_branch`.
+    key = binascii.unhexlify('2eff00002253689bea26')
+    cursor = kernel32_idb.id0.find(key)
+    cursor.next()
+    assert binascii.hexlify(cursor.key) == b'2eff00002253689bea8e'
+
+
+def test_cursor_complex_leaf_prev(kernel32_idb):
+    # see the scenario in `test_cursor_branch`.
+    key = binascii.unhexlify('2eff00002253689bece5')
+    cursor = kernel32_idb.id0.find(key)
+    cursor.prev()
+    assert binascii.hexlify(cursor.key) == b'2eff00002253689bea8e'
 
 
 def test_cursor_min_max(kernel32_idb):
