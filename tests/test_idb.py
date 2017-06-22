@@ -146,11 +146,39 @@ def test_cursor_complex_leaf_prev(kernel32_idb):
     assert binascii.hexlify(cursor.key) == b'2eff00002253689bea8e'
 
 
-def test_cursor_min_max(kernel32_idb):
-    # test cursor movement from min and max keys
-    # min leaf key: 24204d4158204c494e4b
-    # max leaf key: 4e776373737472
-    pass
+def test_cursor_min(kernel32_idb):
+    # test cursor movement from min key
+    # min leaf keys:
+    #   24204d4158204c494e4b
+    #   24204d4158204e4f4445
+    #   24204e45542044455343
+    #   2e0000000044689ae208
+    key = binascii.unhexlify('24204d4158204c494e4b')
+    cursor = kernel32_idb.id0.find(key)
+    cursor.next()
+    assert binascii.hexlify(cursor.key) == b'24204d4158204e4f4445'
+    cursor.prev()
+    assert binascii.hexlify(cursor.key) == b'24204d4158204c494e4b'
+    with pytest.raises(IndexError):
+        cursor.prev()
+
+
+def test_cursor_max(kernel32_idb):
+    # test cursor movement from max key
+    # max leaf keys:
+    #   4e7763736e636d70
+    #   4e7763736e637079
+    #   4e7763736e6370795f73
+    #   4e77637372636872
+    #   4e776373737472
+    key = binascii.unhexlify('4e776373737472')
+    cursor = kernel32_idb.id0.find(key)
+    cursor.prev()
+    assert binascii.hexlify(cursor.key) == b'4e77637372636872'
+    cursor.next()
+    assert binascii.hexlify(cursor.key) == b'4e776373737472'
+    with pytest.raises(IndexError):
+        cursor.next()
 
 
 def test_id1(kernel32_idb):
