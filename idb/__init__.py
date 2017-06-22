@@ -200,6 +200,7 @@ class Page(vstruct.VStruct):
         self.ppointer = v_uint32()
         self.entry_count = v_uint16()
         self.contents = v_bytes(page_size)
+        # ordered cache of entries, once loaded.
         self._entries = []
 
     def is_leaf(self):

@@ -201,6 +201,7 @@ def test_cursor_enum_all_desc(kernel32_idb):
     count = 1
     while True:
         try:
+            #print(cursor.key)
             cursor.prev()
         except IndexError:
             break
