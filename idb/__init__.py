@@ -200,6 +200,7 @@ class Page(vstruct.VStruct):
         self.ppointer = v_uint32()
         self.entry_count = v_uint16()
         self.contents = v_bytes(page_size)
+        self._entries = []
 
     def is_leaf(self):
         '''
@@ -209,6 +210,25 @@ class Page(vstruct.VStruct):
           bool: True if this is a leaf node.
         '''
         return self.ppointer == 0
+
+    def _load_entries(self):
+        if not self._entries:
+            key = b''
+            for i in range(self.entry_count):
+                if self.is_leaf():
+                    ptr = LeafEntryPointer()
+                    ptr.vsParse(self.contents, offset=i * SIZEOF_ENTRY)
+
+                    entry = LeafEntry(key, ptr.common_prefix)
+                    entry.vsParse(self.contents, offset=ptr.offset - SIZEOF_ENTRY)
+                else:
+                    ptr = BranchEntryPointer()
+                    ptr.vsParse(self.contents, offset=i * SIZEOF_ENTRY)
+
+                    entry = BranchEntry(int(ptr.page))
+                    entry.vsParse(self.contents, offset=ptr.offset - SIZEOF_ENTRY)
+                self._entries.append(entry)
+                key = entry.key
 
     def get_entries(self):
         '''
@@ -220,22 +240,9 @@ class Page(vstruct.VStruct):
         Yields:
           Union[BranchEntry, LeafEntry]: the b-tree entries from this page.
         '''
-        key = b''
-        for i in range(self.entry_count):
-            if self.is_leaf():
-                ptr = LeafEntryPointer()
-                ptr.vsParse(self.contents, offset=i * SIZEOF_ENTRY)
-
-                entry = LeafEntry(key, ptr.common_prefix)
-                entry.vsParse(self.contents, offset=ptr.offset - SIZEOF_ENTRY)
-            else:
-                ptr = BranchEntryPointer()
-                ptr.vsParse(self.contents, offset=i * SIZEOF_ENTRY)
-
-                entry = BranchEntry(int(ptr.page))
-                entry.vsParse(self.contents, offset=ptr.offset - SIZEOF_ENTRY)
+        self._load_entries()
+        for entry in self._entries:
             yield entry
-            key = entry.key
 
     def get_entry(self, entry_number):
         '''
@@ -250,12 +257,10 @@ class Page(vstruct.VStruct):
         Raises:
           KeyError: if the entry number is not in the range of entries.
         '''
-        # TODO: this is ripe for optimization, possibly via caching.
-        # first want to ensure the caller's algorithms work, though.
-        for i, entry in enumerate(self.get_entries()):
-            if i == entry_number:
-                return entry
-        raise KeyError(entry_number)
+        self._load_entries()
+        if entry_number >= len(self._entries):
+            raise KeyError(entry_number)
+        return self._entries[entry_number]
 
     def validate(self):
         last = None
@@ -347,9 +352,10 @@ class Cursor(object):
     def next(self):
         '''
         traverse to the next entry.
+        updates this current cursor instance.
 
         Raises:
-          IndexError: if the entry does not exist.
+          IndexError: if the entry does not exist. the cursor is in an unknown state afterwards.
         '''
         current_page = self.path[-1]
         if current_page.is_leaf():
@@ -384,7 +390,7 @@ class Cursor(object):
                 self.entry_number = entry_number
                 return
 
-            else:
+            else:  # is inner entry.
                 # simple case: simply increment the entry number in the current node.
                 next_entry_number = self.entry_number + 1
                 next_entry = current_page.get_entry(next_entry_number)
@@ -408,9 +414,10 @@ class Cursor(object):
     def prev(self):
         '''
         traverse to the previous entry.
+        updates this current cursor instance.
 
         Raises:
-          IndexError: if the entry does not exist.
+          IndexError: if the entry does not exist. the cursor is in an unknown state afterwards.
         '''
         current_page = self.path[-1]
         if current_page.is_leaf():
@@ -444,7 +451,7 @@ class Cursor(object):
                 self.entry_number = entry_number - 1
                 return
 
-            else:
+            else:  # is inner entry.
                 # simple case: simply decrement the entry number in the current node.
                 next_entry_number = self.entry_number - 1
                 next_entry = current_page.get_entry(next_entry_number)

@@ -181,6 +181,34 @@ def test_cursor_max(kernel32_idb):
         cursor.next()
 
 
+def test_cursor_enum_all_asc(kernel32_idb):
+    minkey = binascii.unhexlify('24204d4158204c494e4b')
+    cursor = kernel32_idb.id0.find(minkey)
+    count = 1
+    while True:
+        try:
+            cursor.next()
+        except IndexError:
+            break
+        count += 1
+
+    assert kernel32_idb.id0.record_count == count
+
+
+def test_cursor_enum_all_desc(kernel32_idb):
+    maxkey = binascii.unhexlify('4e776373737472')
+    cursor = kernel32_idb.id0.find(maxkey)
+    count = 1
+    while True:
+        try:
+            cursor.prev()
+        except IndexError:
+            break
+        count += 1
+
+    assert kernel32_idb.id0.record_count == count
+
+
 def test_id1(kernel32_idb):
     segments = kernel32_idb.id1.segments
     # collected empirically
