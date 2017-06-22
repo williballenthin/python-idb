@@ -198,7 +198,7 @@ class Page(vstruct.VStruct):
     def __init__(self, page_size):
         vstruct.VStruct.__init__(self)
         self.ppointer = v_uint32()
-        self.count = v_uint16()
+        self.entry_count = v_uint16()
         self.contents = v_bytes(page_size)
 
     def is_leaf(self):
@@ -221,7 +221,7 @@ class Page(vstruct.VStruct):
           Union[BranchEntry, LeafEntry]: the b-tree entries from this page.
         '''
         key = b''
-        for i in range(self.count):
+        for i in range(self.entry_count):
             if self.is_leaf():
                 ptr = LeafEntryPointer()
                 ptr.vsParse(self.contents, offset=i * SIZEOF_ENTRY)
@@ -236,6 +236,22 @@ class Page(vstruct.VStruct):
                 entry.vsParse(self.contents, offset=ptr.offset - SIZEOF_ENTRY)
             yield entry
             key = entry.key
+
+    def get_entry(self, entry_number):
+        '''
+        get the entry at the given index.
+
+        Arguments:
+          entry_number (int): the entry index.
+
+        Returns:
+          Union[BranchEntry, LeafEntry]: the b-tree entry.
+        '''
+        # TODO: this is ripe for optimization, possibly via caching.
+        # first want to ensure the caller's algorithms work, though.
+        for i, entry in enumerate(self.get_entries()):
+            if i == entry_number:
+                return entry
 
     def validate(self):
         last = None
@@ -265,34 +281,64 @@ class Cursor(object):
 
         # populated once found
         self.entry = None
+        self.entry_number = None
 
         self._find(self.index.root_page, key)
 
-    def _find(self, page_number, key):
-        page = self.index.get_page(page_number)
-        self.path.append(page)
-
+    def _find_index(self, page, key):
+        '''
+        find the index of the exact match, or in the case of a branch node,
+         the index of the least-greater entry.
+        '''
         if page.is_leaf():
             # TODO: should binary search here.
-            for entry in page.get_entries():
+            for i, entry in enumerate(page.get_entries()):
                 # TODO: exact match only
                 if key == entry.key:
-                    self.entry = entry
-                    return
+                    return i
         else:
-            last = page.ppointer
             # TODO: should binary search here.
             for i, entry in enumerate(page.get_entries()):
                 entry_key = bytes(entry.key)
                 # TODO: exact match only
                 if key == entry_key:
-                    self.entry = entry
-                    return
+                    return i
                 elif key < entry_key:
-                    self._find(last, key)
-                    return
+                    # this is the least-greater entry
+                    return i
                 else:
-                    last = entry.page
+                    continue
+        return KeyError(key)
+
+    def _find(self, page_number, key):
+        page = self.index.get_page(page_number)
+        self.path.append(page)
+
+        is_largest = False
+        try:
+            entry_number = self._find_index(page, key)
+        except KeyError:
+            # an entry larger than the given key is not found.
+            # but we know we should be searching this node,
+            #  so we must have to recurse into the final page pointer.
+            is_largest = True
+            entry_number = page.entry_count - 1
+
+        entry = page.get_entry(entry_number)
+
+        if entry.key == key:
+            self.entry = entry
+            self.entry_number = entry_number
+            return
+        else:
+            if entry_number == 0:
+                next_page_number = page.ppointer
+            elif is_largest:
+                next_page_number = page.get_entry(page.entry_count - 1).page
+            else:
+                next_page_number = page.get_entry(entry_number - 1).page
+            self._find(next_page_number, key)
+            return
 
     def next(self):
         '''
