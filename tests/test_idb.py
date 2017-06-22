@@ -89,6 +89,51 @@ def test_cursor_easy_leaf(kernel32_idb):
     assert binascii.hexlify(cursor.key) == b'2eff00002253689cc95b'
 
 
+def test_cursor_branch(kernel32_idb):
+    #   576 contents (branch):
+    #     ...
+    #     000638: 2eff00002253689b9535 = ff689b953573ff441098aa0c040c16000000000000
+    #   > 000639: 2eff00002253689bea8e = ff689bea8e8257ff8000c00aa2c601
+    #     00000e: 2eff00002253689ccaf1 = ff689ccaf113ff8000c00be25301
+    #     ...
+    #
+    #   638 contents (leaf):
+    #     00:00: 2eff00002253689b95db = ff689b95db54ff441098ad08040c14000000000000
+    #     00:01: 2eff00002253689b9665 = ff689b96655bff441098b008040815000000000000
+    #     00:00: 2eff00002253689b970f = ff689b970f808bff441098b30804141f000000000000
+    #     ...
+    #     00:01: 2eff00002253689be79b = ff689be79b1bff8000c00a9d4b01
+    #     00:00: 2eff00002253689be7b6 = ff689be7b68270ff8000c00af6a101
+    #   > 00:00: 2eff00002253689bea26 = ff689bea2668ff8000c00a9f4301
+    #
+    #
+    #   639 contents (leaf):
+    #   > 00:00: 2eff00002253689bece5 = ff689bece514ff8000c00bc6b701
+    #     00:00: 2eff00002253689becf9 = ff689becf942ff8000c008cf9e01
+    #     00:00: 2eff00002253689bed3b = ff689bed3b42ff8000c0090b9c01
+    #     ...
+    #     00:00: 2eff00002253689cc95b = ff689cc95b40ff8000c00bd30201
+    #     00:01: 2eff00002253689cc99b = ff689cc99b32ff8000c00be35101
+    #     00:00: 2eff00002253689cc9cd = ff689cc9cd2bff8000c00be12f01
+
+    key = binascii.unhexlify('2eff00002253689bea8e')
+    cursor = kernel32_idb.id0.find(key)
+    cursor.next()
+    assert binascii.hexlify(cursor.key) == b'2eff00002253689bece5'
+
+    key = binascii.unhexlify('2eff00002253689bea8e')
+    cursor = kernel32_idb.id0.find(key)
+    cursor.prev()
+    assert binascii.hexlify(cursor.key) == b'2eff00002253689bea26'
+
+
+def test_cursor_min_max(kernel32_idb):
+    # test cursor movement from min and max keys
+    # min leaf key: 24204d4158204c494e4b
+    # max leaf key: 4e776373737472
+    pass
+
+
 def test_id1(kernel32_idb):
     segments = kernel32_idb.id1.segments
     # collected empirically

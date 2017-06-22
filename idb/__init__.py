@@ -354,6 +354,7 @@ class Cursor(object):
         current_page = self.path[-1]
         if current_page.is_leaf():
             if self.entry_number == current_page.entry_count - 1:
+                # complex case: have to traverse up and then around.
                 raise NotImplementedError()
             else:
                 # simple case: simply increment the entry number in the current node.
@@ -363,8 +364,18 @@ class Cursor(object):
                 self.entry = next_entry
                 self.entry_number = next_entry_number
                 return
-        else:
-            raise NotImplementedError()
+        else:  # is branch node.
+
+            # follow the min-edge down to a leaf, and take the min entry.
+            next_page = self.index.get_page(self.entry.page)
+            while not next_page.is_leaf():
+                self.path.append(next_page)
+                next_page = self.index.get_page(next_page.ppointer)
+
+            self.path.append(next_page)
+            self.entry = next_page.get_entry(0)
+            self.entry_number = 0
+            return
 
     def prev(self):
         '''
@@ -385,8 +396,24 @@ class Cursor(object):
                 self.entry = next_entry
                 self.entry_number = next_entry_number
                 return
-        else:
-            raise NotImplementedError()
+        else:  # is branch node.
+
+            # follow the max-edge down to a leaf, and take the max entry.
+            current_page = self.path[-1]
+            if self.entry_number == 0:
+                next_page_number = current_page.ppointer
+            else:
+                next_page_number = current_page.get_entry(self.entry_number - 1).page
+
+            next_page = self.index.get_page(next_page_number)
+            while not next_page.is_leaf():
+                self.path.append(next_page)
+                next_page = self.index.get_page(next_page.get_entry(next_page.entry_count - 1).page)
+
+            self.path.append(next_page)
+            self.entry = next_page.get_entry(next_page.entry_count - 1)
+            self.entry_number = next_page.entry_count - 1
+            return
 
     @property
     def key(self):
