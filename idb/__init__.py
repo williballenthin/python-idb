@@ -342,6 +342,10 @@ class Cursor(object):
             self.entry = entry
             self.entry_number = entry_number
             return
+        elif page.is_leaf():
+            # TODO: exact match.
+            # there is no exact match.
+            raise KeyError(key)
         else:
             if entry_number == 0:
                 next_page_number = page.ppointer
