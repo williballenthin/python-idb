@@ -3,6 +3,8 @@ from fixtures import *
 import logging
 import binascii
 
+import idb.netnode
+
 
 #logging.basicConfig(level=logging.DEBUG)
 
@@ -79,6 +81,41 @@ def test_find_exact_match(kernel32_idb):
     with pytest.raises(KeyError):
         kernel32_idb.id0.find(b'does not exist!')
 
+
+def atest_kinds_of_keys(kernel32_idb):
+    # this is primarily to demonstrate what the btree keys look like
+
+    minkey = binascii.unhexlify('24204d4158204c494e4b')
+    cursor = kernel32_idb.id0.find(minkey)
+
+    import hexdump
+    while True:
+        if cursor.key[0] == 0x2E:
+            k = idb.netnode.parse_complex_key(cursor.key)
+            print('nodeid: %x tag: %s index: %x' % (
+                k.nodeid,
+                k.tag,
+                k.index or 0x0))
+        else:
+            hexdump.hexdump(cursor.key)
+
+        '''
+        try:
+            print('(int)' + idb.netnode.get_int(kernel32_idb, key.nodeid, key.tag, key.index))
+        except ValueError:
+            try:
+                print('(str)' + idb.netnode.get_string(kernel32_idb, key.nodeid, key.tag, key.index))
+            except UnicodeDecodeError:
+                print('(bytes)')
+                hexdump.hexdump(idb.netnode.get_bytes(kernel32_idb, key.nodeid, key.tag, key.index))
+                '''
+
+        try:
+            cursor.next()
+        except IndexError:
+            break
+
+ 
 
 def test_cursor_easy_leaf(kernel32_idb):
     # this is found on a leaf, second to last index.

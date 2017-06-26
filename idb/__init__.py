@@ -797,6 +797,10 @@ class IDB(vstruct.VStruct):
         # these are the only true vstruct fields for this struct.
         self.header = FileHeader()
 
+        # TODO: set this correctly.
+        # possibly inspect the magic header?
+        self.wordsize = 4
+
     def pcb_header(self):
         # TODO: pass along checksum
         for offset in self.header.offsets:
