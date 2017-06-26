@@ -188,31 +188,6 @@ class Netnode(object):
         else:
             return ''
 
-    def valobj(self):
-        if not isinstance(self.nodeid, str):
-            raise KeyError(self.nodeid)
-
-        key = make_key(self.nodeid, wordsize=self.wordsize)
-        cursor = self.idb.id0.find(key)
-        return bytes(cursor.value)
-
-    def valstr(self):
-        return self.valobj().decode('utf-8').rstrip('\x00')
-
-    def value_exists(self):
-        try:
-            return self.valobj() is not None
-        except KeyError:
-            return False
-
-    def long_value(self):
-        v = self.valobj()
-        return struct.unpack('<I', v)[0]
-
-    def deref(self):
-        ptr = self.long_value()
-        return Netnode(self.idb, ptr)
-
     def keys(self, tag=TAGS.SUPVAL):
         '''
         this replaces:
@@ -305,6 +280,36 @@ class Netnode(object):
           - hashprev
         '''
         return self.keys(tag=tag)
+
+    def valobj(self):
+        '''
+        fetch the default netnode value.
+        if this is a effective address node, then we use the 'V' tag.
+        otherwise, we simply use the nodeid is the key.
+        '''
+        if isinstance(self.nodeid, int):
+            key = make_key(self.nodeid, TAGS.VALUE, wordsize=self.wordsize)
+        else:
+            key = make_key(self.nodeid, wordsize=self.wordsize)
+        cursor = self.idb.id0.find(key)
+        return bytes(cursor.value)
+
+    def valstr(self):
+        return self.valobj().decode('utf-8').rstrip('\x00')
+
+    def value_exists(self):
+        try:
+            return self.valobj() is not None
+        except KeyError:
+            return False
+
+    def long_value(self):
+        v = self.valobj()
+        return struct.unpack('<I', v)[0]
+
+    def deref(self):
+        ptr = self.long_value()
+        return Netnode(self.idb, ptr)
 
     def blobsize(self):
         '''
