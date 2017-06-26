@@ -50,11 +50,17 @@ def make_key(nodeid, tag=None, index=None, wordsize=4):
         raise ValueError('unexpected wordsize')
 
     if isinstance(nodeid, str):
-        return b'N' + name.encode('utf-8')
+        return b'N' + nodeid.encode('utf-8')
 
     elif isinstance(nodeid, int):
         if tag is None:
             raise ValueError('tag required')
+        if isinstance(tag, str):
+            if len(tag) != 1:
+                raise ValueError('tag must be a single character string')
+            tag = tag.encode('ascii')
+        else:
+            raise ValueError('tag must be a string')
 
         if index is None:
             return b'.' + struct.pack('>' + wordformat + 'c', nodeid, tag)
@@ -67,7 +73,7 @@ def make_key(nodeid, tag=None, index=None, wordsize=4):
 ComplexKey = namedtuple('ComplexKey', ['nodeid', 'tag', 'index'])
 
 
-def parse_complex_key(buf, wordsize=4):
+def parse_key(buf, wordsize=4):
     if wordsize == 4:
         wordformat = 'I'
     elif wordsize == 8:
@@ -118,7 +124,7 @@ def as_int(buf):
 def as_string(buf):
     if buf is None:
         raise KeyError((nodeid, tag, index))
-    return bytes(buf).rstrip(b'\x00').decode('utf-8')
+    return bytes(buf).rstrip(b'\x00').decode('utf-8').rstrip('\x00')
 
 
 def as_bytes(buf):
@@ -186,12 +192,12 @@ class Netnode(object):
         if not isinstance(self.nodeid, str):
             raise KeyError(self.nodeid)
 
-        key = make_key(self.nodeid, tag, index, wordsize=self.wordsize)
-        cursor = db.id0.find(key)
-        return cursor.value
+        key = make_key(self.nodeid, wordsize=self.wordsize)
+        cursor = self.idb.id0.find(key)
+        return bytes(cursor.value)
 
     def valstr(self):
-        return self.valobj().decode('utf-8')
+        return self.valobj().decode('utf-8').rstrip('\x00')
 
     def value_exists(self):
         try:
@@ -202,6 +208,10 @@ class Netnode(object):
     def long_value(self):
         v = self.valobj()
         return struct.unpack('<I', v)[0]
+
+    def deref(self):
+        ptr = self.long_value()
+        return Netnode(self.idb, ptr)
 
     def keys(self, tag=TAGS.SUPVAL):
         '''
@@ -235,14 +245,14 @@ class Netnode(object):
             raise KeyError((self.nodeid, index, tag))
 
         key = make_key(self.nodeid, tag, index, wordsize=self.wordsize)
-        cursor = db.id0.find(key)
-        return cursor.value
+        cursor = self.idb.id0.find(key)
+        return bytes(cursor.value)
 
     def supval(self, index, tag=TAGS.SUPVAL):
         return self.get_val(index, tag)
 
     def supstr(self, index, tag=TAGS.SUPVAL):
-        return self.supval(index, tag).decode('utf-8')
+        return self.supval(index, tag).decode('utf-8').rstrip('\x00')
 
     def sups(self, tag=TAGS.SUPVAL):
         '''
