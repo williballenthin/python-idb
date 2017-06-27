@@ -197,11 +197,16 @@ class Netnode(object):
 
     def keys(self, tag=TAGS.SUPVAL):
         '''
+        generate the indexes for the given tag in this netnode.
+
         this replaces:
           - *1st
           - *nxt
           - *last
           - *prev
+
+        Yields:
+          int: an index under the given tag in this netnode.
         '''
         key = make_key(self.nodeid, tag, wordsize=self.wordsize)
 
@@ -219,6 +224,13 @@ class Netnode(object):
         '''
         fetch a sup/alt/hash/etc value from the netnode.
         the nodeid for this netnode must be an integer/effective address.
+
+        Args:
+          index (int): the index of the data to fetch.
+          tag (str): single character tag.
+
+        Returns:
+          bytes: the raw data.
         '''
         key = make_key(self.nodeid, tag, index, wordsize=self.wordsize)
         cursor = self.idb.id0.find(key)
@@ -285,8 +297,7 @@ class Netnode(object):
     def valobj(self):
         '''
         fetch the default netnode value.
-        if this is a effective address node, then we use the 'V' tag.
-        otherwise, we simply use the nodeid is the key.
+        this is basically supval(tag='V').
         '''
         key = make_key(self.nodeid, TAGS.VALUE, wordsize=self.wordsize)
         cursor = self.idb.id0.find(key)
