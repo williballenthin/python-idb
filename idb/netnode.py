@@ -48,12 +48,12 @@ def make_key(nodeid, tag=None, index=None, wordsize=4):
     elif isinstance(nodeid, int):
         if tag is None:
             raise ValueError('tag required')
-        if isinstance(tag, str):
-            if len(tag) != 1:
-                raise ValueError('tag must be a single character string')
-            tag = tag.encode('ascii')
-        else:
+        if not isinstance(tag, str):
             raise ValueError('tag must be a string')
+        if len(tag) != 1:
+            raise ValueError('tag must be a single character string')
+
+        tag = tag.encode('ascii')
 
         if index is None:
             return b'.' + struct.pack('>' + wordformat + 'c', nodeid, tag)
@@ -104,22 +104,28 @@ def as_string(buf):
     return bytes(buf).rstrip(b'\x00').decode('utf-8').rstrip('\x00')
 
 
+ROOT_NODEID = 'Root Node'
 class ROOT_INDEX:
     '''
     via: https://github.com/williballenthin/pyidbutil/blob/master/idbtool.py#L182
     '''
-    VERSION = -1
-    VERSION_STRING = 1303
-    PARAM = 0x41b994
-    OPEN_COUNT = -4
-    CREATED = -2
-    CRC = -5
-    MD5 = 1302
+    VERSION = -1           # altval
+    VERSION_STRING = 1303  # supval
+    PARAM = 0x41b994       # supval
+    OPEN_COUNT = -4        # altval
+    CREATED = -2           # altval
+    CRC = -5               # altval
+    MD5 = 1302             # supval
+
+
+LOADER_NODEID = '$ loader name'
+class LOADER_INDEX:
+    PLUGIN = 0x0  # supval
+    FORMAT = 0x1  # supval
 
 
 # try to implement the methods here:
 #
-#   https://www.hex-rays.com/products/ida/support/sdkdoc/netnode_8hpp.html
 #   https://www.hex-rays.com/products/ida/support/sdkdoc/classnetnode.html
 
 

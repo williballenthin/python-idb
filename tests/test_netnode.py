@@ -15,8 +15,8 @@ slow = pytest.mark.skipif(
 
 
 def test_name(kernel32_idb):
-    root = kernel32_idb.netnode('Root Node')
-    assert root.name() == 'Root Node'
+    root = kernel32_idb.netnode(idb.netnode.ROOT_NODEID)
+    assert root.name() == idb.netnode.ROOT_NODEID
 
     nn = kernel32_idb.netnode(0x401000)
     with pytest.raises(KeyError):
@@ -26,13 +26,13 @@ def test_name(kernel32_idb):
 def test_valobj(kernel32_idb):
     # In[29]:  idaapi.netnode("Root Node").valobj()
     # Out[29]: 'Z:\\home\\user\\Downloads\\kernel32\\kernel32.dll\x00'
-    root = kernel32_idb.netnode('Root Node')
+    root = kernel32_idb.netnode(idb.netnode.ROOT_NODEID)
     assert root.valobj() == b'Z:\\home\\user\\Documents\\code\\python-idb\\tests\\data\\kernel32\\kernel32.dll\x00' 
     assert root.valstr() == 'Z:\\home\\user\\Documents\\code\\python-idb\\tests\\data\\kernel32\\kernel32.dll' 
 
 
 def test_root_node(kernel32_idb):
-    root = kernel32_idb.netnode('Root Node')
+    root = kernel32_idb.netnode(idb.netnode.ROOT_NODEID)
     assert root is not None
 
     assert root.altval(idb.netnode.ROOT_INDEX.VERSION) == 695
