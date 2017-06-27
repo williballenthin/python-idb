@@ -1,7 +1,11 @@
 from fixtures import *
 
+import logging
 import datetime
 import binascii
+
+
+#logging.basicConfig(level=logging.DEBUG)
 
 
 slow = pytest.mark.skipif(
@@ -15,23 +19,20 @@ def test_name(kernel32_idb):
     assert root.name() == 'Root Node'
 
     nn = kernel32_idb.netnode(0x401000)
-    assert nn.name() == ''
+    with pytest.raises(KeyError):
+        _ = nn.name()
 
 
 def test_valobj(kernel32_idb):
     # In[29]:  idaapi.netnode("Root Node").valobj()
     # Out[29]: 'Z:\\home\\user\\Downloads\\kernel32\\kernel32.dll\x00'
     root = kernel32_idb.netnode('Root Node')
-    root = root.deref()
     assert root.valobj() == b'Z:\\home\\user\\Documents\\code\\python-idb\\tests\\data\\kernel32\\kernel32.dll\x00' 
     assert root.valstr() == 'Z:\\home\\user\\Documents\\code\\python-idb\\tests\\data\\kernel32\\kernel32.dll' 
 
 
 def test_root_node(kernel32_idb):
     root = kernel32_idb.netnode('Root Node')
-    assert root is not None
-
-    root = root.deref()
     assert root is not None
 
     assert root.altval(idb.netnode.ROOT_INDEX.VERSION) == 695

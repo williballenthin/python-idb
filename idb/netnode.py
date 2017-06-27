@@ -94,17 +94,6 @@ def parse_key(buf, wordsize=4):
     return ComplexKey(nodeid, tag, index)
 
 
-def deref(db, name, wordsize=4):
-    key = make_key(name, wordsize=wordsize)
-    cursor = db.id0.find(key)
-    if wordsize == 4:
-        return struct.unpack('<I', cursor.value)[0]
-    elif wordsize == 8:
-        return struct.unpack('<Q', cursor.value)[0]
-    else:
-        raise ValueError('unexpected wordsize')
-
-
 def as_int(buf):
     if buf is None:
         raise KeyError((nodeid, tag, index))
@@ -168,8 +157,8 @@ class Netnode(object):
         Example::
 
             nn = Netnode(0x401000)
-            TODO
-
+            for xref in nn.alts(tag='X'):
+                print(xref)
 
         TODO: how to address the following keys:
           - $ MAX LINK
@@ -179,14 +168,32 @@ class Netnode(object):
         these are unaddressable via IDA Pro netnodes, too.
         '''
         self.idb = db
-        self.nodeid = nodeid
         self.wordsize = self.idb.wordsize
 
-    def name(self):
-        if isinstance(self.nodeid, str):
-            return self.nodeid
+        if isinstance(nodeid, str):
+            key = make_key(nodeid, wordsize=self.wordsize)
+            cursor = self.idb.id0.find(key)
+            self.nodeid = as_int(cursor.value)
+            logger.info('resolved string netnode %s to %x', nodeid, self.nodeid)
+        elif isinstance(nodeid, int):
+            self.nodeid = nodeid
         else:
-            return ''
+            raise ValueError('unexpected type for nodeid')
+
+    def name(self):
+        '''
+        fetch the name associated with the netnode.
+        basically supval(tag='N')
+
+        Returns:
+          str: the name stored in the netnode.
+
+        Raises:
+          KeyError: if the name for the netnode does not exist.
+        '''
+        key = make_key(self.nodeid, TAGS.NAME, wordsize=self.wordsize)
+        cursor = self.idb.id0.find(key)
+        return as_string(cursor.value)
 
     def keys(self, tag=TAGS.SUPVAL):
         '''
@@ -196,9 +203,6 @@ class Netnode(object):
           - *last
           - *prev
         '''
-        if not isinstance(self.nodeid, int):
-            raise KeyError((self.nodeid, index, tag))
-
         key = make_key(self.nodeid, tag, wordsize=self.wordsize)
 
         # this probably doesn't work...
@@ -216,9 +220,6 @@ class Netnode(object):
         fetch a sup/alt/hash/etc value from the netnode.
         the nodeid for this netnode must be an integer/effective address.
         '''
-        if not isinstance(self.nodeid, int):
-            raise KeyError((self.nodeid, index, tag))
-
         key = make_key(self.nodeid, tag, index, wordsize=self.wordsize)
         cursor = self.idb.id0.find(key)
         return bytes(cursor.value)
@@ -227,7 +228,7 @@ class Netnode(object):
         return self.get_val(index, tag)
 
     def supstr(self, index, tag=TAGS.SUPVAL):
-        return self.supval(index, tag).decode('utf-8').rstrip('\x00')
+        return as_string(self.supval(index, tag))
 
     def sups(self, tag=TAGS.SUPVAL):
         '''
@@ -240,7 +241,7 @@ class Netnode(object):
         return self.keys(tag=tag)
 
     def altval(self, index, tag=TAGS.ALTVAL):
-        return struct.unpack('<I', self.get_val(index, tag))[0]
+        return as_int(self.get_val(index, tag))
 
     def alts(self, tag=TAGS.ALTVAL):
         '''
@@ -253,7 +254,7 @@ class Netnode(object):
         return self.keys(tag=tag)
 
     def charval(self, index, tag=TAGS.CHARVAL):
-        return struct.unpack('<C', self.get_val(index, tag))[0]
+        return as_int(self.get_val(index, tag))
 
     def chars(self, tag=TAGS.ALTVAL):
         '''
@@ -287,15 +288,12 @@ class Netnode(object):
         if this is a effective address node, then we use the 'V' tag.
         otherwise, we simply use the nodeid is the key.
         '''
-        if isinstance(self.nodeid, int):
-            key = make_key(self.nodeid, TAGS.VALUE, wordsize=self.wordsize)
-        else:
-            key = make_key(self.nodeid, wordsize=self.wordsize)
+        key = make_key(self.nodeid, TAGS.VALUE, wordsize=self.wordsize)
         cursor = self.idb.id0.find(key)
         return bytes(cursor.value)
 
     def valstr(self):
-        return self.valobj().decode('utf-8').rstrip('\x00')
+        return as_string(self.valobj())
 
     def value_exists(self):
         try:
@@ -304,12 +302,7 @@ class Netnode(object):
             return False
 
     def long_value(self):
-        v = self.valobj()
-        return struct.unpack('<I', v)[0]
-
-    def deref(self):
-        ptr = self.long_value()
-        return Netnode(self.idb, ptr)
+        return as_int(self.valobj())
 
     def blobsize(self):
         '''
