@@ -50,6 +50,14 @@ def test_root_node(kernel32_idb):
     assert md5 == '00bf1bf1b779ce1af41371426821e0c2'
 
 
+def test_loader(kernel32_idb):
+    loader = kernel32_idb.netnode(idb.netnode.LOADER_NODEID)
+    assert loader is not None
+
+    assert loader.supval(idb.netnode.LOADER_INDEX.PLUGIN) == b'pe.ldw\x00'
+    assert loader.supval(idb.netnode.LOADER_INDEX.FORMAT).startswith(b'Portable executable')
+
+
 @slow
 def test_all_the_values(kernel32_idb):
     # this is primarily to demonstrate what the btree keys look like
