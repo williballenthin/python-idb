@@ -2,16 +2,9 @@ import struct
 import logging
 from collections import namedtuple
 
-import vstruct
-from vstruct.primitives import v_zstr
-from vstruct.primitives import v_bytes
-from vstruct.primitives import v_uint8
-from vstruct.primitives import v_uint16
-from vstruct.primitives import v_uint32
-from vstruct.primitives import v_uint64
-
 
 logger = logging.getLogger(__name__)
+
 
 class TAGS:
     '''
@@ -95,9 +88,6 @@ def parse_key(buf, wordsize=4):
 
 
 def as_int(buf):
-    if buf is None:
-        raise KeyError((nodeid, tag, index))
-
     if len(buf) == 1:
         return struct.unpack('<B', buf)[0]
     elif len(buf) == 2:
@@ -111,15 +101,7 @@ def as_int(buf):
 
 
 def as_string(buf):
-    if buf is None:
-        raise KeyError((nodeid, tag, index))
     return bytes(buf).rstrip(b'\x00').decode('utf-8').rstrip('\x00')
-
-
-def as_bytes(buf):
-    if buf is None:
-        raise KeyError((nodeid, tag, index))
-    return bytes(buf)
 
 
 class ROOT_INDEX:
@@ -212,7 +194,7 @@ class Netnode(object):
 
         # this probably doesn't work...
         # need prefix matching
-        cursor = db.id0.find(key)
+        cursor = self.idb.id0.find(key)
         while cursor.key.startswith(key):
             yield cursor.key
             try:
