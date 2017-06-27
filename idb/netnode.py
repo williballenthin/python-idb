@@ -104,26 +104,6 @@ def as_string(buf):
     return bytes(buf).rstrip(b'\x00').decode('utf-8').rstrip('\x00')
 
 
-ROOT_NODEID = 'Root Node'
-class ROOT_INDEX:
-    '''
-    via: https://github.com/williballenthin/pyidbutil/blob/master/idbtool.py#L182
-    '''
-    VERSION = -1           # altval
-    VERSION_STRING = 1303  # supval
-    PARAM = 0x41b994       # supval
-    OPEN_COUNT = -4        # altval
-    CREATED = -2           # altval
-    CRC = -5               # altval
-    MD5 = 1302             # supval
-
-
-LOADER_NODEID = '$ loader name'
-class LOADER_INDEX:
-    PLUGIN = 0x0  # supval
-    FORMAT = 0x1  # supval
-
-
 # try to implement the methods here:
 #
 #   https://www.hex-rays.com/products/ida/support/sdkdoc/classnetnode.html
@@ -311,3 +291,23 @@ class Netnode(object):
 
     def getblob(self):
         raise NotImplementedError()
+
+
+ROOT_NODEID = 'Root Node'
+class ROOT_INDEX:
+    '''
+    via: https://github.com/williballenthin/pyidbutil/blob/master/idbtool.py#L182
+    '''
+    VERSION = -1           # altval
+    VERSION_STRING = 1303  # supval
+    PARAM = 0x41b994       # supval
+    OPEN_COUNT = -4        # altval
+    CREATED = -2           # altval
+    CRC = -5               # altval
+    MD5 = 1302             # supval
+
+
+LOADER_NODEID = '$ loader name'
+class LOADER_INDEX:
+    PLUGIN = 0x0  # supval
+    FORMAT = 0x1  # supval

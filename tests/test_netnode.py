@@ -32,6 +32,9 @@ def test_valobj(kernel32_idb):
 
 
 def test_root_node(kernel32_idb):
+    '''
+    see also test_analysis for a higher-level interface.
+    '''
     root = kernel32_idb.netnode(idb.netnode.ROOT_NODEID)
     assert root is not None
 
@@ -51,6 +54,9 @@ def test_root_node(kernel32_idb):
 
 
 def test_loader(kernel32_idb):
+    '''
+    see also test_analysis for a higher-level interface.
+    '''
     loader = kernel32_idb.netnode(idb.netnode.LOADER_NODEID)
     assert loader is not None
 
