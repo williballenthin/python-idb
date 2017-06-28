@@ -79,17 +79,26 @@ Field = namedtuple('Field', ['name', 'tag', 'index', 'cast'])
 Field.__new__.__defaults__ = (None,) * len(Field._fields)
 
 
-class Unique(): pass
+class IndexType:
+    def __init__(self, name):
+        self.name = name
 
-ALL = Unique()
-ADDRESSES = Unique()
-NUMBERS = Unique()
-NODES = Unique()
+    def str(self):
+        return self.name.upper()
+
+ALL = IndexType('all')
+ADDRESSES = IndexType('addresses')
+NUMBERS = IndexType('numbers')
+NODES = IndexType('nodes')
 
 VARIABLE_INDEXES = (ALL, ADDRESSES, NUMBERS, NODES)
 
 
 class _Analysis(object):
+    '''
+    this is basically a metaclass for analyzers of IDA Pro netnode namespaces (named nodeid).
+    provide set of fields, and parse them from netnodes (nodeid, tag, and optional index) when accessed.
+    '''
     def __init__(self, db, nodeid, fields):
         self.idb = db
         self.nodeid = nodeid
@@ -99,6 +108,9 @@ class _Analysis(object):
         self._fields_by_name = {f.name: f for f in self.fields}
 
     def _is_address(self, index):
+        '''
+        does the given index fall within a segment?
+        '''
         try:
             self.idb.id1.get_segment(index)
             return True
@@ -106,6 +118,9 @@ class _Analysis(object):
             return False
 
     def _is_node(self, index):
+        '''
+        does the index look like a raw nodeid?
+        '''
         if self.idb.wordsize == 4:
             return index & 0xFF000000 == 0xFF000000
         elif self.idb.wordsize == 8:
@@ -114,10 +129,16 @@ class _Analysis(object):
             raise RuntimeError('unexpected wordsize')
 
     def _is_number(self, index):
+        '''
+        does the index look like not (address or node)?
+        '''
         return (not self._is_address(index)) and (not self._is_node(index))
 
     def __getattr__(self, key):
         '''
+        for the given field name, fetch the value from the appropriate netnode.
+        if the field matches multiple indices, then return a mapping from index to value.
+
         Example::
 
             assert root.version == 695
@@ -129,6 +150,17 @@ class _Analysis(object):
         Example::
 
             assert entrypoints.ordinals[0] == 'DllMain'
+
+        Args:
+          key (str): the name of the field to fetch.
+
+        Returns:
+          any: if a parser was provided, then the parsed data.
+            otherwise, the bytes associatd with the field.
+            if the field matches multiple indices, then the result is mapping from index to value.
+
+        Raises:
+          KeyError: if the field does not exist.
         '''
         if key not in self._fields_by_name:
             return super(Analysis, self).__getattr__(key)
@@ -168,17 +200,33 @@ class _Analysis(object):
 
     def get_field_tag(self, name):
         '''
+        get the tag associated with the given field name.
+
         Example::
 
             assert root.get_field_tag('version') == 'A'
+
+        Args:
+          key (str): the name of the field to fetch.
+
+        Returns:
+          str: a single character string tag.
         '''
         return self._fields_by_name[name].tag
 
     def get_field_index(self, name):
         '''
+        get the index associated with the given field name.
         Example::
 
             assert root.get_field_index('version') == -1
+
+        Args:
+          key (str): the name of the field to fetch.
+
+        Returns:
+          int or IndexType: the index, if its specified.
+            otherwise, this will be an `IndexType` that indicates what indices are expected.
         '''
         return self._fields_by_name[name].index
 
