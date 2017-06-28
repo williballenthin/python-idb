@@ -272,7 +272,7 @@ class FileRegion(vstruct.VStruct):
 #       0x4: end effective address
 #       0x8: rva start?
 FileRegions = Analysis('$ fileregions', [
-    Field('start',  'S', ADDRESSES, as_cast(FileRegion))
+    Field('regions',  'S', ADDRESSES, as_cast(FileRegion))
 ])
 
 

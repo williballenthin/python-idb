@@ -44,3 +44,17 @@ def test_entrypoints(kernel32_idb):
 
     allofthem = entrypoints.all
     assert len(allofthem) == 0x624
+
+
+def test_fileregions(kernel32_idb):
+    fileregions = idb.analysis.FileRegions(kernel32_idb)
+
+    regions = fileregions.regions
+    assert len(regions) == 3
+    assert list(regions.keys()) == [0x68901000, 0x689db000, 0x689dd000]
+
+
+    assert regions[0x68901000].start == 0x68901000
+    assert regions[0x68901000].end == 0x689db000
+    assert regions[0x68901000].rva == 0x1000
+
