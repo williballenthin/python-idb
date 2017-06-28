@@ -8,9 +8,9 @@ import binascii
 #logging.basicConfig(level=logging.DEBUG)
 
 
-slow = pytest.mark.skipif(
-    not pytest.config.getoption("--runslow"),
-    reason="need --runslow option to run"
+debug = pytest.mark.skipif(
+    not pytest.config.getoption("--rundebug"),
+    reason="need --rundebug option to run"
     )
 
 
@@ -64,9 +64,9 @@ def test_loader(kernel32_idb):
     assert loader.supval(idb.netnode.LOADER_INDEX.FORMAT).startswith(b'Portable executable')
 
 
-@slow
+@debug
 def test_all_the_values(kernel32_idb):
-    # this is primarily to demonstrate what the btree keys look like
+    # this is primarily to demonstrate what the btree keys and values look like.
 
     minkey = binascii.unhexlify('24204d4158204c494e4b')
     cursor = kernel32_idb.id0.find(minkey)

@@ -100,6 +100,7 @@ def test_find_exact_match(kernel32_idb):
     with pytest.raises(KeyError):
         kernel32_idb.id0.find(b'does not exist!')
 
+
 def h(number):
     '''
     convert a number to a hex representation, with no leading '0x'.
@@ -265,7 +266,6 @@ def test_cursor_enum_all_desc(kernel32_idb):
     count = 1
     while True:
         try:
-            #print(cursor.key)
             cursor.prev()
         except IndexError:
             break
