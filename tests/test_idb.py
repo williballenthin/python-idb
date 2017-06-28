@@ -289,7 +289,6 @@ def test_id1(kernel32_idb):
     assert id1.get_segment(0x689dc000 - 1).bounds.start == 0x68901000
     assert id1.get_next_segment(0x68901000).bounds.start == 0x689DD000
     assert id1.get_flags(0x68901000) == 0x2590
-    assert id1.get_byte(0x68901000) == 0x90
 
 
 def test_nam(kernel32_idb):
