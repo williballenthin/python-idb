@@ -39,99 +39,74 @@ def test_id0(kernel32_idb):
     p1.validate()
 
 
+def h2b(somehex):
+    return binascii.unhexlify(somehex)
+
+
+def b2h(somebytes):
+    return binascii.hexlify(somebytes).decode('ascii')
+
+
 def test_find_exact_match(kernel32_idb):
     # this is found in the root node, first index
-    key = binascii.unhexlify('2e6892663778689c4fb7')
-    assert binascii.hexlify(kernel32_idb.id0.find(key).key) == binascii.hexlify(key)
-    assert binascii.hexlify(kernel32_idb.id0.find(key).value) == b'13'
+    key = h2b('2e6892663778689c4fb7')
+    assert kernel32_idb.id0.find(key).key == key
+    assert b2h(kernel32_idb.id0.find(key).value) == '13'
 
     # this is found in the second level, third index
-    key = binascii.unhexlify('2e689017765300000009')
-    assert binascii.hexlify(kernel32_idb.id0.find(key).key) == binascii.hexlify(key)
-    assert binascii.hexlify(kernel32_idb.id0.find(key).value) == b'02'
+    key = h2b('2e689017765300000009')
+    assert kernel32_idb.id0.find(key).key == key
+    assert b2h(kernel32_idb.id0.find(key).value) == '02'
 
     # this is found in the root node, last index.
-    key = binascii.unhexlify('2eff001bc44e')
-    assert binascii.hexlify(kernel32_idb.id0.find(key).key) == binascii.hexlify(key)
-    assert binascii.hexlify(kernel32_idb.id0.find(key).value) == b'24204636383931344133462e6c705375624b6579'
+    key = h2b('2eff001bc44e')
+    assert kernel32_idb.id0.find(key).key == key
+    assert b2h(kernel32_idb.id0.find(key).value) == '24204636383931344133462e6c705375624b6579'
 
     # this is found on a leaf node, first index
-    key = binascii.unhexlify('2e6890142c5300001000')
-    assert binascii.hexlify(kernel32_idb.id0.find(key).key) == binascii.hexlify(key)
-    assert binascii.hexlify(kernel32_idb.id0.find(key).value) == b'01080709'
+    key = h2b('2e6890142c5300001000')
+    assert kernel32_idb.id0.find(key).key == key
+    assert b2h(kernel32_idb.id0.find(key).value) == '01080709'
 
     # this is found on a leaf node, fourth index
-    key = binascii.unhexlify('2e689a288c530000000a')
-    assert binascii.hexlify(kernel32_idb.id0.find(key).key) == binascii.hexlify(key)
-    assert binascii.hexlify(kernel32_idb.id0.find(key).value) == b'02'
+    key = h2b('2e689a288c530000000a')
+    assert kernel32_idb.id0.find(key).key == key
+    assert b2h(kernel32_idb.id0.find(key).value) == '02'
 
     # this is found on a leaf node, last index
-    key = binascii.unhexlify('2e6890157f5300000009')
-    assert binascii.hexlify(kernel32_idb.id0.find(key).key) == binascii.hexlify(key)
-    assert binascii.hexlify(kernel32_idb.id0.find(key).value) == b'02'
+    key = h2b('2e6890157f5300000009')
+    assert kernel32_idb.id0.find(key).key == key
+    assert b2h(kernel32_idb.id0.find(key).value) == '02'
 
     # exercise the max/min range
-    minkey = binascii.unhexlify('24204d4158204c494e4b')
-    assert binascii.hexlify(kernel32_idb.id0.find(minkey).key) == binascii.hexlify(minkey)
+    minkey = h2b('24204d4158204c494e4b')
+    assert kernel32_idb.id0.find(minkey).key == minkey
 
-    maxkey = binascii.unhexlify('4e776373737472')
-    assert binascii.hexlify(kernel32_idb.id0.find(maxkey).key) == binascii.hexlify(maxkey)
+    maxkey = h2b('4e776373737472')
+    assert kernel32_idb.id0.find(maxkey).key == maxkey
 
     # check our error handling
     with pytest.raises(KeyError):
         kernel32_idb.id0.find(b'does not exist!')
 
 
-def atest_kinds_of_keys(kernel32_idb):
-    # this is primarily to demonstrate what the btree keys look like
-
-    minkey = binascii.unhexlify('24204d4158204c494e4b')
-    cursor = kernel32_idb.id0.find(minkey)
-
-    import hexdump
-    while True:
-        if cursor.key[0] == 0x2E:
-            k = idb.netnode.parse_complex_key(cursor.key)
-            print('nodeid: %x tag: %s index: %x' % (
-                k.nodeid,
-                k.tag,
-                k.index or 0x0))
-        else:
-            hexdump.hexdump(cursor.key)
-
-        '''
-        try:
-            print('(int)' + idb.netnode.get_int(kernel32_idb, key.nodeid, key.tag, key.index))
-        except ValueError:
-            try:
-                print('(str)' + idb.netnode.get_string(kernel32_idb, key.nodeid, key.tag, key.index))
-            except UnicodeDecodeError:
-                print('(bytes)')
-                hexdump.hexdump(idb.netnode.get_bytes(kernel32_idb, key.nodeid, key.tag, key.index))
-                '''
-
-        try:
-            cursor.next()
-        except IndexError:
-            break
-
 
 def test_find_prefix(kernel32_idb):
     # nodeid: ff000006 ($fixups)
     fixup_nodeid = '2eff000006'
-    key = binascii.unhexlify(fixup_nodeid)
+    key = h2b(fixup_nodeid)
 
     # the first match is the N (name) tag
     cursor = kernel32_idb.id0.find_prefix(key)
-    assert binascii.hexlify(cursor.key) == fixup_nodeid + hex(ord('N'))
+    assert b2h(cursor.key) == fixup_nodeid + hex(ord('N'))
 
     # nodeid: ff000006 ($fixups) tag: S
     supvals = fixup_nodeid + hex(ord('S'))
-    key = binascii.unhexlify(supvals)
+    key = h2b(supvals)
 
     # the first match is for index 0x68901025
     cursor = kernel32_idb.id0.find_prefix(key)
-    assert binascii.hexlify(cursor.key) == fixup_nodeid + '68901025'
+    assert b2h(cursor.key) == fixup_nodeid + '68901025'
 
     with pytest.raises(KeyError):
         cursor = kernel32_idb.id0.find_prefix('does not exist')
@@ -144,15 +119,15 @@ def test_cursor_easy_leaf(kernel32_idb):
     #      00:00: 2eff00002253689cc95b = ff689cc95b40ff8000c00bd30201
     #    > 00:01: 2eff00002253689cc99b = ff689cc99b32ff8000c00be35101
     #      00:00: 2eff00002253689cc9cd = ff689cc9cd2bff8000c00be12f01
-    key = binascii.unhexlify('2eff00002253689cc99b')
+    key = h2b('2eff00002253689cc99b')
     cursor = kernel32_idb.id0.find(key)
 
     cursor.next()
-    assert binascii.hexlify(cursor.key) == b'2eff00002253689cc9cd'
+    assert b2h(cursor.key) == '2eff00002253689cc9cd'
 
     cursor.prev()
     cursor.prev()
-    assert binascii.hexlify(cursor.key) == b'2eff00002253689cc95b'
+    assert b2h(cursor.key) == '2eff00002253689cc95b'
 
 
 def test_cursor_branch(kernel32_idb):
@@ -185,31 +160,31 @@ def test_cursor_branch(kernel32_idb):
     #     00:01: 2eff00002253689cc99b = ff689cc99b32ff8000c00be35101
     #     00:00: 2eff00002253689cc9cd = ff689cc9cd2bff8000c00be12f01
 
-    key = binascii.unhexlify('2eff00002253689bea8e')
+    key = h2b('2eff00002253689bea8e')
     cursor = kernel32_idb.id0.find(key)
     cursor.next()
-    assert binascii.hexlify(cursor.key) == b'2eff00002253689bece5'
+    assert b2h(cursor.key) == '2eff00002253689bece5'
 
-    key = binascii.unhexlify('2eff00002253689bea8e')
+    key = h2b('2eff00002253689bea8e')
     cursor = kernel32_idb.id0.find(key)
     cursor.prev()
-    assert binascii.hexlify(cursor.key) == b'2eff00002253689bea26'
+    assert b2h(cursor.key) == '2eff00002253689bea26'
 
 
 def test_cursor_complex_leaf_next(kernel32_idb):
     # see the scenario in `test_cursor_branch`.
-    key = binascii.unhexlify('2eff00002253689bea26')
+    key = h2b('2eff00002253689bea26')
     cursor = kernel32_idb.id0.find(key)
     cursor.next()
-    assert binascii.hexlify(cursor.key) == b'2eff00002253689bea8e'
+    assert b2h(cursor.key) == '2eff00002253689bea8e'
 
 
 def test_cursor_complex_leaf_prev(kernel32_idb):
     # see the scenario in `test_cursor_branch`.
-    key = binascii.unhexlify('2eff00002253689bece5')
+    key = h2b('2eff00002253689bece5')
     cursor = kernel32_idb.id0.find(key)
     cursor.prev()
-    assert binascii.hexlify(cursor.key) == b'2eff00002253689bea8e'
+    assert b2h(cursor.key) == '2eff00002253689bea8e'
 
 
 def test_cursor_min(kernel32_idb):
@@ -219,12 +194,12 @@ def test_cursor_min(kernel32_idb):
     #   24204d4158204e4f4445
     #   24204e45542044455343
     #   2e0000000044689ae208
-    key = binascii.unhexlify('24204d4158204c494e4b')
+    key = h2b('24204d4158204c494e4b')
     cursor = kernel32_idb.id0.find(key)
     cursor.next()
-    assert binascii.hexlify(cursor.key) == b'24204d4158204e4f4445'
+    assert b2h(cursor.key) == '24204d4158204e4f4445'
     cursor.prev()
-    assert binascii.hexlify(cursor.key) == b'24204d4158204c494e4b'
+    assert b2h(cursor.key) == '24204d4158204c494e4b'
     with pytest.raises(IndexError):
         cursor.prev()
 
@@ -237,19 +212,19 @@ def test_cursor_max(kernel32_idb):
     #   4e7763736e6370795f73
     #   4e77637372636872
     #   4e776373737472
-    key = binascii.unhexlify('4e776373737472')
+    key = h2b('4e776373737472')
     cursor = kernel32_idb.id0.find(key)
     cursor.prev()
-    assert binascii.hexlify(cursor.key) == b'4e77637372636872'
+    assert b2h(cursor.key) == '4e77637372636872'
     cursor.next()
-    assert binascii.hexlify(cursor.key) == b'4e776373737472'
+    assert b2h(cursor.key) == '4e776373737472'
     with pytest.raises(IndexError):
         cursor.next()
 
 
 @slow
 def test_cursor_enum_all_asc(kernel32_idb):
-    minkey = binascii.unhexlify('24204d4158204c494e4b')
+    minkey = h2b('24204d4158204c494e4b')
     cursor = kernel32_idb.id0.find(minkey)
     count = 1
     while True:
@@ -264,7 +239,7 @@ def test_cursor_enum_all_asc(kernel32_idb):
 
 @slow
 def test_cursor_enum_all_desc(kernel32_idb):
-    maxkey = binascii.unhexlify('4e776373737472')
+    maxkey = h2b('4e776373737472')
     cursor = kernel32_idb.id0.find(maxkey)
     count = 1
     while True:
