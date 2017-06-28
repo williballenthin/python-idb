@@ -949,16 +949,23 @@ class IDB(vstruct.VStruct):
         self.til.validate()
         return True
 
+    def netnode(self, *args, **kwargs):
+        return idb.netnode.Netnode(self, *args, **kwargs)
+
     def SegStart(self, ea):
+        # TODO: i think this should use '$ fileregions'
         return self.id1.get_segment(ea).bounds.start
 
     def SegEnd(self, ea):
+        # TODO: i think this should use '$ fileregions'
         return self.id1.get_segment(ea).bounds.end
 
     def FirstSeg(self):
+        # TODO: i think this should use '$ fileregions'
         return self.id1.segments[0].bounds.start
 
     def NextSeg(self, ea):
+        # TODO: i think this should use '$ fileregions'
         return self.id1.get_next_segment(ea).bounds.start
 
     def GetFlags(self, ea):
@@ -967,5 +974,117 @@ class IDB(vstruct.VStruct):
     def IdbByte(self, ea):
         return self.id1.get_byte(ea)
 
-    def netnode(self, *args, **kwargs):
-        return idb.netnode.Netnode(self, *args, **kwargs)
+    def isFunc(self, flags):
+        return flags & FLAGS.MS_CODE == FLAGS.FF_FUNC
+
+    def isImmd(self, flags):
+        return flags & FLAGS.MS_CODE == FLAGS.FF_IMMD
+
+
+class FLAGS:
+    # instruction operand types bites
+    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__opbits.html
+
+    # Mask for 1st arg typing.
+    MS_0TYPE = 0x00F00000
+
+    # Void (unknown)?
+    FF_0VOID = 0x00000000
+
+    # Hexadecimal number?
+    FF_0NUMH = 0x00100000
+
+    # Decimal number?
+    FF_0NUMD = 0x00200000
+
+    # Char ('x')?
+    FF_0CHAR = 0x00300000
+
+    # Segment?
+    FF_0SEG = 0x00400000
+
+    # Offset?
+    FF_0OFF = 0x00500000
+
+    # Binary number?
+    FF_0NUMB = 0x00600000
+
+    # Octal number?
+    FF_0NUMO = 0x00700000
+
+    # Enumeration?
+    FF_0ENUM = 0x00800000
+
+    # Forced operand?
+    FF_0FOP = 0x00900000
+
+    # Struct offset?
+    FF_0STRO = 0x00A00000
+
+    # Stack variable?
+    FF_0STK = 0x00B00000
+
+    # Floating point number?
+    FF_0FLT = 0x00C00000
+
+    # Custom representation?
+    FF_0CUST = 0x00D00000
+
+    # Mask for the type of other operands.
+    MS_1TYPE = 0x0F000000
+
+    # Void (unknown)?
+    FF_1VOID = 0x00000000
+
+    # Hexadecimal number?
+    FF_1NUMH = 0x01000000
+
+    # Decimal number?
+    FF_1NUMD = 0x02000000
+
+    # Char ('x')?
+    FF_1CHAR = 0x03000000
+
+    # Segment?
+    FF_1SEG = 0x04000000
+
+    # Offset?
+    FF_1OFF = 0x05000000
+
+    # Binary number?
+    FF_1NUMB = 0x06000000
+
+    # Octal number?
+    FF_1NUMO = 0x07000000
+
+    # Enumeration?
+    FF_1ENUM = 0x08000000
+
+    # Forced operand?
+    FF_1FOP = 0x09000000
+
+    # Struct offset?
+    FF_1STRO = 0x0A000000
+
+    # Stack variable?
+    FF_1STK = 0x0B000000
+
+    # Floating point number?
+    FF_1FLT = 0x0C000000
+
+    # Custom representation?
+    FF_1CUST = 0x0D000000
+
+    # code byte bits
+    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__codebits.html
+ 	  # Mask for code bits.
+    MS_CODE = 0xF0000000
+
+ 	  # function start?
+    FF_FUNC = 0x10000000
+
+    # Has Immediate value?
+    FF_IMMD = 0x40000000
+
+ 	  # Has jump table or switch_info?
+    FF_JUMP = 0x80000000
