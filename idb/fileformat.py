@@ -768,21 +768,6 @@ class ID1(vstruct.VStruct):
         offset = seg.offset + 4 * (ea - seg.bounds.start)
         return struct.unpack_from('<I', self.buffer, offset)[0]
 
-    def get_byte(self, ea):
-        '''
-        Fetch the byte at the given effective address.
-
-        Arguments:
-          ea (int): the effective address.
-
-        Returns:
-          int: the byte at the given address.
-
-        Raises:
-          KeyError: if the given address does not fall within a segment.
-        '''
-        return self.get_flags(ea) & 0xFF
-
     def validate(self):
         if self.signature != b'VA*\x00':
             raise ValueError('bad signature')
@@ -972,7 +957,14 @@ class IDB(vstruct.VStruct):
         return self.id1.get_flags(ea)
 
     def IdbByte(self, ea):
-        return self.id1.get_byte(ea)
+        flags = self.GetFlags(ea)
+        if self.hasValue(flags):
+            return flags & FLAGS.MS_VAL
+        else:
+            raise KeyError(ea)
+
+    def hasValue(self, flags):
+        return flags & FLAGS.FF_IVL > 0
 
     def isFunc(self, flags):
         return flags & FLAGS.MS_CODE == FLAGS.FF_FUNC
@@ -980,8 +972,42 @@ class IDB(vstruct.VStruct):
     def isImmd(self, flags):
         return flags & FLAGS.MS_CODE == FLAGS.FF_IMMD
 
+    def isCode(self, flags):
+        return flags & FLAGS.MS_CLS == FLAGS.FF_CODE
+
+    def isData(self, flags):
+        return flags & FLAGS.MS_CLS == FLAGS.FF_DATA
+
+    def isTail(self, flags):
+        return flags & FLAGS.MS_CLS == FLAGS.FF_TAIL
+
+    def isNotTail(self, flags):
+        return not self.isTail(flags)
+
+    def isUnknown(self, flags):
+        return flags & FLAGS.MS_CLS == FLAGS.FF_UNK
+
+    def isHead(self, flags):
+        return self.isCode(flags) or self.isData(flags)
+
+
 
 class FLAGS:
+ 	  # Mask for typing.
+    MS_CLS = 0x00000600
+
+    # Code ?
+    FF_CODE = 0x00000600
+
+    # Data ?
+    FF_DATA = 0x00000400
+
+ 	  # Tail ?
+    FF_TAIL = 0x00000200
+
+    # Unknown ?
+    FF_UNK = 0x00000000
+
     # instruction operand types bites
     # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__opbits.html
 
@@ -1088,3 +1114,63 @@ class FLAGS:
 
  	  # Has jump table or switch_info?
     FF_JUMP = 0x80000000
+
+    # data bytes bits
+    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__databits.html
+
+    # Mask for DATA typing.
+    DT_TYPE = 0xF0000000
+
+    # byte
+    FF_BYTE = 0x00000000
+
+    # word
+    FF_WORD = 0x10000000
+
+    # double word
+    FF_DWRD = 0x20000000
+
+    # quadro word
+    FF_QWRD = 0x30000000
+
+    # tbyte
+    FF_TBYT = 0x40000000
+
+    # ASCII ?
+    FF_ASCI = 0x50000000
+
+    # Struct ?
+    FF_STRU = 0x60000000
+
+    # octaword/xmm word (16 bytes/128 bits)
+    FF_OWRD = 0x70000000
+
+    # float
+    FF_FLOAT = 0x80000000
+
+    # double
+    FF_DOUBLE = 0x90000000
+
+    # packed decimal real
+    FF_PACKREAL = 0xA0000000
+
+    # alignment directive
+    FF_ALIGN = 0xB0000000
+
+    # 3-byte data (only with support from the processor module)
+    FF_3BYTE = 0xC0000000
+
+    # custom data type
+    FF_CUSTOM = 0xD0000000
+
+    # ymm word (32 bytes/256 bits)
+    FF_YWRD = 0xE0000000
+
+    # bytes
+    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__.html
+
+    # Mask for byte value.
+    MS_VAL = 0x000000FF
+
+    # Byte has value?
+    FF_IVL = 0x00000100
