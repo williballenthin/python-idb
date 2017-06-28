@@ -42,6 +42,27 @@ def test_state(kernel32_idb):
     assert kernel32_idb.isHead(flags) == False
 
 
+def test_specific_state(kernel32_idb):
+    # .text:68901010 8B FF                                   mov     edi, edi
+    # .text:68901012 55                                      push    ebp
+    first_ea = 0x68901010
+    flags = kernel32_idb.GetFlags(first_ea)
+
+    assert kernel32_idb.isFlow(flags) == False
+    assert kernel32_idb.isVar(flags) == False
+    assert kernel32_idb.hasExtra(flags) == True
+    assert kernel32_idb.has_cmt(flags) == False
+    assert kernel32_idb.hasRef(flags) == True
+    assert kernel32_idb.has_name(flags) == True
+    assert kernel32_idb.has_dummy_name(flags) == False
+
+    # .text:68901044 FF 70 18                                push    dword ptr [eax+18h] ; HeapHandle
+    first_ea = 0x68901044
+    flags = kernel32_idb.GetFlags(first_ea)
+    assert kernel32_idb.isFlow(flags) == True
+    assert kernel32_idb.has_cmt(flags) == True
+
+
 
 def test_code(kernel32_idb):
     first_ea = 0x68901010
