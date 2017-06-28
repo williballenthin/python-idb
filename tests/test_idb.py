@@ -115,7 +115,27 @@ def atest_kinds_of_keys(kernel32_idb):
         except IndexError:
             break
 
- 
+
+def test_find_prefix(kernel32_idb):
+    # nodeid: ff000006 ($fixups)
+    fixup_nodeid = '2eff000006'
+    key = binascii.unhexlify(fixup_nodeid)
+
+    # the first match is the N (name) tag
+    cursor = kernel32_idb.id0.find_prefix(key)
+    assert binascii.hexlify(cursor.key) == fixup_nodeid + hex(ord('N'))
+
+    # nodeid: ff000006 ($fixups) tag: S
+    supvals = fixup_nodeid + hex(ord('S'))
+    key = binascii.unhexlify(supvals)
+
+    # the first match is for index 0x68901025
+    cursor = kernel32_idb.id0.find_prefix(key)
+    assert binascii.hexlify(cursor.key) == fixup_nodeid + '68901025'
+
+    with pytest.raises(KeyError):
+        cursor = kernel32_idb.id0.find_prefix('does not exist')
+
 
 def test_cursor_easy_leaf(kernel32_idb):
     # this is found on a leaf, second to last index.
