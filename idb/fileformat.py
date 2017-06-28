@@ -1,6 +1,7 @@
 '''
 lots of inspiration from: https://github.com/nlitsme/pyidbutil
 '''
+import abc
 import struct
 import logging
 from collections import namedtuple
@@ -277,13 +278,72 @@ class Page(vstruct.VStruct):
         return True
 
 
+class FindStrategy(object):
+    '''
+    defines the interface for strategies of searching the btree.
+
+    implementors will provide a `.find()` method that operates on a `Cursor` instance.
+    the method will update the cursor as it navigates the btree.
+    '''
+    __meta__ = abc.ABCMeta
+    @abc.abstractmethod
+    def find(self, cursor, key):
+        raise NotImplementedError()
+
+
+class ExactMatchStrategy(FindStrategy):
+    def _find(self, cursor, page_number, key):
+        page = cursor.index.get_page(page_number)
+        cursor.path.append(page)
+
+        is_largest = False
+        try:
+            entry_number = cursor.find_index(page, key)
+        except KeyError:
+            # an entry larger than the given key is not found.
+            # but we know we should be searching this node,
+            #  so we must have to recurse into the final page pointer.
+            is_largest = True
+            entry_number = page.entry_count - 1
+
+        entry = page.get_entry(entry_number)
+
+        if entry.key == key:
+            cursor.entry = entry
+            cursor.entry_number = entry_number
+            return
+        elif page.is_leaf():
+            # TODO: exact match.
+            # there is no exact match.
+            raise KeyError(key)
+        else:
+            if entry_number == 0:
+                next_page_number = page.ppointer
+            elif is_largest:
+                next_page_number = page.get_entry(page.entry_count - 1).page
+            else:
+                next_page_number = page.get_entry(entry_number - 1).page
+            self._find(cursor, next_page_number, key)
+            return
+
+    def find(self, cursor, key):
+        self._find(cursor, cursor.index.root_page, key)
+
+
+class PrefixMatchStrategy(FindStrategy):
+    def find(self, cursor, key):
+        raise NotImplementedError()
+
+EXACT_MATCH = ExactMatchStrategy
+PREFIX_MATCH = PrefixMatchStrategy
+
+
 class Cursor(object):
     '''
     represents a particular location in the b-tree.
     can be navigated "forward" and "backwards".
-    constructed by executing an initial query.
     '''
-    def __init__(self, index, key):
+    def __init__(self, index):
         super(Cursor, self).__init__()
         self.index = index
 
@@ -294,9 +354,7 @@ class Cursor(object):
         self.entry = None
         self.entry_number = None
 
-        self._find(self.index.root_page, key)
-
-    def _find_index(self, page, key):
+    def find_index(self, page, key):
         '''
         find the index of the exact match, or in the case of a branch node,
          the index of the least-greater entry.
@@ -323,40 +381,6 @@ class Cursor(object):
                     continue
         raise KeyError(key)
 
-    def _find(self, page_number, key):
-        page = self.index.get_page(page_number)
-        self.path.append(page)
-
-        is_largest = False
-        try:
-            entry_number = self._find_index(page, key)
-        except KeyError:
-            # an entry larger than the given key is not found.
-            # but we know we should be searching this node,
-            #  so we must have to recurse into the final page pointer.
-            is_largest = True
-            entry_number = page.entry_count - 1
-
-        entry = page.get_entry(entry_number)
-
-        if entry.key == key:
-            self.entry = entry
-            self.entry_number = entry_number
-            return
-        elif page.is_leaf():
-            # TODO: exact match.
-            # there is no exact match.
-            raise KeyError(key)
-        else:
-            if entry_number == 0:
-                next_page_number = page.ppointer
-            elif is_largest:
-                next_page_number = page.get_entry(page.entry_count - 1).page
-            else:
-                next_page_number = page.get_entry(entry_number - 1).page
-            self._find(next_page_number, key)
-            return
-
     def next(self):
         '''
         traverse to the next entry.
@@ -381,7 +405,7 @@ class Cursor(object):
 
                     current_page = self.path[-1]
                     try:
-                        entry_number = self._find_index(current_page, start_key)
+                        entry_number = self.find_index(current_page, start_key)
                     except KeyError:
                         # not found, becaues its too big for this node.
                         # so we need to go higher.
@@ -444,7 +468,7 @@ class Cursor(object):
 
                     current_page = self.path[-1]
                     try:
-                        entry_number = self._find_index(current_page, start_key)
+                        entry_number = self.find_index(current_page, start_key)
                     except KeyError:
                         entry_number = current_page.entry_count
 
@@ -524,8 +548,31 @@ class ID0(vstruct.VStruct):
         page.vsParse(buf)
         return page
 
-    def find(self, key):
-        return Cursor(self, key)
+    def find(self, key, strategy=EXACT_MATCH):
+        '''
+        Args:
+          key (bytes): the index key for which to search.
+          strategy (Type[MatchStrategy]): the strategy to use to do the search.
+            some possible strategies:
+              - EXACT_MATCH
+              - PREFIX_MATCH
+
+        Returns:
+          cursor: the cursor that points to the match.
+
+        Raises:
+          KeyError: if the match failes to find a result.
+        '''
+        c = Cursor(self)
+        s = strategy()
+        s.find(c, key)
+        return c
+
+    def find_prefix(self, key):
+        '''
+        convenience shortcut for prefix match search.
+        '''
+        return self.find(key, strategy=PREFIX_MATCH)
 
     def validate(self):
         if self.signature != b'B-tree v2':
