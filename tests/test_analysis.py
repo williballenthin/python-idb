@@ -58,3 +58,13 @@ def test_fileregions(kernel32_idb):
     assert regions[0x68901000].end == 0x689db000
     assert regions[0x68901000].rva == 0x1000
 
+
+def test_functions(kernel32_idb):
+    functions = idb.analysis.Functions(kernel32_idb)
+
+    funcs = functions.functions
+    assert len(funcs) == 0x12a8
+
+    for addr, func in funcs.items():
+        assert addr == func.start
+

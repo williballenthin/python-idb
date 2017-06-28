@@ -5,6 +5,8 @@ import datetime
 from collections import namedtuple
 
 import vstruct
+from vstruct.primitives import v_bytes
+from vstruct.primitives import v_uint8
 from vstruct.primitives import v_uint32
 
 import idb
@@ -276,15 +278,44 @@ FileRegions = Analysis('$ fileregions', [
 ])
 
 
-FUNCS_NODEID = '$ funcs'
+
+# nodeid: ff000022 tag: S index: 0x689bd410
+# FF 68 9B D4 10 81 5A FF  44 10 99 CE 20 04 00 10 00 00 00 00 00 00
+# [] [addr be  ] [] [   ]
+#                flags, if 0x80 set, then next is 2 bytes
+#
+# nodeid: ff000022 tag: S index: 0x689bd56a
+# FF 68 9B D5 6A 2D FF     80  00 C0 0A 48 05 01
+# [] [addr be  ] [] []     []
+#                flags, if 0x80 set, then next 2 bytes
+
+class Function(vstruct.VStruct):
+    def __init__(self):
+        vstruct.VStruct.__init__(self)
+        self.unk0  = v_uint8()
+        self.start = v_uint32(bigend=True)
+        self.flags = v_uint8()
+        self.unk05 = v_bytes()
+
+    def pcb_flags(self):
+        if self.flags & 0x80:
+            self['unk05'].vsSetLength(1)
+        else:
+            self['unk05'].vsSetLength(0)
+
+
+
+# '$ funcs' maps from function effective address to details about it.
+#
 # supvals:
 #   format1:
 #     index: effective address
 #     value:
 #       0x0:
+#       0x1: start effective address (big endian)
 #       0x4:
 #       0x8:
 #       0xC:
 Functions = Analysis('$ funcs', [
-    Field('address',  'S', ADDRESSES, bytes)
+    Field('functions',  'S', ADDRESSES, as_cast(Function)),
 ])
