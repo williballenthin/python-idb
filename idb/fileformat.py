@@ -991,25 +991,28 @@ class IDB(vstruct.VStruct):
         return self.isCode(flags) or self.isData(flags)
 
     def isFlow(self, flags):
-        return flags & FLAGS.MS_COMM == FLAGS.FF_FLOW
+        return flags & FLAGS.MS_COMM & FLAGS.FF_FLOW > 0
 
     def isVar(self, flags):
-        return flags & FLAGS.MS_COMM == FLAGS.FF_VAR
+        return flags & FLAGS.MS_COMM & FLAGS.FF_VAR > 0
 
     def hasExtra(self, flags):
-        return flags & FLAGS.MS_COMM == FLAGS.FF_LINE
+        print(flags & FLAGS.FF_LINE)
+        return flags & FLAGS.MS_COMM & FLAGS.FF_LINE > 0
 
     def has_cmt(self, flags):
-        return flags & FLAGS.MS_COMM == FLAGS.FF_COMM
+        return flags & FLAGS.MS_COMM & FLAGS.FF_COMM > 0
 
     def hasRef(self, flags):
-        return flags & FLAGS.MS_COMM == FLAGS.FF_REF
+        print(flags & FLAGS.FF_REF)
+        return flags & FLAGS.MS_COMM & FLAGS.FF_REF > 0
 
     def has_name(self, flags):
-        return flags & FLAGS.MS_COMM == FLAGS.FF_NAME
+        print(flags & FLAGS.FF_NAME)
+        return flags & FLAGS.MS_COMM & FLAGS.FF_NAME > 0
 
     def has_dummy_name(self, flags):
-        return flags & FLAGS.MS_COMM == FLAGS.FF_LABL
+        return flags & FLAGS.MS_COMM & FLAGS.FF_LABL > 0
 
     def has_auto_name(self, flags):
         raise NotImplementedError()
@@ -1021,10 +1024,10 @@ class IDB(vstruct.VStruct):
         raise NotImplementedError()
 
     def is_invsign(self, flags):
-        return flags & FLAGS.MS_COMM == FLAGS.FF_SIGN
+        return flags & FLAGS.MS_COMM & FLAGS.FF_SIGN > 0
 
     def is_bnot(self, flags):
-        return flags & FLAGS.MS_COMM == FLAGS.FF_BNOT
+        return flags & FLAGS.MS_COMM & FLAGS.FF_BNOT > 0
 
 
 class FLAGS:
