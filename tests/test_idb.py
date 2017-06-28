@@ -40,10 +40,21 @@ def test_id0(kernel32_idb):
 
 
 def h2b(somehex):
+    '''
+    convert the given hex string into bytes.
+
+    binascii.unhexlify is many more characters to type :-).
+    '''
     return binascii.unhexlify(somehex)
 
 
 def b2h(somebytes):
+    '''
+    convert the given bytes into a hex *string*.
+
+    binascii.hexlify returns a bytes, which is slightly annoying.
+    also, its many more characters to type.
+    '''
     return binascii.hexlify(somebytes).decode('ascii')
 
 
@@ -89,6 +100,16 @@ def test_find_exact_match(kernel32_idb):
     with pytest.raises(KeyError):
         kernel32_idb.id0.find(b'does not exist!')
 
+def h(number):
+    '''
+    convert a number to a hex representation, with no leading '0x'.
+
+    Example::
+
+        assert h(16)   == '10'
+        assert hex(16) == '0x10'
+    '''
+    return '%02x' % number
 
 
 def test_find_prefix(kernel32_idb):
