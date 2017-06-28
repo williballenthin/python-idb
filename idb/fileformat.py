@@ -1015,12 +1015,15 @@ class IDB(vstruct.VStruct):
         return flags & FLAGS.MS_COMM & FLAGS.FF_LABL > 0
 
     def has_auto_name(self, flags):
+        # unknown how to compute this
         raise NotImplementedError()
 
     def has_any_name(self, flags):
+        # unknown how to compute this
         raise NotImplementedError()
 
     def has_user_name(self, flags):
+        # unknown how to compute this
         raise NotImplementedError()
 
     def is_invsign(self, flags):
@@ -1029,8 +1032,36 @@ class IDB(vstruct.VStruct):
     def is_bnot(self, flags):
         return flags & FLAGS.MS_COMM & FLAGS.FF_BNOT > 0
 
+    # TODO: methods here: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__datafuncs1.html
+    # TODO: methods here: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__opfuncs1.html
+    # TODO: methods here: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__opfuncs2.html
+
+    def Head(self, ea):
+        raise NotImplementedError()
+
+    def NextHead(self, ea):
+        raise NotImplementedError()
+
+    def PrevHead(self, ea):
+        raise NotImplementedError()
+
+    def GetManyBytes(self, ea, count):
+        raise NotImplementedError()
+
 
 class FLAGS:
+    # instruction/data operands
+    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__op.html
+
+    # outer offset base (combined with operand number). More...
+    OPND_OUTER = 0x80
+
+    # mask for operand number
+    OPND_MASK = 0x07
+
+    # all operands
+    OPND_ALL = OPND_MASK
+
     # byte states bits
     # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__statebits.html
 
