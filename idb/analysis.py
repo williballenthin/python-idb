@@ -1,4 +1,5 @@
 import struct
+import logging
 import binascii
 import datetime
 from collections import namedtuple
@@ -8,6 +9,9 @@ from vstruct.primitives import v_uint32
 
 import idb
 import idb.netnode
+
+
+logger = logging.getLogger(__name__)
 
 
 def as_unix_timestamp(buf):
@@ -73,6 +77,16 @@ Field = namedtuple('Field', ['name', 'tag', 'index', 'cast'])
 Field.__new__.__defaults__ = (None,) * len(Field._fields)
 
 
+class Unique(): pass
+
+ALL = Unique()
+ADDRESSES = Unique()
+NUMBERS = Unique()
+NODES = Unique()
+
+VARIABLE_INDEXES = (ALL, ADDRESSES, NUMBERS, NODES)
+
+
 class _Analysis(object):
     def __init__(self, db, nodeid, fields):
         self.idb = db
@@ -81,6 +95,24 @@ class _Analysis(object):
         self.fields = fields
 
         self._fields_by_name = {f.name: f for f in self.fields}
+
+    def _is_address(self, index):
+        try:
+            self.idb.id1.get_segment(index)
+            return True
+        except KeyError:
+            return False
+
+    def _is_node(self, index):
+        if self.idb.wordsize == 4:
+            return index & 0xFF000000 == 0xFF000000
+        elif self.idb.wordsize == 8:
+            return index & 0xFF00000000000000 == 0xFF00000000000000
+        else:
+            raise RuntimeError('unexpected wordsize')
+
+    def _is_number(self, index):
+        return (not self._is_address(index)) and (not self._is_node(index))
 
     def __getattr__(self, key):
         '''
@@ -100,15 +132,29 @@ class _Analysis(object):
             return super(Analysis, self).__getattr__(key)
 
         field = self._fields_by_name[key]
-        if field.index == '*':
+        if field.index in VARIABLE_INDEXES:
+
+            if field.index == ADDRESSES:
+                nfilter = self._is_address
+            elif field.index == NUMBERS:
+                nfilter = self._is_number
+            elif field.index == NODES:
+                nfilter = self._is_node
+            elif field.index == ALL:
+                nfilter = lambda x: True
+            else:
+                raise ValueError('unexpected index')
+
             # indexes are variable, so map them to the values
             ret = {}
-            for sup in self.netnode.sups(tag=field.tag):
-                v = self.netnode.supval(sup, tag=field.tag)
+            for sup in self.netnode.supentries(tag=field.tag):
+                if not nfilter(sup.parsed_key.index):
+                    continue
+
                 if field.cast is None:
-                    ret[sup] = bytes(v)
+                    ret[sup.parsed_key.index] = bytes(sup.value)
                 else:
-                    ret[sup] = field.cast(bytes(v))
+                    ret[sup.parsed_key.index] = field.cast(bytes(sup.value))
             return ret
         else:
             # normal field with an explicit index
@@ -192,6 +238,8 @@ User = Analysis('$ user1', [
 ])
 
 
+# '$ entry points' maps from ordinal/address to function name.
+#
 # supvals:
 #   format1
 #     index: export ordinal
@@ -199,9 +247,10 @@ User = Analysis('$ user1', [
 #   format2
 #     index: EA
 #     value: function name
-EntryPoints = Analysis('$ entrypoints', [
-    Field('ordinals',  'S', '*', idb.netnode.as_string),
-    Field('addresses', 'S', '*', idb.netnode.as_string),
+EntryPoints = Analysis('$ entry points', [
+    Field('ordinals',  'S', NUMBERS, idb.netnode.as_string),
+    Field('addresses', 'S', ADDRESSES, idb.netnode.as_string),
+    Field('all',       'S', ALL, idb.netnode.as_string),
 ])
 
 
@@ -213,6 +262,8 @@ class FileRegion(vstruct.VStruct):
         self.rva = v_uint32()
 
 
+# '$ fileregions' maps from segment start address to details about it.
+#
 # supvals:
 #   format1:
 #     index: start effective address
@@ -221,7 +272,7 @@ class FileRegion(vstruct.VStruct):
 #       0x4: end effective address
 #       0x8: rva start?
 FileRegions = Analysis('$ fileregions', [
-    Field('start',  'S', '*', as_cast(FileRegion))
+    Field('start',  'S', ADDRESSES, as_cast(FileRegion))
 ])
 
 
@@ -235,5 +286,5 @@ FUNCS_NODEID = '$ funcs'
 #       0x8:
 #       0xC:
 Functions = Analysis('$ funcs', [
-    Field('address',  'S', '*', bytes)
+    Field('address',  'S', ADDRESSES, bytes)
 ])

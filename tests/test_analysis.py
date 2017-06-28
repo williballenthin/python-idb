@@ -3,6 +3,10 @@ from fixtures import *
 import idb.analysis
 
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+
 def test_root(kernel32_idb):
     root = idb.analysis.Root(kernel32_idb)
 
@@ -22,3 +26,21 @@ def test_loader(kernel32_idb):
 
     assert loader.plugin == 'pe.ldw'
     assert loader.format.startswith('Portable executable') == True
+
+
+def test_entrypoints(kernel32_idb):
+    entrypoints = idb.analysis.EntryPoints(kernel32_idb)
+
+    addresses = entrypoints.addresses
+    assert len(addresses) == 1
+    assert 0x68901695 in addresses
+    assert addresses[0x68901695] == 'DllEntryPoint'
+
+    ordinals = entrypoints.ordinals
+    assert len(ordinals) == 0x623
+    assert 0x1 in ordinals
+    assert 0x623 in ordinals
+    assert ordinals[0x1] == 'BaseThreadInitThunk'
+
+    allofthem = entrypoints.all
+    assert len(allofthem) == 0x624
