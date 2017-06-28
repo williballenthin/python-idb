@@ -993,6 +993,9 @@ class IDB(vstruct.VStruct):
 
 
 class FLAGS:
+    # byte states bits
+    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__statebits.html
+
  	  # Mask for typing.
     MS_CLS = 0x00000600
 
@@ -1007,6 +1010,39 @@ class FLAGS:
 
     # Unknown ?
     FF_UNK = 0x00000000
+
+    # specific state information bits
+    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__statespecb.html
+
+    # Mask of common bits.
+    MS_COMM = 0x000FF800
+
+    # Has comment ?
+    FF_COMM = 0x00000800
+
+    # has references
+    FF_REF = 0x00001000
+
+    # Has next or prev lines ?
+    FF_LINE = 0x00002000
+
+    # Has name ?
+    FF_NAME = 0x00004000
+
+    # Has dummy name?
+    FF_LABL = 0x00008000
+
+    # Exec flow from prev instruction.
+    FF_FLOW = 0x00010000
+
+    # Inverted sign of operands.
+    FF_SIGN = 0x00020000
+
+    # Bitwise negation of operands.
+    FF_BNOT = 0x00040000
+
+    # is variable byte?
+    FF_VAR = 0x00080000
 
     # instruction operand types bites
     # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__opbits.html
