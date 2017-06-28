@@ -990,6 +990,41 @@ class IDB(vstruct.VStruct):
     def isHead(self, flags):
         return self.isCode(flags) or self.isData(flags)
 
+    def isFlow(self, flags):
+        return flags & FLAGS.MS_COMM == FLAGS.FF_FLOW
+
+    def isVar(self, flags):
+        return flags & FLAGS.MS_COMM == FLAGS.FF_VAR
+
+    def hasExtra(self, flags):
+        return flags & FLAGS.MS_COMM == FLAGS.FF_LINE
+
+    def has_cmt(self, flags):
+        return flags & FLAGS.MS_COMM == FLAGS.FF_COMM
+
+    def hasRef(self, flags):
+        return flags & FLAGS.MS_COMM == FLAGS.FF_REF
+
+    def has_name(self, flags):
+        return flags & FLAGS.MS_COMM == FLAGS.FF_NAME
+
+    def has_dummy_name(self, flags):
+        return flags & FLAGS.MS_COMM == FLAGS.FF_LABL
+
+    def has_auto_name(self, flags):
+        raise NotImplementedError()
+
+    def has_any_name(self, flags):
+        raise NotImplementedError()
+
+    def has_user_name(self, flags):
+        raise NotImplementedError()
+
+    def is_invsign(self, flags):
+        return flags & FLAGS.MS_COMM == FLAGS.FF_SIGN
+
+    def is_bnot(self, flags):
+        return flags & FLAGS.MS_COMM == FLAGS.FF_BNOT
 
 
 class FLAGS:
