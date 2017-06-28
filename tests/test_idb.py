@@ -119,18 +119,18 @@ def test_find_prefix(kernel32_idb):
 
     # the first match is the N (name) tag
     cursor = kernel32_idb.id0.find_prefix(key)
-    assert b2h(cursor.key) == fixup_nodeid + hex(ord('N'))
+    assert b2h(cursor.key) == fixup_nodeid + h(ord('N'))
 
     # nodeid: ff000006 ($fixups) tag: S
-    supvals = fixup_nodeid + hex(ord('S'))
+    supvals = fixup_nodeid + h(ord('S'))
     key = h2b(supvals)
 
     # the first match is for index 0x68901025
     cursor = kernel32_idb.id0.find_prefix(key)
-    assert b2h(cursor.key) == fixup_nodeid + '68901025'
+    assert b2h(cursor.key) == fixup_nodeid + h(ord('S')) + '68901025'
 
     with pytest.raises(KeyError):
-        cursor = kernel32_idb.id0.find_prefix('does not exist')
+        cursor = kernel32_idb.id0.find_prefix(b'does not exist')
 
 
 def test_cursor_easy_leaf(kernel32_idb):
