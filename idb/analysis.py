@@ -4,11 +4,7 @@ import datetime
 from collections import namedtuple
 
 import vstruct
-from vstruct.primitives import v_bytes
-from vstruct.primitives import v_uint8
-from vstruct.primitives import v_uint16
 from vstruct.primitives import v_uint32
-from vstruct.primitives import v_uint64
 
 import idb
 import idb.netnode
@@ -69,7 +65,6 @@ def as_cast(V):
     def inner(buf):
         return cast(buf, V)
     return inner
-
 
 
 Field = namedtuple('Field', ['name', 'tag', 'index', 'cast'])
@@ -217,7 +212,7 @@ class FileRegion(vstruct.VStruct):
         self.end = v_uint32()
         self.rva = v_uint32()
 
- 
+
 # supvals:
 #   format1:
 #     index: start effective address
