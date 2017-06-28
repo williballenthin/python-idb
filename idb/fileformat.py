@@ -292,6 +292,10 @@ class FindStrategy(object):
 
 
 class ExactMatchStrategy(FindStrategy):
+    '''
+    strategy used to find the entry with exactly the key provided.
+    if the exact key is not found, `KeyError` is raised.
+    '''
     def _find(self, cursor, page_number, key):
         page = cursor.index.get_page(page_number)
         cursor.path.append(page)
@@ -313,8 +317,7 @@ class ExactMatchStrategy(FindStrategy):
             cursor.entry_number = entry_number
             return
         elif page.is_leaf():
-            # TODO: exact match.
-            # there is no exact match.
+            # no matches!
             raise KeyError(key)
         else:
             if entry_number == 0:
@@ -331,8 +334,53 @@ class ExactMatchStrategy(FindStrategy):
 
 
 class PrefixMatchStrategy(FindStrategy):
+    '''
+    strategy used to find the first entry that begins with the given key.
+    it may be an exact match, or an exact match does not exist, and the result starts with the given key.
+    if no entries start with the given key, `KeyError` is raised.
+    '''
+    def _find(self, cursor, page_number, key):
+        page = cursor.index.get_page(page_number)
+        cursor.path.append(page)
+
+        if page.is_leaf():
+            for i, entry in enumerate(page.get_entries()):
+                entry_key = bytes(entry.key)
+                if entry_key.startswith(key):
+                    cursor.entry = entry
+                    cursor.entry_number = i
+                    return
+                elif entry_key > key:
+                    # as soon as we reach greater entries, we'll never match
+                    break
+            raise KeyError(key)
+        else:  # is branch node
+            next_page = page.ppointer
+            for i, entry in enumerate(page.get_entries()):
+                entry_key = bytes(entry.key)
+                if entry_key == key:
+                    cursor.entry = entry
+                    cursor.entry_number = i
+                    return
+                elif entry_key.startswith(key):
+                    # the sub-page pointed to by this entry contains larger entries.
+                    # so we need to look at the sub-page pointed to by the last entry (or ppointer).
+                    return self._find(cursor, next_page, key)
+                elif entry_key > key:
+                    # as soon as we reach greater entries, we'll never match
+                    break
+                else:
+                    next_page = entry.page
+
+            # since we haven't found a matching entry, but we know our matches must be in the page,
+            # we need to search the final sub-page, which contains the greatest entries.
+            return self._find(cursor, next_page, key)
+
     def find(self, cursor, key):
-        raise NotImplementedError()
+        self._find(cursor, cursor.index.root_page, key)
+
+
+# TODO: add MIN/MAX strategies?
 
 EXACT_MATCH = ExactMatchStrategy
 PREFIX_MATCH = PrefixMatchStrategy
@@ -352,8 +400,11 @@ class Cursor(object):
 
         # populated once found
         self.entry = None
+
+
         self.entry_number = None
 
+    # TODO: consider moving this to the Page class.
     def find_index(self, page, key):
         '''
         find the index of the exact match, or in the case of a branch node,
@@ -524,6 +575,13 @@ class Cursor(object):
 
 
 class ID0(vstruct.VStruct):
+    '''
+    a b-tree index.
+    keys and values are arbitrary byte strings.
+
+    use `.find()` to identify a matching entry, and use the resulting cursor
+     instance to access the value, or traverse to less/greater entries.
+    '''
     def __init__(self, buf):
         vstruct.VStruct.__init__(self)
         self.buf = memoryview(buf)
@@ -554,7 +612,7 @@ class ID0(vstruct.VStruct):
           key (bytes): the index key for which to search.
           strategy (Type[MatchStrategy]): the strategy to use to do the search.
             some possible strategies:
-              - EXACT_MATCH
+              - EXACT_MATCH (default)
               - PREFIX_MATCH
 
         Returns:
