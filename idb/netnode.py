@@ -109,6 +109,9 @@ def as_string(buf):
 #   https://www.hex-rays.com/products/ida/support/sdkdoc/classnetnode.html
 
 
+Entry = namedtuple('Entry', ['key', 'parsed_key', 'value'])
+
+
 class Netnode(object):
     def __init__(self, db, nodeid):
         '''
@@ -163,9 +166,9 @@ class Netnode(object):
         cursor = self.idb.id0.find(key)
         return as_string(cursor.value)
 
-    def keys(self, tag=TAGS.SUPVAL):
+    def get_tag_entries(self, tag=TAGS.SUPVAL):
         '''
-        generate the indexes for the given tag in this netnode.
+        generate the entries for the given tag in this netnode.
 
         this replaces:
           - *1st
@@ -174,16 +177,14 @@ class Netnode(object):
           - *prev
 
         Yields:
-          int: an index under the given tag in this netnode.
+          Entry: an entry (with key and value) under the given tag in this netnode.
         '''
         key = make_key(self.nodeid, tag, wordsize=self.wordsize)
 
-        # this probably doesn't work...
-        # need prefix matching
         cursor = self.idb.id0.find_prefix(key)
         while bytes(cursor.key).startswith(key):
-            index = parse_key(cursor.key, wordsize=self.idb.wordsize).index
-            yield index
+            parsed_key = parse_key(cursor.key, wordsize=self.idb.wordsize)
+            yield Entry(cursor.key, parsed_key, cursor.value)
             try:
                 cursor.next()
             except IndexError:
@@ -219,7 +220,12 @@ class Netnode(object):
           - suplast
           - supprev
         '''
-        return self.keys(tag=tag)
+        for entry in self.get_tag_entries(tag=tag):
+            yield entry.parsed_key.index
+
+    def supentries(self, tag=TAGS.SUPVAL):
+        for entry in self.get_tag_entries(tag=tag):
+            yield entry
 
     def altval(self, index, tag=TAGS.ALTVAL):
         return as_int(self.get_val(index, tag))
@@ -232,7 +238,13 @@ class Netnode(object):
           - altlast
           - altprev
         '''
-        return self.keys(tag=tag)
+        for entry in self.get_tag_entries(tag=tag):
+            yield entry.parsed_key.index
+
+    def altentries(self, tag=TAGS.ALTVAL):
+        for entry in self.get_tag_entries(tag=tag):
+            # TODO: cast the value?
+            yield entry
 
     def charval(self, index, tag=TAGS.CHARVAL):
         return as_int(self.get_val(index, tag))
@@ -245,7 +257,13 @@ class Netnode(object):
           - charlast
           - charprev
         '''
-        return self.keys(tag=tag)
+        for entry in self.get_tag_entries(tag=tag):
+            yield entry.parsed_key.index
+
+    def charentries(self, tag=TAGS.CHARVAL):
+        for entry in self.get_tag_entries(tag=tag):
+            # TODO: cast the value?
+            yield entry
 
     def hashval(self, index, tag=TAGS.HASHVAL):
         '''
@@ -261,7 +279,12 @@ class Netnode(object):
           - hashlast
           - hashprev
         '''
-        return self.keys(tag=tag)
+        for entry in self.get_tag_entries(tag=tag):
+            yield entry.parsed_key.index
+
+    def hashentries(self, tag=TAGS.HASHVAL):
+        for entry in self.get_tag_entries(tag=tag):
+            yield entry
 
     def valobj(self):
         '''
