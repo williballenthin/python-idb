@@ -180,9 +180,10 @@ class Netnode(object):
 
         # this probably doesn't work...
         # need prefix matching
-        cursor = self.idb.id0.find(key)
-        while cursor.key.startswith(key):
-            yield cursor.key
+        cursor = self.idb.id0.find_prefix(key)
+        while bytes(cursor.key).startswith(key):
+            index = parse_key(cursor.key, wordsize=self.idb.wordsize).index
+            yield index
             try:
                 cursor.next()
             except IndexError:
