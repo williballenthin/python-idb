@@ -19,6 +19,9 @@ def test_heads(kernel32_idb):
 
 
 def test_bytes(kernel32_idb):
+    # .text:68901010 8B FF                                   mov     edi, edi
+    # .text:68901012 55                                      push    ebp
+
     first_ea = 0x68901010
     flags = kernel32_idb.GetFlags(first_ea)
     assert kernel32_idb.hasValue(flags) == True
@@ -77,6 +80,8 @@ def test_specific_state(kernel32_idb):
 
 
 def test_code(kernel32_idb):
+    # .text:68901010 8B FF                                   mov     edi, edi
+    # .text:68901012 55                                      push    ebp
     first_ea = 0x68901010
     flags = kernel32_idb.GetFlags(first_ea)
 
@@ -87,4 +92,80 @@ def test_code(kernel32_idb):
     flags = kernel32_idb.GetFlags(second_ea)
     assert kernel32_idb.isFunc(flags) == False
     assert kernel32_idb.isImmd(flags) == False
+
+
+def test_data(kernel32_idb):
+    # text:689011EB 90 90 90 90 90 90 90 90+                align 20h
+    flags = kernel32_idb.GetFlags(0x689011eb)
+    assert kernel32_idb.isByte(flags) == False
+    assert kernel32_idb.isWord(flags) == False
+    assert kernel32_idb.isDwrd(flags) == False
+    assert kernel32_idb.isQwrd(flags) == False
+    assert kernel32_idb.isOwrd(flags) == False
+    assert kernel32_idb.isYwrd(flags) == False
+    assert kernel32_idb.isTbyt(flags) == False
+    assert kernel32_idb.isFloat(flags) == False
+    assert kernel32_idb.isDouble(flags) == False
+    assert kernel32_idb.isPackReal(flags) == False
+    assert kernel32_idb.isASCII(flags) == False
+    assert kernel32_idb.isStruct(flags) == False
+    assert kernel32_idb.isAlign(flags) == True
+    assert kernel32_idb.is3byte(flags) == False
+    assert kernel32_idb.isCustom(flags) == False
+
+    # .text:68901497 90 90 90 90 90                          db 5 dup(90h)
+    flags = kernel32_idb.GetFlags(0x68901497)
+    assert kernel32_idb.isByte(flags) == True
+    assert kernel32_idb.isWord(flags) == False
+    assert kernel32_idb.isDwrd(flags) == False
+    assert kernel32_idb.isQwrd(flags) == False
+    assert kernel32_idb.isOwrd(flags) == False
+    assert kernel32_idb.isYwrd(flags) == False
+    assert kernel32_idb.isTbyt(flags) == False
+    assert kernel32_idb.isFloat(flags) == False
+    assert kernel32_idb.isDouble(flags) == False
+    assert kernel32_idb.isPackReal(flags) == False
+    assert kernel32_idb.isASCII(flags) == False
+    assert kernel32_idb.isStruct(flags) == False
+    assert kernel32_idb.isAlign(flags) == False
+    assert kernel32_idb.is3byte(flags) == False
+    assert kernel32_idb.isCustom(flags) == False
+
+    # .text:6893A7BC 24 83 98 68                             dd offset sub_68988324
+    flags = kernel32_idb.GetFlags(0x6893a7bc)
+    assert kernel32_idb.isByte(flags) == False
+    assert kernel32_idb.isWord(flags) == False
+    assert kernel32_idb.isDwrd(flags) == True
+    assert kernel32_idb.isQwrd(flags) == False
+    assert kernel32_idb.isOwrd(flags) == False
+    assert kernel32_idb.isYwrd(flags) == False
+    assert kernel32_idb.isTbyt(flags) == False
+    assert kernel32_idb.isFloat(flags) == False
+    assert kernel32_idb.isDouble(flags) == False
+    assert kernel32_idb.isPackReal(flags) == False
+    assert kernel32_idb.isASCII(flags) == False
+    assert kernel32_idb.isStruct(flags) == False
+    assert kernel32_idb.isAlign(flags) == False
+    assert kernel32_idb.is3byte(flags) == False
+    assert kernel32_idb.isCustom(flags) == False
+
+    # .text:6893A840 42 69 41 63 74 69 76 61+aBiactivatework db 'BiActivateWorkItem',0
+    flags = kernel32_idb.GetFlags(0x6893a840)
+    assert kernel32_idb.isByte(flags) == False
+    assert kernel32_idb.isWord(flags) == False
+    assert kernel32_idb.isDwrd(flags) == False
+    assert kernel32_idb.isQwrd(flags) == False
+    assert kernel32_idb.isOwrd(flags) == False
+    assert kernel32_idb.isYwrd(flags) == False
+    assert kernel32_idb.isTbyt(flags) == False
+    assert kernel32_idb.isFloat(flags) == False
+    assert kernel32_idb.isDouble(flags) == False
+    assert kernel32_idb.isPackReal(flags) == False
+    assert kernel32_idb.isASCII(flags) == True
+    assert kernel32_idb.isStruct(flags) == False
+    assert kernel32_idb.isAlign(flags) == False
+    assert kernel32_idb.is3byte(flags) == False
+    assert kernel32_idb.isCustom(flags) == False
+
+
 

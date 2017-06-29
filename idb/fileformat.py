@@ -1071,7 +1071,51 @@ class IDB(vstruct.VStruct):
     def is_bnot(self, flags):
         return flags & FLAGS.MS_COMM & FLAGS.FF_BNOT > 0
 
-    # TODO: methods here: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__datafuncs1.html
+    def isByte (self, flags):
+        return flags & FLAGS.DT_TYPE ==	FLAGS.FF_BYTE
+
+    def isWord (self, flags):
+ 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_WORD
+
+    def isDwrd (self, flags):
+ 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_DWRD
+
+    def isQwrd (self, flags):
+ 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_QWRD
+
+    def isOwrd (self, flags):
+ 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_OWRD
+
+    def isYwrd (self, flags):
+ 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_YWRD
+
+    def isTbyt (self, flags):
+ 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_TBYT
+
+    def isFloat (self, flags):
+ 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_FLOAT
+
+    def isDouble (self, flags):
+ 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_DOUBLE
+
+    def isPackReal (self, flags):
+ 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_PACKREAL
+
+    def isASCII (self, flags):
+ 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_ASCI
+
+    def isStruct (self, flags):
+ 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_STRU
+
+    def isAlign (self, flags):
+ 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_ALIGN
+
+    def is3byte (self, flags):
+ 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_3BYTE
+
+    def isCustom (self, flags):
+ 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_CUSTOM
+
     # TODO: methods here: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__opfuncs1.html
     # TODO: methods here: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__opfuncs2.html
 
