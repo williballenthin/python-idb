@@ -985,8 +985,22 @@ class IDB(vstruct.VStruct):
         ea -= 1
         return self.Head(ea)
 
-    def GetManyBytes(self, ea, count):
-        raise NotImplementedError()
+    def GetManyBytes(self, ea, size, use_dbg=False):
+        '''
+        Raises:
+          IndexError: if the range extends beyond a segment.
+          KeyError: if a byte is not defined.
+        '''
+        if use_dbg:
+            raise NotImplementedError()
+
+        if self.SegStart(ea) != self.SegStart(ea + size):
+            raise IndexError((ea, ea+size))
+
+        ret = []
+        for i in range(ea, ea + size):
+            ret.append(self.IdbByte(i))
+        return bytes(ret)
 
     def hasValue(self, flags):
         return flags & FLAGS.FF_IVL > 0

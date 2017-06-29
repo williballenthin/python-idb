@@ -30,6 +30,8 @@ def test_bytes(kernel32_idb):
         kernel32_idb.GetFlags(0x88888888)
         assert kernel32_idb.hasValue(kernel32_idb.GetFlags(0x88888888)) == True
 
+    assert kernel32_idb.GetManyBytes(0x68901010, 0x3) == b'\x8B\xFF\x55'
+
 
 def test_state(kernel32_idb):
     # .text:68901010 8B FF                                   mov     edi, edi
