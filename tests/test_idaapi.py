@@ -8,6 +8,16 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 
+def test_heads(kernel32_idb):
+    # .text:68901010 8B FF                                   mov     edi, edi
+    # .text:68901012 55                                      push    ebp
+    first_ea = 0x68901010
+    assert kernel32_idb.Head(first_ea) == 0x68901010
+    assert kernel32_idb.Head(first_ea + 1) == 0x68901010
+    assert kernel32_idb.NextHead(first_ea) == 0x68901012
+    assert kernel32_idb.PrevHead(first_ea + 2) == first_ea
+
+
 def test_bytes(kernel32_idb):
     first_ea = 0x68901010
     flags = kernel32_idb.GetFlags(first_ea)

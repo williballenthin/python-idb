@@ -963,6 +963,31 @@ class IDB(vstruct.VStruct):
         else:
             raise KeyError(ea)
 
+    def Head(self, ea):
+        flags = self.GetFlags(ea)
+        while not self.isHead(flags):
+            ea -= 1
+            # TODO: handle Index/KeyError here when we overrun a segment
+            flags = self.GetFlags(ea)
+        return ea
+
+    def NextHead(self, ea):
+        ea += 1
+        flags = self.GetFlags(ea)
+        while not self.isHead(flags):
+            ea += 1
+            # TODO: handle Index/KeyError here when we overrun a segment
+            flags = self.GetFlags(ea)
+        return ea
+
+    def PrevHead(self, ea):
+        ea = self.Head(ea)
+        ea -= 1
+        return self.Head(ea)
+
+    def GetManyBytes(self, ea, count):
+        raise NotImplementedError()
+
     def hasValue(self, flags):
         return flags & FLAGS.FF_IVL > 0
 
@@ -1035,18 +1060,6 @@ class IDB(vstruct.VStruct):
     # TODO: methods here: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__datafuncs1.html
     # TODO: methods here: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__opfuncs1.html
     # TODO: methods here: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__opfuncs2.html
-
-    def Head(self, ea):
-        raise NotImplementedError()
-
-    def NextHead(self, ea):
-        raise NotImplementedError()
-
-    def PrevHead(self, ea):
-        raise NotImplementedError()
-
-    def GetManyBytes(self, ea, count):
-        raise NotImplementedError()
 
 
 class FLAGS:
