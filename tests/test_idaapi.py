@@ -167,4 +167,48 @@ def test_data(kernel32_idb):
     assert kernel32_idb.isCustom(flags) == False
 
 
+def test_operand_types(kernel32_idb):
+    # .text:68901010 8B FF                                   mov     edi, edi
+    # .text:68901012 55                                      push    ebp
 
+    flags = kernel32_idb.GetFlags(0x68901012)
+    assert kernel32_idb.isDefArg0(flags) == False  # there is an operand, but its not a number, so...
+    assert kernel32_idb.isDefArg1(flags) == False
+    assert kernel32_idb.isOff0(flags) == False
+    assert kernel32_idb.isChar0(flags) == False
+    assert kernel32_idb.isSeg0(flags) == False
+    assert kernel32_idb.isEnum0(flags) == False
+    assert kernel32_idb.isStroff0(flags) == False
+    assert kernel32_idb.isStkvar0(flags) == False
+    assert kernel32_idb.isFloat0(flags) == False
+    assert kernel32_idb.isCustFmt0(flags) == False
+    assert kernel32_idb.isNum0(flags) == False
+
+    # .text:68901015 64 A1 30 00 00 00                       mov     eax, large fs:30h
+    # .text:6890101B 83 EC 18                                sub     esp, 18h
+    flags = kernel32_idb.GetFlags(0x6890101B)
+    assert kernel32_idb.isDefArg0(flags) == False
+    assert kernel32_idb.isDefArg1(flags) == True
+    assert kernel32_idb.isOff1(flags) == False
+    assert kernel32_idb.isChar1(flags) == False
+    assert kernel32_idb.isSeg1(flags) == False
+    assert kernel32_idb.isEnum1(flags) == False
+    assert kernel32_idb.isStroff1(flags) == False
+    assert kernel32_idb.isStkvar1(flags) == False
+    assert kernel32_idb.isFloat1(flags) == False
+    assert kernel32_idb.isCustFmt1(flags) == False
+    assert kernel32_idb.isNum1(flags) == True
+
+    # .text:68901964 FF 75 24                                push    [ebp+lpOverlapped] ; lpOverlapped
+    flags = kernel32_idb.GetFlags(0x68901964)
+    assert kernel32_idb.isDefArg0(flags) == True
+    assert kernel32_idb.isDefArg1(flags) == False
+    assert kernel32_idb.isOff0(flags) == False
+    assert kernel32_idb.isChar0(flags) == False
+    assert kernel32_idb.isSeg0(flags) == False
+    assert kernel32_idb.isEnum0(flags) == False
+    assert kernel32_idb.isStroff0(flags) == False
+    assert kernel32_idb.isStkvar0(flags) == True
+    assert kernel32_idb.isFloat0(flags) == False
+    assert kernel32_idb.isCustFmt0(flags) == False
+    assert kernel32_idb.isNum0(flags) == False

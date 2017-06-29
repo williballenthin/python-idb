@@ -1120,13 +1120,13 @@ class IDB(vstruct.VStruct):
         '''
         Is the first operand defined? Initially operand has no defined representation.
         '''
-        raise NotImplementedError()
+        return flags & FLAGS.MS_0TYPE > 0
 
     def isDefArg1(self, flags):
         '''
         Is the second operand defined? Initially operand has no defined representation.
         '''
-        raise NotImplementedError()
+        return flags & FLAGS.MS_1TYPE > 0
 
     def isOff0(self, flags):
         '''
