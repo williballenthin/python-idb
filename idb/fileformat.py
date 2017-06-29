@@ -1116,7 +1116,146 @@ class IDB(vstruct.VStruct):
     def isCustom (self, flags):
  	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_CUSTOM
 
-    # TODO: methods here: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__opfuncs1.html
+    def isDefArg0(self, flags):
+        '''
+        Is the first operand defined? Initially operand has no defined representation.
+        '''
+        raise NotImplementedError()
+
+    def isDefArg1(self, flags):
+        '''
+        Is the second operand defined? Initially operand has no defined representation.
+        '''
+        raise NotImplementedError()
+
+    def isOff0(self, flags):
+        '''
+        Is the first operand offset? (example: push offset xxx)
+        '''
+        return flags & FLAGS.MS_0TYPE == FLAGS.FF_0CUST
+
+    def isOff1(self, flags):
+        '''
+        Is the second operand offset? (example: mov ax, offset xxx)
+        '''
+        return flags & FLAGS.MS_1TYPE == FLAGS.FF_1CUST
+
+    def isChar0(self, flags):
+        '''
+        Is the first operand character constant? (example: push 'a')
+        '''
+        return flags & FLAGS.MS_0TYPE == FLAGS.FF_0CHAR
+
+    def isChar1(self, flags):
+        '''
+        Is the second operand character constant? (example: mov al, 'a')
+        '''
+        return flags & FLAGS.MS_1TYPE == FLAGS.FF_1CHAR
+
+    def isSeg0(self, flags):
+        '''
+        Is the first operand segment selector? (example: push seg seg001)
+        '''
+        return flags & FLAGS.MS_0TYPE == FLAGS.FF_0SEG
+
+    def isSeg1(self, flags):
+        '''
+        Is the second operand segment selector? (example: mov dx, seg dseg)
+        '''
+        return flags & FLAGS.MS_1TYPE == FLAGS.FF_1SEG
+
+    def isEnum0(self, flags):
+        '''
+        Is the first operand a symbolic constant (enum member)?
+        '''
+        return flags & FLAGS.MS_0TYPE == FLAGS.FF_0ENUM
+
+    def isEnum1(self, flags):
+        '''
+        Is the second operand a symbolic constant (enum member)?
+        '''
+        return flags & FLAGS.MS_1TYPE == FLAGS.FF_1ENUM
+
+    def isStroff0(self, flags):
+        '''
+        Is the first operand an offset within a struct?
+        '''
+        return flags & FLAGS.MS_0TYPE == FLAGS.FF_0STRO
+
+    def isStroff1(self, flags):
+        '''
+        Is the second operand an offset within a struct?
+        '''
+        return flags & FLAGS.MS_1TYPE == FLAGS.FF_1STRO
+
+    def isStkvar0(self, flags):
+        '''
+        Is the first operand a stack variable?
+        '''
+        return flags & FLAGS.MS_0TYPE == FLAGS.FF_0STK
+
+    def isStkvar1(self, flags):
+        '''
+        Is the second operand a stack variable?
+        '''
+        return flags & FLAGS.MS_1TYPE == FLAGS.FF_1STK
+
+    def isFloat0(self, flags):
+        '''
+        Is the first operand a floating point number?
+        '''
+        return flags & FLAGS.MS_0TYPE == FLAGS.FF_0FLT
+
+    def isFloat1(self, flags):
+        '''
+        Is the second operand a floating point number?
+        '''
+        return flags & FLAGS.MS_1TYPE == FLAGS.FF_1FLT
+
+    def isCustFmt0(self, flags):
+        '''
+        Does the first operand use a custom data representation?
+        '''
+        return flags & FLAGS.MS_0TYPE == FLAGS.FF_0CUST
+
+    def isCustFmt1(self, flags):
+        '''
+        Does the second operand use a custom data representation?
+        '''
+        return flags & FLAGS.MS_1TYPE == FLAGS.FF_1CUST
+
+    def isNum0(self, flags):
+        '''
+        Is the first operand a number (i.e. binary,octal,decimal or hex?)
+        '''
+        t = flags & FLAGS.MS_0TYPE
+        return t == FLAGS.FF_0NUMB or \
+               t == FLAGS.FF_0NUMO or \
+               t == FLAGS.FF_0NUMD or \
+               t == FLAGS.FF_0NUMH
+
+    def isNum1(self, flags):
+        '''
+        Is the second operand a number (i.e. binary,octal,decimal or hex?)
+        '''
+        t = flags & FLAGS.MS_1TYPE
+        return t == FLAGS.FF_1NUMB or \
+               t == FLAGS.FF_1NUMO or \
+               t == FLAGS.FF_1NUMD or \
+               t == FLAGS.FF_1NUMH
+
+    def get_optype_flags0(self, flags):
+        '''
+        Get flags for first operand.
+        '''
+        return flags & FLAGS.MS_0TYPE
+
+    def get_optype_flags1(self, flags):
+        '''
+        Get flags for second operand.
+        '''
+        return flags & FLAGS.MS_1TYPE
+
     # TODO: methods here: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__opfuncs2.html
 
 

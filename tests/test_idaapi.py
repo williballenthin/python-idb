@@ -78,7 +78,6 @@ def test_specific_state(kernel32_idb):
     assert kernel32_idb.has_cmt(flags) == True
 
 
-
 def test_code(kernel32_idb):
     # .text:68901010 8B FF                                   mov     edi, edi
     # .text:68901012 55                                      push    ebp
