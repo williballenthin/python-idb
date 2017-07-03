@@ -102,7 +102,7 @@ class _Analysis(object):
     def __init__(self, db, nodeid, fields):
         self.idb = db
         self.nodeid = nodeid
-        self.netnode = self.idb.netnode(self.nodeid)
+        self.netnode = idb.netnode.Netnode(db, self.nodeid)
         self.fields = fields
 
         self._fields_by_name = {f.name: f for f in self.fields}

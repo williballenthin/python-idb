@@ -1,6 +1,9 @@
 import contextlib
 
 
+from idb.idapython import IDAPython
+
+
 @contextlib.contextmanager
 def from_file(path):
     # break import cycle
