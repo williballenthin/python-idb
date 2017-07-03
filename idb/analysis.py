@@ -414,7 +414,8 @@ class PString(vstruct.VStruct):
         self.s = v_str()
 
     def pcb_length(self):
-        self['s'].vsSetLength(self.length)
+        length = self.length
+        self['s'].vsSetLength(length - 1)
 
 
 class TypeString(vstruct.VStruct):
@@ -429,7 +430,8 @@ class TypeString(vstruct.VStruct):
             raise RuntimeError('unexpected type header')
 
     def pcb_length(self):
-        self['s'].vsSetLength(self.length)
+        length = self.length
+        self['s'].vsSetLength(length - 1)
 
 
 class StructMember:
