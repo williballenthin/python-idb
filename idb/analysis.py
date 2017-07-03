@@ -5,6 +5,7 @@ import datetime
 from collections import namedtuple
 
 import vstruct
+from vstruct.primitives import v_str
 from vstruct.primitives import v_bytes
 from vstruct.primitives import v_uint8
 from vstruct.primitives import v_uint32
@@ -403,6 +404,34 @@ def idaunpack(buf):
     return values
 
 
+class PString(vstruct.VStruct):
+    '''
+    short pascal string, prefixed with single byte length.
+    '''
+    def __init__(self):
+        vstruct.VStruct.__init__(self)
+        self.length = v_uint8()
+        self.s = v_str()
+
+    def pcb_length(self):
+        self['s'].vsSetLength(self.length)
+
+
+class TypeString(vstruct.VStruct):
+    def __init__(self):
+        vstruct.VStruct.__init__(self)
+        self.header = v_uint8()
+        self.length = v_uint8()
+        self.s = v_str()
+
+    def pcb_header(self):
+        if self.header != 0x3D:
+            raise RuntimeError('unexpected type header')
+
+    def pcb_length(self):
+        self['s'].vsSetLength(self.length)
+
+
 class StructMember:
     def __init__(self, db, nodeid):
         self.idb = db
@@ -417,15 +446,9 @@ class StructMember:
         # 00000000: 3D 0A 48 49 4E 53 54 41  4E 43 45 00              =.HINSTANCE.
 
         v = self.netnode.supval(tag='S', index=0x3000)
-
-        if v[0] != 0x3D:
-            # this could be string-type?
-            raise RuntimeError('unexpected type name header')
-
-        length = v[1]
-        s = v[2:2+length].decode('utf-8').rstrip('\x00')
-
-        return s
+        s = TypeString()
+        s.vsParse(v)
+        return s.s
 
     def get_enum_id(self):
         return self.altval(tag='A', index=0xB)
@@ -480,6 +503,7 @@ class STRUCT_FLAGS:
 
     # ghost copy of a local type
     SF_GHOST = 0x00001000
+
 
 
 class Struct:
