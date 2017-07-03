@@ -70,6 +70,7 @@ def test_functions(kernel32_idb):
 
 
 def test_struct(kernel32_idb):
+    # ; BOOL __stdcall DllEntryPoint(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
     # .text:68901695                                         public DllEntryPoint
     # .text:68901695                         DllEntryPoint   proc near
     # .text:68901695
@@ -113,10 +114,10 @@ def test_function(kernel32_idb):
     # .text:689016B7 55                                      push    ebp
     # .text:689016B8 8B EC                                   mov     ebp, esp
     # .text:689016BA 81 EC 14 02 00 00                       sub     esp, 214h
-    func = idb.analysis.Function(kernel32_idb, 0x689016B5)
-    assert func.get_name() == 'sub_689016B5'
+    sub_689016B5 = idb.analysis.Function(kernel32_idb, 0x689016B5)
+    assert sub_689016B5.get_name() == 'sub_689016B5'
 
-    chunks = list(func.get_chunks())
+    chunks = list(sub_689016B5.get_chunks())
     assert chunks == [(0x689033D9, 0x17),
                       (0x68904247, 0xA3),
                       (0x689061B9, 0x25E),
@@ -126,3 +127,21 @@ def test_function(kernel32_idb):
                       (0x6892F267, 0x29),
                       (0x68934D65, 0x3D),
                       (0x68937707, 0x84)]
+
+    #sub_689016B5.get_unk()
+
+
+    # ; BOOL __stdcall DllEntryPoint(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
+    # .text:68901695                                         public DllEntryPoint
+    # .text:68901695                         DllEntryPoint   proc near
+    # .text:68901695
+    # .text:68901695                         hinstDLL        = dword ptr  8
+    # .text:68901695                         fdwReason       = dword ptr  0Ch
+    # .text:68901695                         lpReserved      = dword ptr  10h
+    DllEntryPoint = idb.analysis.Function(kernel32_idb, 0x68901695)
+
+    #DllEntryPoint.get_unk()
+
+    print(DllEntryPoint.get_signature())
+
+

@@ -565,6 +565,8 @@ def pairs(l):
 
 
 Chunk = namedtuple('Chunk', ['effective_address', 'length'])
+FunctionParameter = namedtuple('FunctionParameter', ['type', 'name'])
+FunctionSignature = namedtuple('FunctionSignature', ['calling_convention', 'rtype', 'unk', 'parameters'])
 
 
 class Function:
@@ -586,11 +588,45 @@ class Function:
         except KeyError:
             return 'sub_%X' % (self.nodeid)
 
-    def get_function_signature_types(self):
-        pass
+    def get_signature(self):
+        typebuf = self.netnode.supval(tag='S', index=0x3000)
+        namebuf = self.netnode.supval(tag='S', index=0x3001)
 
-    def get_function_signature_names(self):
-        pass
+        if typebuf[0] != 0xC:
+            raise RuntimeError('unexpected signature header')
+
+        if typebuf[1] == ord('S'):
+            # this is just a guess...
+            conv = 'stdcall'
+        else:
+            raise NotImplementedError()
+
+        rtype = TypeString()
+        rtype.vsParse(typebuf, offset=2)
+
+        # this is a guess???
+        sp_delta = typebuf[2+len(rtype)]
+
+        import hexdump
+        hexdump.hexdump(typebuf)
+        hexdump.hexdump(namebuf)
+        params = []
+        typeoffset = 0x2 + len(rtype) + 0x1
+        nameoffset = 0x0
+        while typeoffset < len(typebuf):
+            if typebuf[typeoffset] == 0x0:
+                break
+            typename = TypeString()
+            typename.vsParse(typebuf, offset=typeoffset)
+            typeoffset += len(typename)
+
+            paramname = PString()
+            paramname.vsParse(namebuf, offset=nameoffset)
+            nameoffset += len(paramname)
+
+            params.append(FunctionParameter(typename.s, paramname.s))
+
+        return FunctionSignature(conv, rtype.s, sp_delta, params)
 
     def get_chunks(self):
         v = self.netnode.supval(tag='S', index=0x7000)
@@ -615,3 +651,10 @@ class Function:
             yield Chunk(ea, length)
             last_ea = ea
             last_length = length
+
+    def get_unk(self):
+        v = self.netnode.supval(tag='S', index=0x1000)
+        import hexdump
+        hexdump.hexdump(v)
+        for vv in idaunpack(v):
+            print('  - %s' % hex(vv))
