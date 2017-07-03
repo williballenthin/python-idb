@@ -276,6 +276,20 @@ class idc:
             flags = self.GetFlags(ea)
         return ea
 
+    def ItemSize(self, ea):
+        oea = ea
+        flags = self.GetFlags(ea)
+        if not ida_bytes.isHead(flags):
+            raise RuntimeError('ItemSize must only be called on a head address.')
+
+        ea += 1
+        flags = self.GetFlags(ea)
+        while not ida_bytes.isHead(flags):
+            ea += 1
+            # TODO: handle Index/KeyError here when we overrun a segment
+            flags = self.GetFlags(ea)
+        return oea - ea
+
     def NextHead(self, ea):
         ea += 1
         flags = self.GetFlags(ea)
