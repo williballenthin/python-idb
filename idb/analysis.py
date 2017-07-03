@@ -102,7 +102,7 @@ class _Analysis(object):
     def __init__(self, db, nodeid, fields):
         self.idb = db
         self.nodeid = nodeid
-        self.netnode = idb.netnode.Netnode(db, self.nodeid)
+        self.netnode = idb.netnode.Netnode(db, nodeid)
         self.fields = fields
 
         self._fields_by_name = {f.name: f for f in self.fields}
@@ -326,7 +326,6 @@ FileRegions = Analysis('$ fileregions', [
 ])
 
 
-
 # nodeid: ff000022 tag: S index: 0x689bd410
 # FF 68 9B D4 10 81 5A FF  44 10 99 CE 20 04 00 10 00 00 00 00 00 00
 # [] [addr be  ] [] [   ]
@@ -352,7 +351,6 @@ class Function(vstruct.VStruct):
             self['unk05'].vsSetLength(0)
 
 
-
 # '$ funcs' maps from function effective address to details about it.
 #
 # supvals:
@@ -367,3 +365,153 @@ class Function(vstruct.VStruct):
 Functions = Analysis('$ funcs', [
     Field('functions',  'S', ADDRESSES, as_cast(Function)),
 ])
+
+
+def idaunpack(buf):
+    '''
+    IDA-specific data packing format.
+
+    via: https://github.com/williballenthin/pyidbutil/blob/de12af8a1c32a36a5daac591f4cc5a17fa9496da/idblib.py#L161
+    '''
+    buf = bytearray(buf)
+
+    def nextval(o):
+        val = buf[o] ; o += 1
+        if val == 0xff:  # 32 bit value
+            val, = struct.unpack_from(">L", buf, o)
+            o += 4
+            return val, o
+        if val < 0x80:  # 7 bit value
+            return val, o
+        val <<= 8
+        val |= buf[o] ; o += 1
+        if val < 0xc000:  # 14 bit value
+            return val & 0x3fff, o
+
+        # 29 bit value
+        val <<= 8
+        val |= buf[o] ; o += 1
+        val <<= 8
+        val |= buf[o] ; o += 1
+        return val & 0x1fffffff, o
+
+    values = []
+    o = 0
+    while o < len(buf):
+        val, o = nextval(o)
+        values.append(val)
+    return values
+
+
+class StructMember:
+    def __init__(self, db, nodeid):
+        self.idb = db
+        self.nodeid = nodeid
+        self.netnode = idb.netnode.Netnode(db, self.nodeid)
+
+    def get_name(self):
+        return self.netnode.name().partition('.')[2]
+
+    def get_type(self):
+        # nodeid: ff000078 tag: S index: 0x3000
+        # 00000000: 3D 0A 48 49 4E 53 54 41  4E 43 45 00              =.HINSTANCE.
+
+        v = self.netnode.supval(tag='S', index=0x3000)
+
+        if v[0] != 0x3D:
+            # this could be string-type?
+            raise RuntimeError('unexpected type name header')
+
+        length = v[1]
+        s = v[2:2+length].decode('utf-8').rstrip('\x00')
+
+        return s
+
+    def get_enum_id(self):
+        return self.altval(tag='A', index=0xB)
+
+    def get_struct_id(self):
+        return self.altval(tag='A', index=0x3)
+
+    def get_member_comment(self):
+        return self.supstr(tag='S', index=0x0)
+
+    def get_repeatable_member_comment(self):
+        return self.supstr(tag='S', index=0x1)
+
+    # TODO: tag='A', index=0x10
+    # TODO: tag='S', index=0x9, "ptrseg"
+
+    def __str__(self):
+        try:
+            typ = self.get_type()
+        except KeyError:
+            return 'StructMember(name: %s)' % (self.get_name())
+        else:
+            return 'StructMember(name: %s, type: %s)' % (self.get_name(), self.get_type())
+
+
+class STRUCT_FLAGS:
+    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___s_f__.html
+
+    # is variable size structure (varstruct)? More...
+    SF_VAR = 0x00000001
+
+    # is a union? More...
+    SF_UNION = 0x00000002
+
+    # has members of type "union"?
+    SF_HASUNI = 0x00000004
+
+    # don't include in the chooser list
+    SF_NOLIST = 0x00000008
+
+    # the structure comes from type library
+    SF_TYPLIB = 0x00000010
+
+    # the structure is collapsed
+    SF_HIDDEN = 0x00000020
+
+    # the structure is a function frame
+    SF_FRAME = 0x00000040
+
+    # alignment (shift amount: 0..31)
+    SF_ALIGN = 0x00000F80
+
+    # ghost copy of a local type
+    SF_GHOST = 0x00001000
+
+
+class Struct:
+    def __init__(self, db, nodeid):
+        self.idb = db
+        self.nodeid = nodeid
+        self.netnode = idb.netnode.Netnode(db, self.nodeid)
+
+    def get_members(self):
+        v = self.netnode.supval(tag='M', index=0)
+        vals = idaunpack(v)
+
+        if not vals[0] & STRUCT_FLAGS.SF_FRAME:
+            raise RuntimeError('unexpected frame header')
+
+        count = vals[1]
+        offset = 2
+        for i in range(count):
+            if self.idb.wordsize == 4:
+                member_vals = vals[offset:offset + 5]
+                offset += 5
+                nodeid_offset, unk1, unk2, unk3, unk4 = member_vals
+                member_nodeid = self.netnode.nodebase + nodeid_offset
+                yield StructMember(self.idb, member_nodeid)
+            elif self.idb.wordsize == 8:
+                member_vals = vals[offset:offset + 8]
+                offset += 8
+                nodeid_offseta, nodeid_offsetb, unk1a, unk1b, unk2a, unk2b, unk3, unk4 = member_vals
+                nodeid_offset = nodeid_offseta | (nodeid_offset << 32)
+                unk1 = unk1a | (unk1b << 32)
+                unk2 = unk2a | (unk2b << 32)
+                member_nodeid = self.netnode.nodebase + nodeid_offset
+                yield StructMember(self.idb, member_nodeid)
+            else:
+                raise RuntimeError('unexpected wordsize')

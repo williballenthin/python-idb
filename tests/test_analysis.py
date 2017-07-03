@@ -68,3 +68,15 @@ def test_functions(kernel32_idb):
     for addr, func in funcs.items():
         assert addr == func.start
 
+
+def test_struct(kernel32_idb):
+    struc = idb.analysis.Struct(kernel32_idb, 0xFF000075)
+    members = list(struc.get_members())
+
+    assert list(map(lambda m: m.get_name(), members)) == [' s',
+                                                          ' r',
+                                                          'hinstDLL',
+                                                          'fdwReason',
+                                                          'lpReserved',]
+
+    assert members[2].get_type() == 'HINSTANCE'
