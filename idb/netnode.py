@@ -140,6 +140,12 @@ class Netnode(object):
         '''
         self.idb = db
         self.wordsize = self.idb.wordsize
+        if self.wordsize == 4:
+            self.nodebase = 0xFF000000
+        elif self.wordsize == 8:
+            self.nodebase = 0xFF00000000000000
+        else:
+            raise RuntimeError('unexpected wordsize')
 
         if isinstance(nodeid, str):
             key = make_key(nodeid, wordsize=self.wordsize)
