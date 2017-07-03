@@ -114,6 +114,15 @@ def test_function(kernel32_idb):
     # .text:689016B8 8B EC                                   mov     ebp, esp
     # .text:689016BA 81 EC 14 02 00 00                       sub     esp, 214h
     func = idb.analysis.Function(kernel32_idb, 0x689016B5)
-
     assert func.get_name() == 'sub_689016B5'
 
+    chunks = list(func.get_chunks())
+    assert chunks == [(0x689033D9, 0x17),
+                      (0x68904247, 0xA3),
+                      (0x689061B9, 0x25E),
+                      (0x689138B4, 0x1F),
+                      (0x6892BC20, 0x21),
+                      (0x6892F138, 0x15),
+                      (0x6892F267, 0x29),
+                      (0x68934D65, 0x3D),
+                      (0x68937707, 0x84)]

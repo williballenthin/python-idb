@@ -524,6 +524,23 @@ class Struct:
             else:
                 raise RuntimeError('unexpected wordsize')
 
+
+def chunks(l, n):
+    '''
+    Yield successive n-sized chunks from l.
+    via: https://stackoverflow.com/a/312464/87207
+    '''
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
+
+def pairs(l):
+    return chunks(l, 2)
+
+
+Chunk = namedtuple('Chunk', ['effective_address', 'length'])
+
+
 class Function:
     '''
     Example::
@@ -549,6 +566,26 @@ class Function:
     def get_function_signature_names(self):
         pass
 
-    def get_function_chunks(self):
-        v = self.supval(tag='S', index=0x7000)
-        return idaunpack(v)
+    def get_chunks(self):
+        v = self.netnode.supval(tag='S', index=0x7000)
+
+        # stored as:
+        #
+        #   first chunk:
+        #     effective addr
+        #     length
+        #   second chunk:
+        #     delta from first.ea + first.length
+        #     length
+        #   third chunk:
+        #     delta from second.ea + second.length
+        #     length
+        #   ...
+
+        last_ea = 0
+        last_length = 0
+        for delta, length in pairs(idaunpack(v)):
+            ea = last_ea + last_length + delta
+            yield Chunk(ea, length)
+            last_ea = ea
+            last_length = length
