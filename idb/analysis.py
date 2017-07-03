@@ -607,9 +607,6 @@ class Function:
         # this is a guess???
         sp_delta = typebuf[2+len(rtype)]
 
-        import hexdump
-        hexdump.hexdump(typebuf)
-        hexdump.hexdump(namebuf)
         params = []
         typeoffset = 0x2 + len(rtype) + 0x1
         nameoffset = 0x0
