@@ -14,6 +14,12 @@ slow = pytest.mark.skipif(
     )
 
 
+debug = pytest.mark.skipif(
+    not pytest.config.getoption("--rundebug"),
+    reason="need --rundebug option to run"
+    )
+
+
 def test_validate(empty_idb, kernel32_idb):
     # should be no ValueErrors here.
     assert empty_idb.validate() is True

@@ -336,7 +336,7 @@ FileRegions = Analysis('$ fileregions', [
 # [] [addr be  ] [] []     []
 #                flags, if 0x80 set, then next 2 bytes
 
-class Function(vstruct.VStruct):
+class FunctionEntry(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
         self.unk0  = v_uint8()
@@ -363,7 +363,7 @@ class Function(vstruct.VStruct):
 #       0x8:
 #       0xC:
 Functions = Analysis('$ funcs', [
-    Field('functions',  'S', ADDRESSES, as_cast(Function)),
+    Field('functions',  'S', ADDRESSES, as_cast(FunctionEntry)),
 ])
 
 
@@ -483,9 +483,17 @@ class STRUCT_FLAGS:
 
 
 class Struct:
-    def __init__(self, db, nodeid):
+    '''
+    Example::
+
+        struc = Struct(idb, 0xFF000075)
+        assert struc.get_name() == 'EXCEPTION_INFO'
+        assert len(struc.get_members()) == 5
+        assert list(struc.get_members())[0].get_type() == 'DWORD'
+    '''
+    def __init__(self, db, structid):
         self.idb = db
-        self.nodeid = nodeid
+        self.nodeid = structid
         self.netnode = idb.netnode.Netnode(db, self.nodeid)
 
     def get_members(self):
@@ -515,3 +523,32 @@ class Struct:
                 yield StructMember(self.idb, member_nodeid)
             else:
                 raise RuntimeError('unexpected wordsize')
+
+class Function:
+    '''
+    Example::
+
+        func = Function(idb, 0x401000)
+        assert func.get_name() == 'DllEntryPoint'
+        assert func.get_signature() == '... DllEntryPoint(...)'
+    '''
+    def __init__(self, db, fva):
+        self.idb = db
+        self.nodeid = fva
+        self.netnode = idb.netnode.Netnode(db, self.nodeid)
+
+    def get_name(self):
+        try:
+            return self.netnode.name()
+        except KeyError:
+            return 'sub_%X' % (self.nodeid)
+
+    def get_function_signature_types(self):
+        pass
+
+    def get_function_signature_names(self):
+        pass
+
+    def get_function_chunks(self):
+        v = self.supval(tag='S', index=0x7000)
+        return idaunpack(v)
