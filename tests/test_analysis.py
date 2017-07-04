@@ -148,3 +148,55 @@ def test_function(kernel32_idb):
     assert list(map(lambda p: p.name, sig.parameters)) == ['hinstDLL', 'fdwReason', 'lpReserved']
 
 
+def test_stack_change_points(kernel32_idb):
+    # .text:68901AEA                         CreateThread    proc near
+    # .text:68901AEA
+    # .text:68901AEA                         lpThreadAttributes= dword ptr  8
+    # .text:68901AEA                         dwStackSize     = dword ptr  0Ch
+    # .text:68901AEA                         lpStartAddress  = dword ptr  10h
+    # .text:68901AEA                         lpParameter     = dword ptr  14h
+    # .text:68901AEA                         dwCreationFlags = dword ptr  18h
+    # .text:68901AEA                         lpThreadId      = dword ptr  1Ch
+    # .text:68901AEA
+    # .text:68901AEA 8B FF                                   mov     edi, edi
+    # .text:68901AEC 55                                      push    ebp
+    # .text:68901AED 8B EC                                   mov     ebp, esp
+    # .text:68901AEF FF 75 1C                                push    [ebp+lpThreadId]
+    # .text:68901AF2 8B 45 18                                mov     eax, [ebp+dwCreationFlags]
+    # .text:68901AF5 6A 00                                   push    0
+    # .text:68901AF7 25 04 00 01 00                          and     eax, 10004h
+    # .text:68901AFC 50                                      push    eax
+    # .text:68901AFD FF 75 14                                push    [ebp+lpParameter]
+    # .text:68901B00 FF 75 10                                push    [ebp+lpStartAddress]
+    # .text:68901B03 FF 75 0C                                push    [ebp+dwStackSize]
+    # .text:68901B06 FF 75 08                                push    [ebp+lpThreadAttributes]
+    # .text:68901B09 6A FF                                   push    0FFFFFFFFh
+    # .text:68901B0B FF 15 00 D8 9D 68                       call    ds:CreateRemoteThreadEx_0
+    # .text:68901B11 5D                                      pop     ebp
+    # .text:68901B12 C2 18 00                                retn    18h
+    # .text:68901B12                         CreateThread    endp
+    CreateThread = idb.analysis.Function(kernel32_idb, 0x68901aea)
+    change_points = list(CreateThread.get_stack_change_points())
+    assert change_points == [(0x68901aed, -4),
+                             (0x68901af2, -4),
+                             (0x68901af7, -4),
+                             (0x68901afd, -4),
+                             (0x68901b00, -4),
+                             (0x68901b03, -4),
+                             (0x68901b06, -4),
+                             (0x68901b09, -4),
+                             (0x68901b0b, -4),
+                             (0x68901b11, 32),
+                             (0x68901b12, 4)]
+
+    # .text:68901493                         ; HANDLE __stdcall GetCurrentProcess()
+    # .text:68901493                                         public GetCurrentProcess
+    # .text:68901493                         GetCurrentProcess proc near
+    # .text:68901493 83 C8 FF                                or      eax, 0FFFFFFFFh
+    # .text:68901496 C3                                      retn
+    # .text:68901496                         GetCurrentProcess endp
+    GetCurrentProcess = idb.analysis.Function(kernel32_idb, 0x68901493)
+    with pytest.raises(KeyError):
+        # there are no stack change points in this function
+        assert list(GetCurrentProcess.get_stack_change_points()) == []
+

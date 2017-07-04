@@ -567,6 +567,7 @@ def pairs(l):
 Chunk = namedtuple('Chunk', ['effective_address', 'length'])
 FunctionParameter = namedtuple('FunctionParameter', ['type', 'name'])
 FunctionSignature = namedtuple('FunctionSignature', ['calling_convention', 'rtype', 'unk', 'parameters'])
+StackChangePoint = namedtuple('StackChangePoint', ['effective_address', 'change'])
 
 
 class Function:
@@ -649,9 +650,20 @@ class Function:
             last_ea = ea
             last_length = length
 
-    def get_unk(self):
+    # S-0x1000: sp change points
+    # S-0x4000: register variables
+    # S-0x5000: local labels
+    # S-0x7000: function tails
+
+    def get_stack_change_points(self):
+        # ref: ida.wll@0x100793d0
         v = self.netnode.supval(tag='S', index=0x1000)
-        import hexdump
-        hexdump.hexdump(v)
-        for vv in idaunpack(v):
-            print('  - %s' % hex(vv))
+        offset = self.nodeid
+        for (delta, change) in pairs(idaunpack(v)):
+            offset += delta
+            if change & 1:
+                change = change >> 1
+            else:
+                change = -(change >> 1)
+
+            yield StackChangePoint(offset, change)
