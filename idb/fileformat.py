@@ -380,10 +380,53 @@ class PrefixMatchStrategy(FindStrategy):
         self._find(cursor, cursor.index.root_page, key)
 
 
-# TODO: add MIN/MAX strategies?
+class MinKeyStrategy(FindStrategy):
+    '''
+    strategy used to find the minimum key in the index.
+    note: this completely ignores the provided key.
+    '''
+    def _find(self, cursor, page_number):
+        page = cursor.index.get_page(page_number)
+        cursor.path.append(page)
+
+        if page.is_leaf():
+            entry = page.get_entry(0)
+            cursor.entry = entry
+            cursor.entry_number = 0
+        else:  # is branch node
+            return self._find(cursor, page.ppointer)
+
+    def find(self, cursor, _):
+        self._find(cursor, cursor.index.root_page)
+
+
+class MaxKeyStrategy(FindStrategy):
+    '''
+    strategy used to find the maximum key in the index.
+    note: this completely ignores the provided key.
+    '''
+    def _find(self, cursor, page_number):
+        page = cursor.index.get_page(page_number)
+        cursor.path.append(page)
+
+        if page.is_leaf():
+            entry_number = page.entry_count - 1
+            entry = page.get_entry(entry_number)
+            cursor.entry = entry
+            cursor.entry_number = entry_number
+        else:  # is branch node
+            entry_number = page.entry_count - 1
+            entry = page.get_entry(entry_number)
+            return self._find(cursor, entry.page)
+
+    def find(self, cursor, _):
+        self._find(cursor, cursor.index.root_page)
+
 
 EXACT_MATCH = ExactMatchStrategy
 PREFIX_MATCH = PrefixMatchStrategy
+MIN_KEY = MinKeyStrategy
+MAX_KEY = MaxKeyStrategy
 
 
 class Cursor(object):
@@ -631,6 +674,24 @@ class ID0(vstruct.VStruct):
         convenience shortcut for prefix match search.
         '''
         return self.find(key, strategy=PREFIX_MATCH)
+
+    def get_min(self):
+        '''
+        find the minimum entry in the index.
+
+        Returns:
+          cursor: the cursor that points to the match.
+        '''
+        return self.find(None, strategy=MIN_KEY)
+
+    def get_max(self):
+        '''
+        find the maximum entry in the index.
+
+        Returns:
+          cursor: the cursor that points to the match.
+        '''
+        return self.find(None, strategy=MAX_KEY)
 
     def validate(self):
         if self.signature != b'B-tree v2':

@@ -223,6 +223,9 @@ def test_cursor_min(kernel32_idb):
     #   24204e45542044455343
     #   2e0000000044689ae208
     key = h2b('24204d4158204c494e4b')
+
+    assert kernel32_idb.id0.get_min().key == key
+
     cursor = kernel32_idb.id0.find(key)
     cursor.next()
     assert b2h(cursor.key) == '24204d4158204e4f4445'
@@ -241,6 +244,9 @@ def test_cursor_max(kernel32_idb):
     #   4e77637372636872
     #   4e776373737472
     key = h2b('4e776373737472')
+
+    assert kernel32_idb.id0.get_max().key == key
+
     cursor = kernel32_idb.id0.find(key)
     cursor.prev()
     assert b2h(cursor.key) == '4e77637372636872'
