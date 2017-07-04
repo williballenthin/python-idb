@@ -373,7 +373,7 @@ class idc:
         oea = ea
         flags = self.GetFlags(ea)
         if not ida_bytes.isHead(flags):
-            raise RuntimeError('ItemSize must only be called on a head address.')
+            raise ValueError('ItemSize must only be called on a head address.')
 
         ea += 1
         flags = self.GetFlags(ea)
@@ -381,7 +381,7 @@ class idc:
             ea += 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
-        return oea - ea
+        return ea - oea
 
     def NextHead(self, ea):
         ea += 1

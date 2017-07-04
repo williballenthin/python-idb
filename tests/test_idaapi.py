@@ -37,10 +37,10 @@ def test_bytes(kernel32_idb):
         idc.GetFlags(0x88888888)
         assert idc.hasValue(idc.GetFlags(0x88888888)) == True
 
-    assert ida_bytes.ItemSize(first_ea) == 2
+    assert idc.ItemSize(0x68901010) == 2
     with pytest.raises(ValueError):
-        ida_bytes.ItemSize(first_ea + 1)
-    assert ida_bytes.ItemSize(first_ea + 2) == 1
+        idc.ItemSize(0x68901011)
+    assert idc.ItemSize(0x68901012) == 1
 
     assert idc.GetManyBytes(0x68901010, 0x3) == b'\x8B\xFF\x55'
 
