@@ -230,6 +230,9 @@ def test_operand_types(kernel32_idb):
 
 
 def test_colors(small_idb):
-    idc = idb.IDAPython(small_idb).idc
+    api = idb.IDAPython(small_idb)
+
+    assert api.ida_nalt.is_colored_item(0) == True
+
     # this is what i set it to via IDAPython when creating the idb.
-    assert idc.GetColor(0, idc.CIC_ITEM) == 0x888888
+    assert api.idc.GetColor(0, api.idc.CIC_ITEM) == 0x888888
