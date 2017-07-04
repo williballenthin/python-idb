@@ -1,3 +1,6 @@
+import idb.analysis
+
+
 class FLAGS:
     # instruction/data operands
     # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__op.html
@@ -328,7 +331,7 @@ class ida_netnode:
         self.idb = db
 
     def netnode(self, *args, **kwargs):
-        return idb.netnode.Netnode(self, *args, **kwargs)
+        return idb.netnode.Netnode(self.idb, *args, **kwargs)
 
 
 class idc:
@@ -413,6 +416,38 @@ class idc:
         for i in range(ea, ea + size):
             ret.append(self.IdbByte(i))
         return bytes(ret)
+
+    # one instruction or data
+    CIC_ITEM = 1
+    # function
+    CIC_FUNC = 2
+    # segment
+    CIC_SEGM = 3
+    # default color
+    DEFCOLOR = 0xFFFFFFFF
+
+    def GetColor(self, ea, what):
+        '''
+        Args:
+          ea (int): effective address of thing.
+          what (int): one of:
+            - idc.CIC_ITEM
+            - idc.CIC_FUNC
+            - idc.CIC_SEGM
+
+        Returns:
+          int: the color in RGB. possibly idc.DEFCOLOR if not set.
+        '''
+        if what != idc.CIC_ITEM:
+            raise NotImplementedError()
+
+        # TODO: check aflags
+
+        nn = ida_netnode(self.idb).netnode(ea)
+        try:
+            return nn.altval(tag='A', index=0x14) - 1
+        except KeyError:
+            return idc.DEFCOLOR
 
     def hasValue(self, flags):
         return flags & FLAGS.FF_IVL > 0

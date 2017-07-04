@@ -21,3 +21,9 @@ def kernel32_idb():
     path = os.path.join(CD, 'data', 'kernel32', 'kernel32.idb')
     with idb.from_file(path) as db:
         yield db
+
+@pytest.yield_fixture
+def small_idb():
+    path = os.path.join(CD, 'data', 'small', 'small-colored.idb')
+    with idb.from_file(path) as db:
+        yield db

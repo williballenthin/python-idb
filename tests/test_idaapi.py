@@ -227,3 +227,9 @@ def test_operand_types(kernel32_idb):
     assert idc.isFloat0(flags) == False
     assert idc.isCustFmt0(flags) == False
     assert idc.isNum0(flags) == False
+
+
+def test_colors(small_idb):
+    idc = idb.IDAPython(small_idb).idc
+    # this is what i set it to via IDAPython when creating the idb.
+    assert idc.GetColor(0, idc.CIC_ITEM) == 0x888888

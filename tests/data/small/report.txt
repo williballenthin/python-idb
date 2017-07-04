@@ -1,0 +1,6 @@
+small-colored.idb is a small idb file created from the source data 'small.bin', which
+ simply contains the string "hello world!".
+the item at offset 0x0 has been defined a byte, and its item color set to 0x888888.
+
+contents: small.bin
+md5sum: d84adb46aca96f2c7686289f1819379f
