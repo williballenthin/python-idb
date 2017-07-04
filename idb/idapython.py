@@ -14,7 +14,7 @@ class FLAGS:
     # byte states bits
     # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__statebits.html
 
- 	  # Mask for typing.
+    # Mask for typing.
     MS_CLS = 0x00000600
 
     # Code ?
@@ -23,7 +23,7 @@ class FLAGS:
     # Data ?
     FF_DATA = 0x00000400
 
- 	  # Tail ?
+    # Tail ?
     FF_TAIL = 0x00000200
 
     # Unknown ?
@@ -157,16 +157,16 @@ class FLAGS:
 
     # code byte bits
     # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__codebits.html
- 	  # Mask for code bits.
+    # Mask for code bits.
     MS_CODE = 0xF0000000
 
- 	  # function start?
+    # function start?
     FF_FUNC = 0x10000000
 
     # Has Immediate value?
     FF_IMMD = 0x40000000
 
- 	  # Has jump table or switch_info?
+    # Has jump table or switch_info?
     FF_JUMP = 0x80000000
 
     # data bytes bits
@@ -228,6 +228,99 @@ class FLAGS:
 
     # Byte has value?
     FF_IVL = 0x00000100
+
+
+class AFLAGS:
+    # additional flags
+    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___a_f_l__.html
+
+    # has line number info
+    AFL_LINNUM = 0x00000001
+
+    # user-defined SP value
+    AFL_USERSP = 0x00000002
+
+    # name is public (inter-file linkage)
+    AFL_PUBNAM = 0x00000004
+
+    # name is weak
+    AFL_WEAKNAM = 0x00000008
+
+    # the item is hidden completely
+    AFL_HIDDEN = 0x00000010
+
+    # the instruction/data is specified by the user
+    AFL_MANUAL = 0x00000020
+
+    # the code/data border is hidden
+    AFL_NOBRD = 0x00000040
+
+    # display struct field name at 0 offset when displaying an offset. More...
+    AFL_ZSTROFF = 0x00000080
+
+    # the 1st operand is bitwise negated
+    AFL_BNOT0 = 0x00000100
+
+    # the 2nd operand is bitwise negated
+    AFL_BNOT1 = 0x00000200
+
+    # item from the standard library. More...
+    AFL_LIB = 0x00000400
+
+    # has typeinfo? (NSUP_TYPEINFO)
+    AFL_TI = 0x00000800
+
+    # has typeinfo for operand 0? (NSUP_OPTYPES)
+    AFL_TI0 = 0x00001000
+
+    # has typeinfo for operand 1? (NSUP_OPTYPES+1)
+    AFL_TI1 = 0x00002000
+
+    # has local name too (FF_NAME should be set)
+    AFL_LNAME = 0x00004000
+
+    # has type comment? (such a comment may be changed by IDA)
+    AFL_TILCMT = 0x00008000
+
+    # toggle leading zeroes for the 1st operand
+    AFL_LZERO0 = 0x00010000
+
+    # toggle leading zeroes for the 2nd operand
+    AFL_LZERO1 = 0x00020000
+
+    # has user defined instruction color?
+    AFL_COLORED = 0x00040000
+
+    # terse structure variable display?
+    AFL_TERSESTR = 0x00080000
+
+    # code: toggle sign of the 1st operand
+    AFL_SIGN0 = 0x00100000
+
+    # code: toggle sign of the 2nd operand
+    AFL_SIGN1 = 0x00200000
+
+    # for imported function pointers: doesn't return. More...
+    AFL_NORET = 0x00400000
+
+    # sp delta value is fixed by analysis. More...
+    AFL_FIXEDSPD = 0x00800000
+
+    # the previous insn was created for alignment purposes only
+    AFL_ALIGNFLOW = 0x01000000
+
+    # the type information is definitive. More...
+    AFL_USERTI = 0x02000000
+
+    # function returns a floating point value
+    AFL_RETFP = 0x04000000
+
+    # insn modifes SP and uses the modified value More...
+    AFL_USEMODSP = 0x08000000
+
+    # autoanalysis should not create code here
+    AFL_NOTCODE = 0x10000000
+
 
 
 class ida_netnode:
@@ -304,7 +397,7 @@ class idc:
         ea -= 1
         return self.Head(ea)
 
-    def GetManyBytes(self, ea, size, use_dbg=False):
+    def GetManyBytes(self, ea, size, use_dbg= False):
         '''
         Raises:
           IndexError: if the range extends beyond a segment.
@@ -488,63 +581,63 @@ class ida_bytes:
 
     @staticmethod
     def isByte(flags):
-        return flags & FLAGS.DT_TYPE ==	FLAGS.FF_BYTE
+        return flags & FLAGS.DT_TYPE == FLAGS.FF_BYTE
 
     @staticmethod
     def isWord(flags):
- 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_WORD
+       return flags & FLAGS.DT_TYPE == FLAGS.FF_WORD
 
     @staticmethod
     def isDwrd(flags):
- 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_DWRD
+       return flags & FLAGS.DT_TYPE == FLAGS.FF_DWRD
 
     @staticmethod
     def isQwrd(flags):
- 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_QWRD
+       return flags & FLAGS.DT_TYPE == FLAGS.FF_QWRD
 
     @staticmethod
     def isOwrd(flags):
- 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_OWRD
+       return flags & FLAGS.DT_TYPE == FLAGS.FF_OWRD
 
     @staticmethod
     def isYwrd(flags):
- 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_YWRD
+       return flags & FLAGS.DT_TYPE == FLAGS.FF_YWRD
 
     @staticmethod
     def isTbyt(flags):
- 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_TBYT
+       return flags & FLAGS.DT_TYPE == FLAGS.FF_TBYT
 
     @staticmethod
     def isFloat(flags):
- 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_FLOAT
+       return flags & FLAGS.DT_TYPE == FLAGS.FF_FLOAT
 
     @staticmethod
     def isDouble(flags):
- 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_DOUBLE
+       return flags & FLAGS.DT_TYPE == FLAGS.FF_DOUBLE
 
     @staticmethod
     def isPackReal(flags):
- 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_PACKREAL
+       return flags & FLAGS.DT_TYPE == FLAGS.FF_PACKREAL
 
     @staticmethod
     def isASCII(flags):
- 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_ASCI
+       return flags & FLAGS.DT_TYPE == FLAGS.FF_ASCI
 
     @staticmethod
     def isStruct(flags):
- 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_STRU
+       return flags & FLAGS.DT_TYPE == FLAGS.FF_STRU
 
     @staticmethod
     def isAlign(flags):
- 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_ALIGN
+       return flags & FLAGS.DT_TYPE == FLAGS.FF_ALIGN
 
     @staticmethod
     def is3byte(flags):
- 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_3BYTE
+       return flags & FLAGS.DT_TYPE == FLAGS.FF_3BYTE
 
     @staticmethod
     def isCustom(flags):
- 	      return flags & FLAGS.DT_TYPE ==	FLAGS.FF_CUSTOM
+       return flags & FLAGS.DT_TYPE == FLAGS.FF_CUSTOM
 
 
 class IDAPython:
