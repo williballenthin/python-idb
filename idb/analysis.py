@@ -411,19 +411,92 @@ FileRegions = Analysis('$ fileregions', [
 # [] [addr be  ] [] []     []
 #                flags, if 0x80 set, then next 2 bytes
 
-class FunctionEntry(vstruct.VStruct):
-    def __init__(self):
-        vstruct.VStruct.__init__(self)
-        self.unk0  = v_uint8()
-        self.start = v_uint32(bigend=True)
-        self.flags = v_uint8()
-        self.unk05 = v_bytes()
 
-    def pcb_flags(self):
-        if self.flags & 0x80:
-            self['unk05'].vsSetLength(1)
+class func_t:
+    def __init__(self, buf):
+        self.buf = buf
+        self.vals = self.get_values()
+
+        self.startEA = self.vals[0]
+        self.endEA = self.startEA + self.vals[1]
+        self.flags = self.vals[2]
+
+        self.frame = None
+        self.frsize = None
+        self.frregs = None
+        self.argsize = None
+        self.fpd = None
+        self.color = None
+        self.owner = None
+        self.refqty = None
+
+        try:
+            self.frame = self.vals[3]
+            self.frsize = self.vals[4]
+            self.frregs = self.vals[5]
+            self.argsize = self.vals[6]
+            self.fpd = self.vals[7]
+            self.color = self.vals[8]
+            self.owner = self.vals[9]
+            self.refqty = self.vals[10]
+        except IndexError:
+            # some of these we don't have, so we'll fall back to the default value of None.
+            # eg. owner, refqty only present in some idb versions
+            # eg. all of these, if high bit of flags not set.
+            pass
+
+    def get_values(self):
+        # see `func_loader` (my name) in ida.wll.
+        # used to initialize from "$ funcs" netnode, and references `unpack_dw`.
+        offset = 0
+        vals = []
+
+        v, size = unpack_dd(self.buf, offset=offset)
+        offset += size
+        vals.append(v)
+
+        v, size = unpack_dd(self.buf, offset=offset)
+        offset += size
+        # v[0] + v[1]
+        vals.append(v)
+
+        v, size = unpack_dw(self.buf, offset=offset)
+        offset += size
+        vals.append(v)
+
+        if vals[2] & 0x80 == 0x0:
+            v, size = unpack_dd(self.buf, offset=offset)
+            offset += size
+            # 0x1000000
+            vals.append(v)
+
+            v, size = unpack_dd(self.buf, offset=offset)
+            offset += size
+            vals.append(v)
+
+            v, size = unpack_dw(self.buf, offset=offset)
+            offset += size
+            vals.append(v)
+
+            v, size = unpack_dd(self.buf, offset=offset)
+            offset += size
+            vals.append(v)
+
+            v, size = unpack_dw(self.buf, offset=offset)
+            offset += size
+            vals.append(v)
+
+            # there is some other stuff here, based on... IDB version???
+
         else:
-            self['unk05'].vsSetLength(0)
+            v, size = unpack_dd(self.buf, offset=offset)
+            offset += size
+            vals.append(v)
+
+            v, size = unpack_dw(self.buf, offset=offset)
+            offset += size
+            vals.append(v)
+        return vals
 
 
 # '$ funcs' maps from function effective address to details about it.
@@ -438,7 +511,7 @@ class FunctionEntry(vstruct.VStruct):
 #       0x8:
 #       0xC:
 Functions = Analysis('$ funcs', [
-    Field('functions',  'S', ADDRESSES, as_cast(FunctionEntry)),
+    Field('functions',  'S', ADDRESSES, func_t),
 ])
 
 

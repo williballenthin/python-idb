@@ -338,6 +338,52 @@ class idc:
     def __init__(self, db):
         self.idb = db
 
+        # apparently this enum changes with bitness.
+        # this is annoying.
+        # so, be sure to reference these via an `idc` *instance*.
+        # yes:
+        #
+        #    idc(some_idb).FUNCATTR_START
+        #
+        # no:
+        #
+        #    idc.FUNCATTR_START
+        #
+        # via: https://github.com/zachriggle/idapython/blob/37d2fd13b31fec8e6e53fbb9704fa3cd0cbd5b07/python/idc.py#L4149
+        if self.idb.wordsize == 4:
+            # function start address
+            FUNCATTR_START = 0
+            # function end address
+            FUNCATTR_END = 4
+            # function flags
+            FUNCATTR_FLAGS = 8
+            # function frame id
+            FUNCATTR_FRAME = 10
+            # size of local variables
+            FUNCATTR_FRSIZE = 14
+            # size of saved registers area
+            FUNCATTR_FRREGS = 18
+            # number of bytes purged from the stack
+            FUNCATTR_ARGSIZE = 20
+            # frame pointer delta
+            FUNCATTR_FPD = 24
+            # function color code
+            FUNCATTR_COLOR = 28
+        elif self.idb.wordsize == 8:
+            FUNCATTR_START   = 0
+            FUNCATTR_END     = 8
+            FUNCATTR_FLAGS   = 16
+            FUNCATTR_FRAME   = 18
+            FUNCATTR_FRSIZE  = 26
+            FUNCATTR_FRREGS  = 34
+            FUNCATTR_ARGSIZE = 36
+            FUNCATTR_FPD     = 44
+            FUNCATTR_COLOR   = 52
+            FUNCATTR_OWNER   = 18
+            FUNCATTR_REFQTY  = 26
+        else:
+            raise RuntimeError('unexpected wordsize')
+
     def SegStart(self, ea):
         # TODO: i think this should use '$ fileregions'
         return self.idb.id1.get_segment(ea).bounds.start
@@ -449,6 +495,34 @@ class idc:
             return nn.altval(tag='A', index=0x14) - 1
         except KeyError:
             return idc.DEFCOLOR
+
+    def GetFunctionFlags(ea):
+        func = ida_funcs(self.idb).get_func(ea)
+        return func.flags
+
+    def GetFunctionAttr(self, ea, attr):
+        func = ida_funcs(self.idb).get_func(ea)
+
+        if attr == self.FUNCATTR_START:
+            return func.startEA
+        elif attr == self.FUNCATTR_END:
+            return func.endEA
+        elif attr == self.FUNCATTR_FLAGS:
+            return func.flags
+        elif attr == self.FUNCATTR_FRAME:
+            return func.frame
+        elif attr == self.FUNCATTR_FRSIZE:
+            return func.frsize
+        elif attr == self.FUNCATTR_FRREGS:
+            return func.frregs
+        elif attr == self.FUNCATTR_ARGSIZE:
+            return func.argsize
+        elif attr == self.FUNCATTR_FPD:
+            return func.fpd
+        elif attr == self.FUNCATTR_COLOR:
+            return func.color
+        else:
+            raise ValueError('unknown attr: %x' % (attr))
 
     def hasValue(self, flags):
         return flags & FLAGS.FF_IVL > 0
@@ -763,10 +837,65 @@ class ida_nalt:
         return self.get_aflags(ea) & AFLAGS.AFL_NOTCODE > 0
 
 
+    def __init__(self, db):
+        self.idb = db
+
+
+class ida_funcs:
+    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_u_n_c__.html
+    # Function doesn't return.
+    FUNC_NORET = 0x00000001
+
+    # Far function.
+    FUNC_FAR = 0x00000002
+
+    # Library function.
+    FUNC_LIB = 0x00000004
+
+    # Static function.
+    FUNC_STATICDEF = 0x00000008
+
+    # Function uses frame pointer (BP)
+    FUNC_FRAME = 0x00000010
+
+    # User has specified far-ness. More...
+    FUNC_USERFAR = 0x00000020
+
+    # A hidden function chunk.
+    FUNC_HIDDEN = 0x00000040
+
+    # Thunk (jump) function.
+    FUNC_THUNK = 0x00000080
+
+    # BP points to the bottom of the stack frame.
+    FUNC_BOTTOMBP = 0x00000100
+
+    # Function 'non-return' analysis must be performed. More...
+    FUNC_NORET_PENDING = 0x00200
+
+    # SP-analysis has been performed. More...
+    FUNC_SP_READY = 0x00000400
+
+    # 'argsize' field has been validated. More...
+    FUNC_PURGED_OK = 0x00004000
+
+    # This is a function tail. More...
+    FUNC_TAIL = 0x00008000
+
+    def __init__(self, db):
+        self.idb = db
+
+    def get_func(self, ea):
+        nn = ida_netnode(self.idb).netnode(ea)
+        v = nn.supval(tag='S', index=ea)
+        return idb.analysis.func_t(v)
+
+
 class IDAPython:
     def __init__(self, db):
         self.idb = db
         self.idc = idc(db)
+        self.ida_funcs = ida_funcs(db)
         self.ida_bytes = ida_bytes(db)
         self.ida_netnode = ida_netnode(db)
         self.ida_nalt = ida_nalt(db)
