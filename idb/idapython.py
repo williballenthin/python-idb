@@ -1,4 +1,9 @@
+import logging
+
 import idb.analysis
+
+
+logger = logging.getLogger(__name__)
 
 
 def is_flag_set(flags, flag):
@@ -890,9 +895,36 @@ class ida_funcs:
         self.idb = db
 
     def get_func(self, ea):
+        '''
+        get the func_t associated with the given address.
+        if the address is not the start of a function (or function tail), then searches
+         for a function that contains the given address.
+        note: the range search is pretty slow, since we parse everything on-demand.
+        '''
         nn = ida_netnode(self.idb).netnode('$ funcs')
-        v = nn.supval(tag='S', index=ea)
-        return idb.analysis.func_t(v)
+        try:
+            v = nn.supval(tag='S', index=ea)
+        except KeyError:
+            # search for the given effective address in the function regions.
+            # according to [1], `get_func` only searches the primary region, and not all chunks?
+            #
+            # [1]: http://www.openrce.org/reference_library/ida_sdk_lookup/get_func
+            for func in idb.analysis.Functions(self.idb).functions.values():
+                if not (func.startEA <= ea < func.endEA):
+                    continue
+
+                if is_flag_set(func.flags, self.FUNC_TAIL):
+                    return self.get_func(func.owner)
+                else:
+                    return func
+
+            raise KeyError(ea)
+        else:
+            func = idb.analysis.func_t(v)
+            if is_flag_set(func.flags, self.FUNC_TAIL):
+                return self.get_func(func.owner)
+            else:
+                return func
 
 
 class IDAPython:

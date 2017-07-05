@@ -258,6 +258,7 @@ def test_func_t(kernel32_idb):
     assert DllEntryPoint.argsize == 0xC
     # frame pointer delta. not clear on how this is computed.
     # in fact, a value of 0x9 doesn't make much sense. so this might be wrong.
+    # more likely to be the stack change point count.
     assert DllEntryPoint.fpd == 0x9
 
     flags = DllEntryPoint.flags
@@ -275,3 +276,10 @@ def test_func_t(kernel32_idb):
     assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_SP_READY) == True
     assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_PURGED_OK) == True
     assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_TAIL) == False
+    # also demonstrate finding the func from an address it may contain.
+    # note: this can be a pretty slow search, since we do everything on demand with no caching.
+    assert api.ida_funcs.get_func(0x68901695 + 1).startEA == 0x68901695
+
+    # this is the function chunk for DllEntryPoint, but gets resolved to the non-tail func.
+    assert api.ida_funcs.get_func(0x68906156).startEA == 0x68901695
+    assert api.ida_funcs.get_func(0x68906156 + 1).startEA == 0x68901695
