@@ -2,6 +2,7 @@ import pytest
 from fixtures import *
 
 import idb
+import idb.idapython
 
 
 import logging
@@ -258,3 +259,19 @@ def test_func_t(kernel32_idb):
     # frame pointer delta. not clear on how this is computed.
     # in fact, a value of 0x9 doesn't make much sense. so this might be wrong.
     assert DllEntryPoint.fpd == 0x9
+
+    flags = DllEntryPoint.flags
+    # collected empirically
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_NORET) == False
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_FAR) == False
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_LIB) == False
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_STATICDEF) == False
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_FRAME) == True
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_USERFAR) == False
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_HIDDEN) == False
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_THUNK) == False
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_BOTTOMBP) == False
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_NORET_PENDING) == False
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_SP_READY) == True
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_PURGED_OK) == True
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_TAIL) == False
