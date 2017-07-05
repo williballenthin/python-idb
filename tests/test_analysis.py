@@ -66,7 +66,7 @@ def test_functions(kernel32_idb):
     assert len(funcs) == 0x12a8
 
     for addr, func in funcs.items():
-        assert addr == func.start
+        assert addr == func.startEA
 
 
 def test_struct(kernel32_idb):

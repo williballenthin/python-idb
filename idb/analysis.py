@@ -457,46 +457,52 @@ class func_t:
 
         v, size = unpack_dd(self.buf, offset=offset)
         offset += size
-        # v[0] + v[1]
         vals.append(v)
 
         v, size = unpack_dw(self.buf, offset=offset)
         offset += size
         vals.append(v)
 
-        if vals[2] & 0x80 == 0x0:
-            v, size = unpack_dd(self.buf, offset=offset)
-            offset += size
-            # 0x1000000
-            vals.append(v)
+        try:
+            if vals[2] & 0x80 == 0x0:
+                v, size = unpack_dd(self.buf, offset=offset)
+                offset += size
+                # 0x1000000
+                vals.append(v)
 
-            v, size = unpack_dd(self.buf, offset=offset)
-            offset += size
-            vals.append(v)
+                v, size = unpack_dd(self.buf, offset=offset)
+                offset += size
+                vals.append(v)
 
-            v, size = unpack_dw(self.buf, offset=offset)
-            offset += size
-            vals.append(v)
+                v, size = unpack_dw(self.buf, offset=offset)
+                offset += size
+                vals.append(v)
 
-            v, size = unpack_dd(self.buf, offset=offset)
-            offset += size
-            vals.append(v)
+                v, size = unpack_dd(self.buf, offset=offset)
+                offset += size
+                vals.append(v)
 
-            v, size = unpack_dw(self.buf, offset=offset)
-            offset += size
-            vals.append(v)
+                v, size = unpack_dw(self.buf, offset=offset)
+                offset += size
+                vals.append(v)
 
-            # there is some other stuff here, based on... IDB version???
+                # there is some other stuff here, based on... IDB version???
 
-        else:
-            v, size = unpack_dd(self.buf, offset=offset)
-            offset += size
-            vals.append(v)
+            else:
+                v, size = unpack_dd(self.buf, offset=offset)
+                offset += size
+                vals.append(v)
 
-            v, size = unpack_dw(self.buf, offset=offset)
-            offset += size
-            vals.append(v)
-        return vals
+                v, size = unpack_dw(self.buf, offset=offset)
+                offset += size
+                vals.append(v)
+        except IndexError:
+            # this is dangerous.
+            # i don't know all the combinations of which fields can exist.
+            # so, we'll do the best we can...
+            pass
+        finally:
+            return vals
 
 
 # '$ funcs' maps from function effective address to details about it.
