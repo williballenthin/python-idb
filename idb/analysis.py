@@ -82,32 +82,30 @@ def unpack_dd(buf, offset=0):
 
     via: https://github.com/williballenthin/pyidbutil/blob/de12af8a1c32a36a5daac591f4cc5a17fa9496da/idblib.py#L161
     '''
-    o = offset
-    val = buf[o] ; o += 1
-    if val == 0xff:  # 32 bit value
-        val, = struct.unpack_from(">L", buf, o)
-        o += 4
-        return val, o
-    if val < 0x80:  # 7 bit value
-        return val, o
-    val <<= 8
-    val |= buf[o] ; o += 1
-    if val < 0xc000:  # 14 bit value
-        return val & 0x3fff, o
-
-    # 29 bit value
-    val <<= 8
-    val |= buf[o] ; o += 1
-    val <<= 8
-    val |= buf[o] ; o += 1
-    return val & 0x1fffffff, o
+    buf = buf[offset:]
+    header = buf[0]
+    if header & 0x80 == 0:
+        return header, 1
+    elif header & 0xC0 != 0xC0:
+        return ((header & 0x7F) << 8) + buf[1], 2
+    else:
+        if header & 0xE0 == 0xE0:
+            hi = (buf[1] << 8) + buf[2]
+            low = (buf[3] << 8) + buf[4]
+            size = 5
+        else:
+            hi = (((header & 0x3F) << 8) + buf[1])
+            low = (buf[2] << 8) + buf[3]
+            size = 4
+        return (hi << 16) + low, size
 
 
 def unpack_dds(buf):
     offset = 0
     while offset < len(buf):
-        val, offset = unpack_dd(buf, offset=offset)
+        val, size = unpack_dd(buf, offset=offset)
         yield val
+        offset += size
 
 
 Field = namedtuple('Field', ['name', 'tag', 'index', 'cast'])
