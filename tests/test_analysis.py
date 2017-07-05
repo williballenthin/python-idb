@@ -200,3 +200,11 @@ def test_stack_change_points(kernel32_idb):
         # there are no stack change points in this function
         assert list(GetCurrentProcess.get_stack_change_points()) == []
 
+
+
+def test_xrefs(kernel32_idb):
+    assert list(idb.analysis.crefs_from(kernel32_idb, 0x68901695)) == []
+    assert list(idb.analysis.crefs_from(kernel32_idb, 0x6890169E)) == [0x68906156]
+
+    assert list(idb.analysis.crefs_to(kernel32_idb, 0x6890169E)) == []
+    assert list(idb.analysis.crefs_to(kernel32_idb, 0x68906156)) == [0x6890169E]

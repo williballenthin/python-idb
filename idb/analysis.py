@@ -789,3 +789,69 @@ class Function:
                 change = -(change >> 1)
 
             yield StackChangePoint(offset, change)
+
+
+def _get_xrefs(db, ea, tag):
+    nn = idb.netnode.Netnode(db, ea)
+    try:
+        for xref in nn.chars(tag=tag):
+            yield xref
+    except KeyError:
+        return
+
+
+def crefs_to(db, ea):
+    '''
+    fetches the code references to the given address.
+
+    Args:
+      db (idb.IDB): the database.
+      ea (int): the effective address from which to fetch xrefs.
+
+    Yields:
+      int: xref address.
+    '''
+    return _get_xrefs(db, ea, 'X')
+
+
+def crefs_from(db, ea):
+    '''
+    fetches the code references from the given address.
+
+    Args:
+      db (idb.IDB): the database.
+      ea (int): the effective address from which to fetch xrefs.
+
+    Yields:
+      int: xref address.
+    '''
+    return _get_xrefs(db, ea, 'x')
+
+
+def drefs_to(db, ea):
+    '''
+    fetches the data references to the given address.
+
+    Args:
+      db (idb.IDB): the database.
+      ea (int): the effective address from which to fetch xrefs.
+
+    Yields:
+      int: xref address.
+    '''
+    return _get_xrefs(db, ea, 'D')
+
+
+def drefs_from(db, ea):
+    '''
+    fetches the data references from the given address.
+
+    Args:
+      db (idb.IDB): the database.
+      ea (int): the effective address from which to fetch xrefs.
+
+    Yields:
+      int: xref address.
+    '''
+    return _get_xrefs(db, ea, 'x')
+
