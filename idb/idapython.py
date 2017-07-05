@@ -1,6 +1,10 @@
 import idb.analysis
 
 
+def is_flag_set(flags, flag):
+    return flags & flag == flag
+
+
 class FLAGS:
     # instruction/data operands
     # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__op.html
@@ -762,79 +766,79 @@ class ida_nalt:
             return 0
 
     def is_hidden_item(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_HIDDEN > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_HIDDEN)
 
     def is_hidden_border(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_NOBRD > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_NOBRD)
 
     def uses_modsp(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_USEMODSP > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_USEMODSP)
 
     def is_zstroff(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_ZSTROFF > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_ZSTROFF)
 
     def is__bnot0(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_BNOT0 > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_BNOT0)
 
     def is__bnot1(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_BNOT1 > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_BNOT1)
 
     def is_libitem(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_LIB > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_LIB)
 
     def has_ti(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_TI > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_TI)
 
     def has_ti0(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_TI0 > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_TI0)
 
     def has_ti1(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_TI1 > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_TI1)
 
     def has_lname(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_LNAME > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_LNAME)
 
     def is_tilcmt(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_TILCMT > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_TILCMT)
 
     def is_usersp(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_USERSP > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_USERSP)
 
     def is_lzero0(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_LZERO0 > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_LZERO0)
 
     def is_lzero1(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_LZERO1 > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_LZERO1)
 
     def is_colored_item(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_COLORED > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_COLORED)
 
     def is_terse_struc(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_TERSESTR > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_TERSESTR)
 
     def is__invsign0(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_SIGN0 > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_SIGN0)
 
     def is__invsign1(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_SIGN1 > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_SIGN1)
 
     def is_noret(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_NORET > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_NORET)
 
     def is_fixed_spd(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_FIXEDSPD > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_FIXEDSPD)
 
     def is_align_flow(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_ALIGNFLOW > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_ALIGNFLOW)
 
     def is_userti(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_USERTI > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_USERTI)
 
     def is_retfp(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_RETFP > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_RETFP)
 
     def is_notcode(self, ea):
-        return self.get_aflags(ea) & AFLAGS.AFL_NOTCODE > 0
+        return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_NOTCODE)
 
 
     def __init__(self, db):
@@ -886,7 +890,7 @@ class ida_funcs:
         self.idb = db
 
     def get_func(self, ea):
-        nn = ida_netnode(self.idb).netnode(ea)
+        nn = ida_netnode(self.idb).netnode('$ funcs')
         v = nn.supval(tag='S', index=ea)
         return idb.analysis.func_t(v)
 

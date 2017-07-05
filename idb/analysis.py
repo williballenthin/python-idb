@@ -401,17 +401,6 @@ FileRegions = Analysis('$ fileregions', [
 ])
 
 
-# nodeid: ff000022 tag: S index: 0x689bd410
-# FF 68 9B D4 10 81 5A FF  44 10 99 CE 20 04 00 10 00 00 00 00 00 00
-# [] [addr be  ] [] [   ]
-#                flags, if 0x80 set, then next is 2 bytes
-#
-# nodeid: ff000022 tag: S index: 0x689bd56a
-# FF 68 9B D5 6A 2D FF     80  00 C0 0A 48 05 01
-# [] [addr be  ] [] []     []
-#                flags, if 0x80 set, then next 2 bytes
-
-
 class func_t:
     def __init__(self, buf):
         self.buf = buf
@@ -510,12 +499,7 @@ class func_t:
 # supvals:
 #   format1:
 #     index: effective address
-#     value:
-#       0x0:
-#       0x1: start effective address (big endian)
-#       0x4:
-#       0x8:
-#       0xC:
+#     value: func_t
 Functions = Analysis('$ funcs', [
     Field('functions',  'S', ADDRESSES, func_t),
 ])

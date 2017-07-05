@@ -236,3 +236,25 @@ def test_colors(small_idb):
 
     # this is what i set it to via IDAPython when creating the idb.
     assert api.idc.GetColor(0, api.idc.CIC_ITEM) == 0x888888
+
+
+def test_func_t(kernel32_idb):
+    api = idb.IDAPython(kernel32_idb)
+
+    DllEntryPoint = api.ida_funcs.get_func(0x68901695)
+    assert DllEntryPoint.startEA == 0x68901695
+    assert DllEntryPoint.endEA == 0x689016B0
+    # the netnode id of the frame structure
+    # go look at netnode | FF 00 00 00 00 75 |
+    assert DllEntryPoint.frame == 0x75
+    # size of local variables
+    assert DllEntryPoint.frsize == 0x0
+    # size of saved registers.
+    # i presume this is for saved ebp.
+    # in the IDA functions view, the "Locals" column may be (frsize + frregs).
+    assert DllEntryPoint.frregs == 0x4
+    # size on stack of arguments
+    assert DllEntryPoint.argsize == 0xC
+    # frame pointer delta. not clear on how this is computed.
+    # in fact, a value of 0x9 doesn't make much sense. so this might be wrong.
+    assert DllEntryPoint.fpd == 0x9
