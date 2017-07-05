@@ -19,6 +19,10 @@ import idb.netnode
 logger = logging.getLogger(__name__)
 
 
+def is_flag_set(flags, flag):
+    return flags & flag == flag
+
+
 def as_unix_timestamp(buf):
     '''
     parse unix timestamp bytes into a timestamp.
@@ -402,6 +406,8 @@ FileRegions = Analysis('$ fileregions', [
 
 
 class func_t:
+    FUNC_TAIL = 0x00008000
+
     def __init__(self, buf):
         self.buf = buf
         self.vals = self.get_values()
@@ -419,20 +425,22 @@ class func_t:
         self.owner = None
         self.refqty = None
 
-        try:
-            self.frame = self.vals[3]
-            self.frsize = self.vals[4]
-            self.frregs = self.vals[5]
-            self.argsize = self.vals[6]
-            self.fpd = self.vals[7]
-            self.color = self.vals[8]
-            self.owner = self.vals[9]
-            self.refqty = self.vals[10]
-        except IndexError:
-            # some of these we don't have, so we'll fall back to the default value of None.
-            # eg. owner, refqty only present in some idb versions
-            # eg. all of these, if high bit of flags not set.
-            pass
+        if not is_flag_set(self.flags, func_t.FUNC_TAIL):
+            try:
+                self.frame = self.vals[3]
+                self.frsize = self.vals[4]
+                self.frregs = self.vals[5]
+                self.argsize = self.vals[6]
+                self.fpd = self.vals[7]
+                self.color = self.vals[8]
+            except IndexError:
+                # some of these we don't have, so we'll fall back to the default value of None.
+                # eg. owner, refqty only present in some idb versions
+                # eg. all of these, if high bit of flags not set.
+                pass
+        else:
+            self.owner = self.startEA - self.vals[3]
+            self.refqty = self.vals[4]
 
     def get_values(self):
         # see `func_loader` (my name) in ida.wll.
@@ -453,7 +461,7 @@ class func_t:
         vals.append(v)
 
         try:
-            if vals[2] & 0x80 == 0x0:
+            if not is_flag_set(vals[2], func_t.FUNC_TAIL):
                 v, size = unpack_dd(self.buf, offset=offset)
                 offset += size
                 # 0x1000000
