@@ -78,11 +78,22 @@ def as_cast(V):
 
 def unpack_dd(buf, offset=0):
     '''
-    IDA-specific data packing format.
+    unpack up to 32-bits using the IDA-specific data packing format.
 
-    via: https://github.com/williballenthin/pyidbutil/blob/de12af8a1c32a36a5daac591f4cc5a17fa9496da/idblib.py#L161
+    Args:
+      buf (bytes): the region to parse.
+      offset (int): the offset into the region from which to unpack. default: 0.
+
+    Returns:
+      (int, int): the parsed dword, and the number of bytes consumed.
+
+    Raises:
+      KeyError: if the bounds of the region are exceeded.
     '''
-    buf = buf[offset:]
+    if offset != 0:
+        # this isn't particularly fast... but its more readable.
+        buf = buf[offset:]
+
     header = buf[0]
     if header & 0x80 == 0:
         return header, 1
@@ -98,6 +109,35 @@ def unpack_dd(buf, offset=0):
             low = (buf[2] << 8) + buf[3]
             size = 4
         return (hi << 16) + low, size
+
+
+def unpack_dw(buf, offset=0):
+    '''
+    unpack word.
+    '''
+    if offset != 0:
+        buf = buf[offset:]
+
+    header = buf[0]
+    if header & 0x80 == 0:
+        return header, 1
+    elif header & 0xC0 != 0xC0:
+        return ((header << 8) + buf[1]) & 0x7FFF, 2
+    else:
+        return (buf[1] << 8) + buf[2], 3
+
+
+def unpack_dq(buf, offset=0):
+    '''
+    unpack qword.
+    '''
+    if offset != 0:
+        buf = buf[offset:]
+
+    dw1 = unpack_dd(buf)
+    dw2 = unpack_dd(buf, offset=0x4)
+    # TODO: check ordering.
+    return (dw1 << 32) + dw2
 
 
 def unpack_dds(buf):
