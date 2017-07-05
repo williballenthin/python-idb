@@ -76,6 +76,40 @@ def as_cast(V):
     return inner
 
 
+def unpack_dd(buf, offset=0):
+    '''
+    IDA-specific data packing format.
+
+    via: https://github.com/williballenthin/pyidbutil/blob/de12af8a1c32a36a5daac591f4cc5a17fa9496da/idblib.py#L161
+    '''
+    o = offset
+    val = buf[o] ; o += 1
+    if val == 0xff:  # 32 bit value
+        val, = struct.unpack_from(">L", buf, o)
+        o += 4
+        return val, o
+    if val < 0x80:  # 7 bit value
+        return val, o
+    val <<= 8
+    val |= buf[o] ; o += 1
+    if val < 0xc000:  # 14 bit value
+        return val & 0x3fff, o
+
+    # 29 bit value
+    val <<= 8
+    val |= buf[o] ; o += 1
+    val <<= 8
+    val |= buf[o] ; o += 1
+    return val & 0x1fffffff, o
+
+
+def unpack_dds(buf):
+    offset = 0
+    while offset < len(buf):
+        val, offset = unpack_dd(buf, offset=offset)
+        yield val
+
+
 Field = namedtuple('Field', ['name', 'tag', 'index', 'cast'])
 # namedtuple default args.
 # via: https://stackoverflow.com/a/18348004/87207
@@ -370,42 +404,6 @@ Functions = Analysis('$ funcs', [
 ])
 
 
-def idaunpack(buf):
-    '''
-    IDA-specific data packing format.
-
-    via: https://github.com/williballenthin/pyidbutil/blob/de12af8a1c32a36a5daac591f4cc5a17fa9496da/idblib.py#L161
-    '''
-    buf = bytearray(buf)
-
-    def nextval(o):
-        val = buf[o] ; o += 1
-        if val == 0xff:  # 32 bit value
-            val, = struct.unpack_from(">L", buf, o)
-            o += 4
-            return val, o
-        if val < 0x80:  # 7 bit value
-            return val, o
-        val <<= 8
-        val |= buf[o] ; o += 1
-        if val < 0xc000:  # 14 bit value
-            return val & 0x3fff, o
-
-        # 29 bit value
-        val <<= 8
-        val |= buf[o] ; o += 1
-        val <<= 8
-        val |= buf[o] ; o += 1
-        return val & 0x1fffffff, o
-
-    values = []
-    o = 0
-    while o < len(buf):
-        val, o = nextval(o)
-        values.append(val)
-    return values
-
-
 class PString(vstruct.VStruct):
     '''
     short pascal string, prefixed with single byte length.
@@ -526,7 +524,7 @@ class Struct:
 
     def get_members(self):
         v = self.netnode.supval(tag='M', index=0)
-        vals = idaunpack(v)
+        vals = list(unpack_dds(v))
 
         if not vals[0] & STRUCT_FLAGS.SF_FRAME:
             raise RuntimeError('unexpected frame header')
@@ -563,14 +561,12 @@ def chunks(l, n):
             v = list(itertools.islice(l, n))
             if not v:
                 return
-            print('g', v)
             yield v
     else:
         i = 0
         while True:
             try:
                 v = l[i:i+n]
-                print('l', v)
                 yield v
             except IndexError:
                 return
@@ -661,7 +657,7 @@ class Function:
 
         last_ea = 0
         last_length = 0
-        for delta, length in pairs(idaunpack(v)):
+        for delta, length in pairs(unpack_dds(v)):
             ea = last_ea + last_length + delta
             yield Chunk(ea, length)
             last_ea = ea
@@ -676,7 +672,7 @@ class Function:
         # ref: ida.wll@0x100793d0
         v = self.netnode.supval(tag='S', index=0x1000)
         offset = self.nodeid
-        for (delta, change) in pairs(idaunpack(v)):
+        for (delta, change) in pairs(unpack_dds(v)):
             offset += delta
             if change & 1:
                 change = change >> 1
