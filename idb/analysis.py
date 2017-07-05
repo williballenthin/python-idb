@@ -1,7 +1,9 @@
+import types
 import struct
 import logging
 import binascii
 import datetime
+import itertools
 from collections import namedtuple
 
 import vstruct
@@ -556,8 +558,23 @@ def chunks(l, n):
     Yield successive n-sized chunks from l.
     via: https://stackoverflow.com/a/312464/87207
     '''
-    for i in range(0, len(l), n):
-        yield l[i:i + n]
+    if isinstance(l, types.GeneratorType):
+        while True:
+            v = list(itertools.islice(l, n))
+            if not v:
+                return
+            print('g', v)
+            yield v
+    else:
+        i = 0
+        while True:
+            try:
+                v = l[i:i+n]
+                print('l', v)
+                yield v
+            except IndexError:
+                return
+            i += n
 
 
 def pairs(l):
