@@ -450,3 +450,15 @@ def test_segments(kernel32_idb):
     seg = api.idaapi.get_seg(0x68901000)
     assert seg.startEA == 0x68901000
     assert seg.endEA == 0x689db000
+
+
+def test_get_mnem(kernel32_idb):
+    api = idb.IDAPython(kernel32_idb)
+
+    # .text:68901695 000 8B FF                                   mov     edi, edi
+    # .text:68901697 000 55                                      push    ebp
+    # .text:68901698 004 8B EC                                   mov     ebp, esp
+    # .text:6890169A 004 83 7D 0C 01                             cmp     [ebp+fdwReason], 1
+    # .text:6890169E 004 0F 84 B2 4A 00 00                       jz      loc_68906156
+    assert api.idc.GetMnem(0x68901695) == 'mov'
+

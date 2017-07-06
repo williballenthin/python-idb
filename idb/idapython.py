@@ -347,6 +347,7 @@ class ida_netnode:
 class idc:
     def __init__(self, db):
         self.idb = db
+        self.dis = None  # this will be the capstone disassembler, lazily loaded.
 
         # apparently this enum changes with bitness.
         # this is annoying.
@@ -488,6 +489,33 @@ class idc:
         for i in range(ea, ea + size):
             ret.append(self.IdbByte(i))
         return bytes(ret)
+
+    def _load_dis(self):
+        if self.dis is not None:
+            return
+
+        import capstone
+        # WARNING:
+        # TODO: this is hardcoded to 32bit x86! where is the arch stored in the idb?
+        self.dis = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
+        # required to fetch operand values
+        self.dis.detail = True
+
+    def _disassemble(self, ea):
+        size = self.ItemSize(ea)
+        buf = self.GetManyBytes(ea, size)
+        self._load_dis()
+
+        try:
+            op = next(self.dis.disasm(buf, ea))
+        except StopIteration:
+            raise RuntimeError('failed to disassemble %s' % (hex(ea)))
+        else:
+            return op
+
+    def GetMnem(self, ea):
+        op = self._disassemble(ea)
+        return op.mnemonic
 
     # one instruction or data
     CIC_ITEM = 1

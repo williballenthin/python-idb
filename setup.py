@@ -23,7 +23,8 @@ setup(
     license='Apache License 2.0',
     install_requires=[
         "hexdump",
-        "vivisect-vstruct-wb>=1.0.3"
+        'capstone',
+        "vivisect-vstruct-wb>=1.0.3",
     ],
     packages=find_packages(exclude=['*.tests', '*.tests.*']),
     entry_points={
