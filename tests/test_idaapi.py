@@ -447,7 +447,7 @@ def test_segments(kernel32_idb):
     assert api.idc.SegEnd(0x689db000) == 0x689dd000
     assert api.idc.SegEnd(0x689dd000) == 0x689de230
 
-    seg = api.idaapi.get_seg(0x68901000)
+    seg = api.idaapi.getseg(0x68901000)
     assert seg.startEA == 0x68901000
     assert seg.endEA == 0x689db000
 

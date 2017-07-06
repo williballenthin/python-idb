@@ -1286,7 +1286,7 @@ class idaapi:
             else:
                 return False
 
-    def get_seg(self, ea):
+    def getseg(self, ea):
         segs = idb.analysis.Segments(self.idb).segments
         for seg in segs.values():
             if seg.startEA <= ea < seg.endEA:
