@@ -884,6 +884,12 @@ class Fixup(vstruct.VStruct):
         if self.type != 0x04:
             raise NotImplementedError('fixup type %x not yet supported' % (self.type))
 
+    def get_fixup_length(self):
+        if self.type == 0x4:
+            return 0x4
+        else:
+            raise NotImplementedError('fixup type %x not yet supported' % (self.type))
+
 
 # '$ fixups' maps from fixup start address to details about it.
 #

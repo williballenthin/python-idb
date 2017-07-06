@@ -249,3 +249,4 @@ def test_fixups(kernel32_idb):
     # .text:68901023 024 8B 3D 98 B1 9D 68                       mov     edi, dword_689DB198
     # .text:68901029 024 85 FF                                   test    edi, edi
     assert fixups[0x68901023 + 2].offset == 0x689DB198
+    assert fixups[0x68901023 + 2].get_fixup_length() == 0x4
