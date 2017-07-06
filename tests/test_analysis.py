@@ -240,3 +240,12 @@ def test_xrefs(kernel32_idb):
     assert 0x689016C0 in pluck('src', idb.analysis.get_drefs_to(kernel32_idb, security_cookie))
     assert lpluck('dst', idb.analysis.get_drefs_from(kernel32_idb, security_cookie)) == []
 
+
+def test_fixups(kernel32_idb):
+    fixups = idb.analysis.Fixups(kernel32_idb).fixups
+    assert len(fixups) == 31608
+
+    # .text:68901022 020 57                                      push    edi
+    # .text:68901023 024 8B 3D 98 B1 9D 68                       mov     edi, dword_689DB198
+    # .text:68901029 024 85 FF                                   test    edi, edi
+    assert fixups[0x68901023 + 2].offset == 0x689DB198

@@ -10,6 +10,7 @@ import vstruct
 from vstruct.primitives import v_str
 from vstruct.primitives import v_bytes
 from vstruct.primitives import v_uint8
+from vstruct.primitives import v_uint16
 from vstruct.primitives import v_uint32
 
 import idb
@@ -868,3 +869,32 @@ def get_drefs_from(db, ea, types=None):
       int: xref address.
     '''
     return _get_xrefs(db, src=ea, tag='d', types=types)
+
+
+class Fixup(vstruct.VStruct):
+    def __init__(self):
+        vstruct.VStruct.__init__(self)
+        # sizeof() == 0xB (fixed)
+        self.type = v_uint8()    # possible values: 0x0 - 0xC. top bit has some meaning.
+        self.unk01 = v_uint16()  # this might be the segment index + 1?
+        self.offset = v_uint32()
+        self.unk07 = v_uint32()
+
+    def pcb_type(self):
+        if self.type != 0x04:
+            raise NotImplementedError('fixup type %x not yet supported' % (self.type))
+
+
+# '$ fixups' maps from fixup start address to details about it.
+#
+# supvals:
+#   format1:
+#     index: start effective address
+#     value:
+#       0x0:
+#       0x4:
+#       0x8:
+Fixups = Analysis('$ fixups', [
+    Field('fixups',  'S', ADDRESSES, as_cast(Fixup))
+])
+
