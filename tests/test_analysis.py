@@ -208,3 +208,14 @@ def test_xrefs(kernel32_idb):
 
     assert list(idb.analysis.crefs_to(kernel32_idb, 0x6890169E)) == []
     assert list(idb.analysis.crefs_to(kernel32_idb, 0x68906156)) == [0x6890169E]
+
+    # .text:689016BA 004 81 EC 14 02 00 00                       sub     esp, 214h
+    # .text:689016C0 218 A1 70 B3 9D 68                          mov     eax, ___security_cookie
+    # .text:689016C5 218 33 C5                                   xor     eax, ebp
+    security_cookie = 0x689DB370
+    assert list(idb.analysis.drefs_from(kernel32_idb, 0x689016C0)) == [security_cookie]
+    assert list(idb.analysis.drefs_to(kernel32_idb, 0x689016C0)) == []
+
+    assert 0x689016C0 in list(idb.analysis.drefs_to(kernel32_idb, security_cookie))
+    assert list(idb.analysis.drefs_from(kernel32_idb, security_cookie)) == []
+

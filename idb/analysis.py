@@ -853,5 +853,5 @@ def drefs_from(db, ea):
     Yields:
       int: xref address.
     '''
-    return _get_xrefs(db, ea, 'x')
+    return _get_xrefs(db, ea, 'd')
 
