@@ -982,11 +982,11 @@ class idaapi:
         '''
         api = IDAPython(self.idb)
 
-        while True:
-            if not is_empty(idb.analysis.get_crefs_from(self.idb, ea)):
-                # single insn in this bb
-                return ea
+        if not is_empty(idb.analysis.get_crefs_from(self.idb, ea,
+                                                    types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F])):
+            return ea
 
+        while True:
             last_ea = ea
             ea = api.idc.NextHead(ea)
 
@@ -997,6 +997,13 @@ class idaapi:
 
             if api.ida_bytes.isFunc(flags):
                 return last_ea
+
+            if not api.ida_bytes.isFlow(flags):
+                return last_ea
+
+            if not is_empty(idb.analysis.get_crefs_from(self.idb, ea,
+                                                        types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F])):
+                return ea
 
     def _find_bb_start(self, ea):
         '''
@@ -1020,8 +1027,11 @@ class idaapi:
             last_ea = ea
             ea = api.idc.PrevHead(ea)
 
-            # TODO: could probably optimize here by re-using the same cursor.
-            if not is_empty(idb.analysis.get_crefs_from(self.idb, ea)):
+            if not is_empty(idb.analysis.get_crefs_from(self.idb, ea,
+                                                        types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F])):
+                return last_ea
+
+            if not api.ida_bytes.isFlow(flags):
                 return last_ea
 
     def _get_flow_preds(self, ea):

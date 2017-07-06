@@ -303,6 +303,9 @@ def test_find_bb_end(kernel32_idb):
     # .text:68906227 220 A3 44 B0 9D 68                          mov     dword_689DB044, eax
     assert api.idaapi._find_bb_end(0x68906227) == 0x68906227
 
+    # regression test
+    assert api.idaapi._find_bb_end(0x689016A4) == 0x689016AD
+
 
 def test_find_bb_start(kernel32_idb):
     # .text:68901695 000 8B FF                                   mov     edi, edi
