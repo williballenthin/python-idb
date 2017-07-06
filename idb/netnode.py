@@ -268,8 +268,7 @@ class Netnode(object):
 
     def charentries(self, tag=TAGS.CHARVAL):
         for entry in self.get_tag_entries(tag=tag):
-            # TODO: cast the value?
-            yield entry
+            yield Entry(entry.key, entry.parsed_key, as_int(entry.value))
 
     def hashval(self, index, tag=TAGS.HASHVAL):
         '''
