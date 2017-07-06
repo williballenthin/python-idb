@@ -982,11 +982,11 @@ class idaapi:
         '''
         api = IDAPython(self.idb)
 
-        if not is_empty(idb.analysis.get_crefs_from(self.idb, ea)):
-            # single insn in this bb
-            return ea
-
         while True:
+            if not is_empty(idb.analysis.get_crefs_from(self.idb, ea)):
+                # single insn in this bb
+                return ea
+
             last_ea = ea
             ea = api.idc.NextHead(ea)
 
@@ -998,10 +998,31 @@ class idaapi:
             if api.ida_bytes.isFunc(flags):
                 return last_ea
 
+    def _find_bb_start(self, ea):
+        '''
+        Args:
+          ea (int): address at which a basic block ends. behavior undefined if its not a block end.
+
+        Returns:
+          int: the address of the first instruction in the basic block. it may be the same as the end.
+        '''
+        api = IDAPython(self.idb)
+
+        while True:
+            flags = api.idc.GetFlags(ea)
+            if api.ida_bytes.hasRef(flags):
+                # start of bb
+                return ea
+
+            if api.ida_bytes.isFunc(flags):
+                return ea
+
+            last_ea = ea
+            ea = api.idc.PrevHead(ea)
+
             # TODO: could probably optimize here by re-using the same cursor.
             if not is_empty(idb.analysis.get_crefs_from(self.idb, ea)):
-                # end of bb
-                return ea
+                return last_ea
 
     def _get_flow_preds(self, ea):
         # this is basically CodeRefsTo with flow=True.

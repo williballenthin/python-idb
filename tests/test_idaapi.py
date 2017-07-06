@@ -304,6 +304,25 @@ def test_find_bb_end(kernel32_idb):
     assert api.idaapi._find_bb_end(0x68906227) == 0x68906227
 
 
+def test_find_bb_start(kernel32_idb):
+    # .text:68901695 000 8B FF                                   mov     edi, edi
+    # .text:68901697 000 55                                      push    ebp
+    # .text:68901698 004 8B EC                                   mov     ebp, esp
+    # .text:6890169A 004 83 7D 0C 01                             cmp     [ebp+fdwReason], 1
+    # .text:6890169E 004 0F 84 B2 4A 00 00                       jz      loc_68906156
+
+    api = idb.IDAPython(kernel32_idb)
+    assert api.idaapi._find_bb_start(0x68901695) == 0x68901695
+    assert api.idaapi._find_bb_start(0x68901697) == 0x68901695
+    assert api.idaapi._find_bb_start(0x68901698) == 0x68901695
+    assert api.idaapi._find_bb_start(0x6890169A) == 0x68901695
+    assert api.idaapi._find_bb_start(0x6890169E) == 0x68901695
+
+    # single insn in the bb:
+    # .text:68906227 220 A3 44 B0 9D 68                          mov     dword_689DB044, eax
+    assert api.idaapi._find_bb_start(0x68906227) == 0x68906227
+
+
 def pluck(prop, s):
     '''
     generate the values from the given attribute with name `prop` from the given sequence of items `s`.
