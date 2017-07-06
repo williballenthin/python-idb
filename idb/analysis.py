@@ -794,72 +794,77 @@ class Function:
 Xref = namedtuple('Xref', ['src', 'dst', 'type'])
 
 
-def _get_xrefs(db, tag, src=None, dst=None):
+def _get_xrefs(db, tag, src=None, dst=None, types=None):
     if not src and not dst:
         raise ValueError('one of src or dst must be provided')
 
     nn = idb.netnode.Netnode(db, src or dst)
     try:
         for entry in nn.charentries(tag=tag):
-            if src:
-                yield Xref(src, entry.parsed_key.index, entry.value)
-            else:  # have dst
-                yield Xref(entry.parsed_key.index, dst, entry.value)
+            if (types and entry.value in types) or (not types):
+                if src:
+                    yield Xref(src, entry.parsed_key.index, entry.value)
+                else:  # have dst
+                    yield Xref(entry.parsed_key.index, dst, entry.value)
     except KeyError:
         return
 
 
-def get_crefs_to(db, ea):
+def get_crefs_to(db, ea, types=None):
     '''
     fetches the code references to the given address.
 
     Args:
       db (idb.IDB): the database.
       ea (int): the effective address from which to fetch xrefs.
+      types (collection of int): if provided, a whitelist collection of xref types to include.
 
     Yields:
       int: xref address.
     '''
-    return _get_xrefs(db, dst=ea, tag='X')
+    return _get_xrefs(db, dst=ea, tag='X', types=types)
 
 
-def get_crefs_from(db, ea):
+def get_crefs_from(db, ea, types=None):
     '''
     fetches the code references from the given address.
 
     Args:
       db (idb.IDB): the database.
       ea (int): the effective address from which to fetch xrefs.
+      types (collection of int): if provided, a whitelist collection of xref types to include.
 
     Yields:
       int: xref address.
     '''
-    return _get_xrefs(db, src=ea, tag='x')
+    return _get_xrefs(db, src=ea, tag='x', types=types)
 
 
-def get_drefs_to(db, ea):
+def get_drefs_to(db, ea, types=None):
     '''
     fetches the data references to the given address.
 
     Args:
       db (idb.IDB): the database.
       ea (int): the effective address from which to fetch xrefs.
+      types (collection of int): if provided, a whitelist collection of xref types to include.
 
     Yields:
       int: xref address.
     '''
-    return _get_xrefs(db, dst=ea, tag='D')
+    return _get_xrefs(db, dst=ea, tag='D', types=types)
 
 
-def get_drefs_from(db, ea):
+def get_drefs_from(db, ea, types=None):
     '''
     fetches the data references from the given address.
 
     Args:
       db (idb.IDB): the database.
       ea (int): the effective address from which to fetch xrefs.
+      types (collection of int): if provided, a whitelist collection of xref types to include.
 
     Yields:
       int: xref address.
     '''
-    return _get_xrefs(db, src=ea, tag='d')
+    return _get_xrefs(db, src=ea, tag='d', types=types)
