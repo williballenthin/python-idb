@@ -369,3 +369,26 @@ def test_flow_succs(kernel32_idb):
     assert lpluck('dst', api.idaapi._get_flow_succs(0x6890169E)) == [0x689016A4, 0x68906156]
     assert lpluck('type', api.idaapi._get_flow_succs(0x6890169E)) == [api.idaapi.fl_F, api.idaapi.fl_JN]
 
+
+def test_flow_chart(kernel32_idb):
+    api = idb.IDAPython(kernel32_idb)
+
+    DllEntryPoint = api.ida_funcs.get_func(0x68901695)
+    bbs = list(api.idaapi.FlowChart(DllEntryPoint))
+    assert list(sorted(lpluck('startEA', bbs))) == [0x68901695, 0x689016A4, 0x68906156]
+
+    for bb in bbs:
+        if bb.startEA == 0x68901695:
+            assert list(sorted(lpluck('startEA', bb.succs()))) == [0x689016A4, 0x68906156]
+        elif bb.startEA == 0x689016A4:
+            assert lpluck('startEA', bb.succs()) == []
+        elif bb.startEA == 0x68906156:
+            assert lpluck('startEA', bb.succs()) == [0x689016A4]
+
+    for bb in bbs:
+        if bb.startEA == 0x68901695:
+            assert lpluck('startEA', bb.preds()) == []
+        elif bb.startEA == 0x689016A4:
+            assert list(sorted(lpluck('startEA', bb.preds()))) == [0x68901695, 0x68906156]
+        elif bb.startEA == 0x68906156:
+            assert lpluck('startEA', bb.preds()) == [0x68901695]

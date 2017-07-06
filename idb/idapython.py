@@ -1,4 +1,5 @@
 import logging
+import collections
 
 import idb.analysis
 
@@ -927,6 +928,29 @@ class ida_funcs:
                 return func
 
 
+class BasicBlock(object):
+    '''
+    interface extracted from: https://raw.githubusercontent.com/gabtremblay/idabearclean/master/idaapi.py
+    '''
+    def __init__(self, flowchart, startEA, endEA):
+        self.fc = flowchart
+        self.id = startEA
+        self.startEA = startEA
+        self.endEA = endEA
+        self.type = NotImplementedError()
+
+    def preds(self):
+        for pred in self.fc.preds[self.startEA]:
+            yield self.fc.bbs[pred]
+
+    def succs(self):
+        for succ in self.fc.succs[self.startEA]:
+            yield self.fc.bbs[succ]
+
+    def __str__(self):
+        return 'BasicBlock(startEA: 0x%x, endEA: 0x%x)' % (self.startEA, self.endEA)
+
+
 def is_empty(s):
     for c in s:
         return False
@@ -992,7 +1016,6 @@ class idaapi:
 
             flags = api.idc.GetFlags(ea)
             if api.ida_bytes.hasRef(flags):
-                # start of bb
                 return last_ea
 
             if api.ida_bytes.isFunc(flags):
@@ -1018,7 +1041,6 @@ class idaapi:
         while True:
             flags = api.idc.GetFlags(ea)
             if api.ida_bytes.hasRef(flags):
-                # start of bb
                 return ea
 
             if api.ida_bytes.isFunc(flags):
@@ -1067,11 +1089,118 @@ class idaapi:
                                                 types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]):
             yield xref
 
+    def FlowChart(self, func):
+        '''
+        Example::
+
+            f = idaapi.FlowChart(idaapi.get_func(here()))
+            for block in f:
+                if p:
+                    print "%x - %x [%d]:" % (block.startEA, block.endEA, block.id)
+                for succ_block in block.succs():
+                    if p:
+                        print "  %x - %x [%d]:" % (succ_block.startEA, succ_block.endEA, succ_block.id)
+
+                for pred_block in block.preds():
+                    if p:
+                        print "  %x - %x [%d]:" % (pred_block.startEA, pred_block.endEA, pred_block.id)
+
+        via: https://github.com/EiNSTeiN-/idapython/blob/master/examples/ex_gdl_qflow_chart.py
+        '''
+
+        # i have no idea how this data is indexed in the idb.
+        # is it even indexed?
+        # therefore, let's parse the basic blocks ourselves!
+
+        class _FlowChart:
+            def __init__(self, db, ea):
+                self.idb = db
+                api = IDAPython(db)
+
+                logger.debug('creating flowchart for %x', ea)
+
+                # set of startEA
+                seen = set([])
+
+                # map from startEA to BasicBlock instance
+                bbs_by_start = {}
+                # map from endEA to BasicBlock instance
+                bbs_by_end = {}
+
+                # map from startEA to set of startEA
+                preds = collections.defaultdict(lambda: set([]))
+                # map from startEA to set of startEA
+                succs = collections.defaultdict(lambda: set([]))
+
+                endEA = api.idaapi._find_bb_end(ea)
+                logger.debug('found end. %x -> %x', ea, endEA)
+                block = BasicBlock(self, ea, endEA)
+                bbs_by_start[ea] = block
+                bbs_by_end[endEA] = block
+
+                q = [block]
+
+                while q:
+                    logger.debug('iteration')
+                    logger.debug('queue: [%s]', ', '.join(map(str, q)))
+
+                    block = q[0]
+                    q = q[1:]
+
+                    logger.debug('exploring %s', block)
+
+                    if block.startEA in seen:
+                        logger.debug('already seen!')
+                        continue
+                    logger.debug('new!')
+                    seen.add(block.startEA)
+
+                    for xref in api.idaapi._get_flow_preds(block.startEA):
+                        if xref.src not in bbs_by_end:
+                            pred_start = api.idaapi._find_bb_start(xref.src)
+                            pred = BasicBlock(self, pred_start, xref.src)
+                            bbs_by_start[pred.startEA] = pred
+                            bbs_by_end[pred.endEA] = pred
+                        else:
+                            pred = bbs_by_end[xref.src]
+
+                        logger.debug('pred: %s', pred)
+
+                        preds[block.startEA].add(pred.startEA)
+                        succs[pred.startEA].add(block.startEA)
+                        q.append(pred)
+
+                    for xref in api.idaapi._get_flow_succs(block.endEA):
+                        if xref.dst not in bbs_by_start:
+                            succ_end = api.idaapi._find_bb_end(xref.dst)
+                            succ = BasicBlock(self, xref.dst, succ_end)
+                            bbs_by_start[succ.startEA] = succ
+                            bbs_by_end[succ.endEA] = succ
+                        else:
+                            succ = bbs_by_start[xref.dst]
+
+                        logger.debug('succ: %s', succ)
+
+                        succs[block.startEA].add(succ.startEA)
+                        preds[succ.startEA].add(block.startEA)
+                        q.append(succ)
+
+                self.preds = preds
+                self.succs = succs
+                self.bbs = bbs_by_start
+
+            def __iter__(self):
+                for bb in self.bbs.values():
+                    yield bb
+
+        return _FlowChart(self.idb, func.startEA)
+
 
 class IDAPython:
     def __init__(self, db):
         self.idb = db
         self.idc = idc(db)
+        self.idaapi = idaapi(db)
         self.ida_funcs = ida_funcs(db)
         self.ida_bytes = ida_bytes(db)
         self.ida_netnode = ida_netnode(db)
