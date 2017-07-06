@@ -182,6 +182,11 @@ def test_data(kernel32_idb):
     assert ida_bytes.isCustom(flags) == False
 
 
+def test_function_name(kernel32_idb):
+    api = idb.IDAPython(kernel32_idb)
+    assert api.idc.GetFunctionName(0x68901695) == 'DllEntryPoint'
+
+
 def test_operand_types(kernel32_idb):
     idc = idb.IDAPython(kernel32_idb).idc
 
@@ -415,3 +420,4 @@ def test_fixups(kernel32_idb):
     assert api.idaapi.get_next_fixup_ea(0x68901023) == 0x68901025
     assert api.idaapi.get_next_fixup_ea(0x68901025) == 0x68901025
     assert api.idaapi.get_next_fixup_ea(0x68901025 + 1) == 0x68901034
+

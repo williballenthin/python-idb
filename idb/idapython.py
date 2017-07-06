@@ -506,7 +506,7 @@ class idc:
         except KeyError:
             return idc.DEFCOLOR
 
-    def GetFunctionFlags(ea):
+    def GetFunctionFlags(self, ea):
         func = ida_funcs(self.idb).get_func(ea)
         return func.flags
 
@@ -533,6 +533,10 @@ class idc:
             return func.color
         else:
             raise ValueError('unknown attr: %x' % (attr))
+
+    def GetFunctionName(self, ea):
+        nn = ida_netnode(self.idb).netnode(ea)
+        return nn.name()
 
     def hasValue(self, flags):
         return flags & FLAGS.FF_IVL > 0
@@ -937,6 +941,8 @@ class BasicBlock(object):
         self.id = startEA
         self.startEA = startEA
         self.endEA = endEA
+        # types are declared here: https://www.hex-rays.com/products/ida/support/sdkdoc/gdl_8hpp.html#afa6fb2b53981d849d63273abbb1624bd
+        # not sure if they are stored in the idb. seems like probably not.
         self.type = NotImplementedError()
 
     def preds(self):
