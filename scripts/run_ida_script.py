@@ -7,6 +7,8 @@ email: willi.ballenthin@gmail.com
 '''
 import sys
 import logging
+import importlib.abc
+import importlib.util
 
 import hexdump
 import argparse
@@ -15,9 +17,6 @@ import idb
 
 
 logger = logging.getLogger(__name__)
-
-import importlib.abc
-import importlib.util
 
 
 class HookedImporter(importlib.abc.MetaPathFinder, importlib.abc.Loader):
@@ -48,6 +47,8 @@ class HookedImporter(importlib.abc.MetaPathFinder, importlib.abc.Loader):
 
 
 def main(argv=None):
+    # TODO: do version check for 3.x
+
     if argv is None:
         argv = sys.argv[1:]
 
@@ -70,9 +71,13 @@ def main(argv=None):
     elif args.quiet:
         logging.basicConfig(level=logging.ERROR)
         logging.getLogger().setLevel(logging.ERROR)
+        logging.getLogger('idb.netnode').setLevel(logging.ERROR)
+        logging.getLogger('idb.fileformat').setLevel(logging.ERROR)
     else:
         logging.basicConfig(level=logging.INFO)
         logging.getLogger().setLevel(logging.INFO)
+        logging.getLogger('idb.netnode').setLevel(logging.ERROR)
+        logging.getLogger('idb.fileformat').setLevel(logging.ERROR)
 
 
     with idb.from_file(args.idbpath) as db:
@@ -100,7 +105,9 @@ def main(argv=None):
         importer.install()
 
         with open(args.script_path, 'rb') as f:
-            g = globals()
+            g = {
+                '__name__': '__main__',
+            }
             g.update(hooks)
             exec(f.read(), g)
 
