@@ -1299,7 +1299,7 @@ class idautils:
         self.api = api
 
     def GetInputFileMD5(self):
-        assert self.api.idc.GetInputMD5() == '00bf1bf1b779ce1af41371426821e0c2'
+        return self.api.idc.GetInputMD5()
 
     def Segments(self):
         return sorted(idb.analysis.Segments(self.idb).segments.keys())

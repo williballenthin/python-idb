@@ -425,6 +425,7 @@ def test_fixups(kernel32_idb):
 def test_input_md5(kernel32_idb):
     api = idb.IDAPython(kernel32_idb)
     assert api.idc.GetInputMD5() == '00bf1bf1b779ce1af41371426821e0c2'
+    assert api.idautils.GetInputFileMD5() == '00bf1bf1b779ce1af41371426821e0c2'
 
 
 def test_segments(kernel32_idb):
