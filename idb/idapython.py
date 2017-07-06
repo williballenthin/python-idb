@@ -1195,6 +1195,25 @@ class idaapi:
 
         return _FlowChart(self.idb, func.startEA)
 
+    def get_next_fixup_ea(self, ea):
+        nn = ida_netnode(self.idb).netnode('$ fixups')
+        # TODO: this is really bad algorithmically. we should cache.
+        for index in nn.sups(tag='S'):
+            if ea <= index:
+                return index
+        raise KeyError(ea)
+
+    def contains_fixups(self, ea, size):
+        try:
+            next_fixup = self.get_next_fixup_ea(ea)
+        except KeyError:
+            return False
+        else:
+            if next_fixup < ea + size:
+                return True
+            else:
+                return False
+
 
 class IDAPython:
     def __init__(self, db):

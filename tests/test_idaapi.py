@@ -392,3 +392,26 @@ def test_flow_chart(kernel32_idb):
             assert list(sorted(lpluck('startEA', bb.preds()))) == [0x68901695, 0x68906156]
         elif bb.startEA == 0x68906156:
             assert lpluck('startEA', bb.preds()) == [0x68901695]
+
+
+def test_fixups(kernel32_idb):
+    api = idb.IDAPython(kernel32_idb)
+
+    # .text:6890101E 01C 53                                      push    ebx
+    # .text:6890101F 020 8B 58 10                                mov     ebx, [eax+10h]
+    # .text:68901022 020 57                                      push    edi
+    # .text:68901023 024 8B 3D 98 B1 9D 68                       mov     edi, dword_689DB198
+    # .text:68901029 024 85 FF                                   test    edi, edi
+    assert api.idaapi.contains_fixups(0x6890101E, 1) == False
+    assert api.idaapi.contains_fixups(0x6890101E, 2) == False
+    assert api.idaapi.contains_fixups(0x6890101E, 5) == False
+    assert api.idaapi.contains_fixups(0x6890101E, 7) == False
+    assert api.idaapi.contains_fixups(0x6890101E, 8) == True
+    assert api.idaapi.contains_fixups(0x6890101E, 9) == True
+    assert api.idaapi.contains_fixups(0x68901023 + 2, 1) == True
+    assert api.idaapi.contains_fixups(0x68901023 + 2, 0x10) == True
+
+    assert api.idaapi.get_next_fixup_ea(0x6890101E) == 0x68901025
+    assert api.idaapi.get_next_fixup_ea(0x68901023) == 0x68901025
+    assert api.idaapi.get_next_fixup_ea(0x68901025) == 0x68901025
+    assert api.idaapi.get_next_fixup_ea(0x68901025 + 1) == 0x68901034
