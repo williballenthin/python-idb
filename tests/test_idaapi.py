@@ -425,3 +425,24 @@ def test_fixups(kernel32_idb):
 def test_input_md5(kernel32_idb):
     api = idb.IDAPython(kernel32_idb)
     assert api.idc.GetInputMD5() == '00bf1bf1b779ce1af41371426821e0c2'
+
+
+def test_segments(kernel32_idb):
+    api = idb.IDAPython(kernel32_idb)
+
+    assert api.idc.FirstSeg() == 0x68901000
+    assert api.idc.NextSeg(0x68901000) == 0x689db000
+    assert api.idc.NextSeg(0x689db000) == 0x689dd000
+
+    assert api.idc.SegStart(0x68901000) == 0x68901000
+    assert api.idc.SegStart(0x68901000 + 1) == 0x68901000
+    assert api.idc.SegStart(0x689db000 - 1) == 0x68901000
+    assert api.idc.SegStart(0x689db000) == 0x689db000
+
+    assert api.idc.SegEnd(0x68901000) == 0x689db000
+    assert api.idc.SegEnd(0x689db000) == 0x689dd000
+    assert api.idc.SegEnd(0x689dd000) == 0x689de230
+
+    seg = api.idaapi.get_seg(0x68901000)
+    assert seg.startEA == 0x68901000
+    assert seg.endEA == 0x689db000

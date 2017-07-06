@@ -250,3 +250,16 @@ def test_fixups(kernel32_idb):
     # .text:68901029 024 85 FF                                   test    edi, edi
     assert fixups[0x68901023 + 2].offset == 0x689DB198
     assert fixups[0x68901023 + 2].get_fixup_length() == 0x4
+
+
+def test_segments(kernel32_idb):
+    segs = idb.analysis.Segments(kernel32_idb).segments
+    assert list(sorted(map(lambda s: s.startEA, segs.values()))) == [0x68901000, 0x689db000, 0x689dd000]
+    assert list(sorted(map(lambda s: s.endEA, segs.values()))) == [0x689db000, 0x689dd000, 0x689de230]
+
+
+def test_segstrings(kernel32_idb):
+    strs = idb.analysis.SegStrings(kernel32_idb).strings
+
+    # the first string is some binary data.
+    assert strs[1:] == ['.text', 'CODE', '.data', 'DATA', '.idata']

@@ -392,7 +392,7 @@ class FileRegion(vstruct.VStruct):
         self.rva = v_uint32()
 
 
-# '$ fileregions' maps from segment start address to details about it.
+# '$ fileregions' maps from idb segment start address to details about it.
 #
 # supvals:
 #   format1:
@@ -518,14 +518,17 @@ class PString(vstruct.VStruct):
     '''
     short pascal string, prefixed with single byte length.
     '''
-    def __init__(self):
+    def __init__(self, length_is_total=True):
         vstruct.VStruct.__init__(self)
         self.length = v_uint8()
         self.s = v_str()
+        self.length_is_total = length_is_total
 
     def pcb_length(self):
         length = self.length
-        self['s'].vsSetLength(length - 1)
+        if self.length_is_total:
+            length = length - 1
+        self['s'].vsSetLength(length)
 
 
 class TypeString(vstruct.VStruct):
@@ -902,5 +905,95 @@ class Fixup(vstruct.VStruct):
 #       0x8:
 Fixups = Analysis('$ fixups', [
     Field('fixups',  'S', ADDRESSES, as_cast(Fixup))
+])
+
+
+class Segment(vstruct.VStruct):
+    def __init__(self):
+        vstruct.VStruct.__init__(self)
+        # sizeof() == 0xB (fixed)
+        self.type = v_uint8()    # possible values: 0x0 - 0xC. top bit has some meaning.
+        self.unk01 = v_uint16()  # this might be the segment index + 1?
+        self.offset = v_uint32()
+        self.unk07 = v_uint32()
+
+    def pcb_type(self):
+        if self.type != 0x04:
+            raise NotImplementedError('fixup type %x not yet supported' % (self.type))
+
+    def get_fixup_length(self):
+        if self.type == 0x4:
+            return 0x4
+        else:
+            raise NotImplementedError('fixup type %x not yet supported' % (self.type))
+
+
+def parse_seg_strings(buf):
+    strings = []
+    offset = 0x0
+
+    while offset < len(buf):
+        if buf[offset] == 0x0:
+            break
+
+        string = PString(length_is_total=False)
+        string.vsParse(buf, offset=offset)
+        offset += len(string)
+        strings.append(string.s)
+
+    return strings
+
+
+SegStrings = Analysis('$ segstrings', [
+    Field('strings',  'S', 0, parse_seg_strings),
+])
+
+
+class Seg:
+    def __init__(self, buf):
+        self.buf = buf
+        self.vals = list(unpack_dds(buf))
+        self.startEA = self.vals[0]
+        self.endEA = self.startEA + self.vals[1]
+        # index into `$ segstrings` array of strings.
+        self.name_index = self.vals[2]
+
+        # via: https://www.hex-rays.com/products/ida/support/sdkdoc/classsegment__t.html
+        # use get/set_segm_class() functions
+        self.sclass = self.vals[3]
+        # this field is IDP dependent.
+        self.orgbase = self.vals[4]
+        # Segment alignment codes
+        self.align = self.vals[5]
+        # Segment combination codes
+        self.comb = self.vals[6]
+        # Segment permissions (0 means no information)
+        self.perm = self.vals[7]
+        # Number of bits in the segment addressing.
+        self.bitness = self.vals[8]
+        # Segment flags
+        self.flags = self.vals[9]
+        # segment selector - should be unique.
+        self.sel = self.vals[10]
+        # default segment register values.
+        self.defsr = self.vals[11]
+        # segment type (see Segment types). More...
+        self.type = self.vals[12]
+        # the segment color
+        self.color = self.vals[12]
+
+
+# '$ segs' maps from segment start address to details about it.
+#
+# supvals:
+#   format1:
+#     index: start effective address
+#     value: pack_dd data.
+#         1: startEA
+#         2: size
+#         3: name index
+#         ...
+Segments = Analysis('$ segs', [
+    Field('segments',  'S', ADDRESSES, Seg),
 ])
 

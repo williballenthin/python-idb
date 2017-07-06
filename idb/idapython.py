@@ -395,20 +395,29 @@ class idc:
             raise RuntimeError('unexpected wordsize')
 
     def SegStart(self, ea):
-        # TODO: i think this should use '$ fileregions'
-        return self.idb.id1.get_segment(ea).bounds.start
+        segs = idb.analysis.Segments(self.idb).segments
+        for seg in segs.values():
+            if seg.startEA <= ea < seg.endEA:
+                return seg.startEA
 
     def SegEnd(self, ea):
-        # TODO: i think this should use '$ fileregions'
-        return self.idb.id1.get_segment(ea).bounds.end
+        segs = idb.analysis.Segments(self.idb).segments
+        for seg in segs.values():
+            if seg.startEA <= ea < seg.endEA:
+                return seg.endEA
 
     def FirstSeg(self):
-        # TODO: i think this should use '$ fileregions'
-        return self.idb.id1.segments[0].bounds.start
+        segs = idb.analysis.Segments(self.idb).segments
+        for startEA in sorted(segs.keys()):
+            return startEA
 
     def NextSeg(self, ea):
-        # TODO: i think this should use '$ fileregions'
-        return self.idb.id1.get_next_segment(ea).bounds.start
+        segs = idb.analysis.Segments(self.idb).segments.values()
+        segs = sorted(segs, key=lambda s: s.startEA)
+
+        for i, seg in enumerate(segs):
+            if seg.startEA <= ea < seg.endEA:
+                return segs[i + 1].startEA
 
     def GetFlags(self, ea):
         return self.idb.id1.get_flags(ea)
@@ -1245,6 +1254,12 @@ class idaapi:
                 return True
             else:
                 return False
+
+    def get_seg(self, ea):
+        segs = idb.analysis.Segments(self.idb).segments
+        for seg in segs.values():
+            if seg.startEA <= ea < seg.endEA:
+                return seg
 
 
 class IDAPython:
