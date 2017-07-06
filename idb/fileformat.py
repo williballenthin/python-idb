@@ -380,6 +380,69 @@ class PrefixMatchStrategy(FindStrategy):
         self._find(cursor, cursor.index.root_page, key)
 
 
+class RoundDownMatchStrategy(FindStrategy):
+    '''
+    strategy used to find the matching key, or the key just less than the given key.
+    it may be an exact match, or an exact match does not exist, and the result is less than the given key.
+    if no entries are less than the given key, `KeyError` is raised.
+    '''
+    def _find(self, cursor, page_number, key):
+        page = cursor.index.get_page(page_number)
+        cursor.path.append(page)
+
+        if page.is_leaf():
+            for i, entry in enumerate(page.get_entries()):
+                entry_key = bytes(entry.key)
+
+                if entry_key == key:
+                    cursor.entry = entry
+                    cursor.entry_number = i
+                    return
+                elif entry_key > key:
+                    if i == 0:
+                        # need to handle this at the branch node, or
+                        #  if this is the only node, bubbles up.
+                        raise KeyError(key)
+                    else:
+                        cursor.entry = page.get_entry(i - 1)
+                        cursor.entry_number = i - 1
+            entry_number = page.entry_count - 1
+            cursor.entry = page.get_entry(entry_number)
+            cursor.entry_number = entry_number
+        else:  # is branch node
+            for i, entry in enumerate(page.get_entries()):
+                entry_key = bytes(entry.key)
+                if entry_key == key:
+                    cursor.entry = entry
+                    cursor.entry_number = i
+                    return
+                elif entry_key > key:
+                    if i == 0:
+                        # may raise KeyError, and its meant to bubble all the way up.
+                        return self._find(cursor, page.ppointer, key)
+                    else:
+                        try:
+                            entry = page.get_entry(i - 1)
+                            return self._find(cursor, entry.page, key)
+                        except KeyError:
+                            cursor.entry = entry
+                            cursor.entry_number = i - 1
+                            return
+                else:
+                    continue
+
+            try:
+                entry = page.get_entry(page.entry_count - 1)
+                return self._find(cursor, entry.page, key)
+            except KeyError:
+                cursor.entry = entry
+                cursor.entry_number = page.entry_count - 1
+                return
+
+    def find(self, cursor, key):
+        self._find(cursor, cursor.index.root_page, key)
+
+
 class MinKeyStrategy(FindStrategy):
     '''
     strategy used to find the minimum key in the index.
@@ -425,6 +488,7 @@ class MaxKeyStrategy(FindStrategy):
 
 EXACT_MATCH = ExactMatchStrategy
 PREFIX_MATCH = PrefixMatchStrategy
+ROUND_DOWN_MATCH = RoundDownMatchStrategy
 MIN_KEY = MinKeyStrategy
 MAX_KEY = MaxKeyStrategy
 
