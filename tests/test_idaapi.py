@@ -434,6 +434,10 @@ def test_segments(kernel32_idb):
     assert api.idc.NextSeg(0x68901000) == 0x689db000
     assert api.idc.NextSeg(0x689db000) == 0x689dd000
 
+    assert api.idc.SegName(0x68901000) == '.text'
+    assert api.idc.SegName(0x689db000) == '.data'
+    assert api.idc.SegName(0x689dd000) == '.idata'
+
     assert api.idc.SegStart(0x68901000) == 0x68901000
     assert api.idc.SegStart(0x68901000 + 1) == 0x68901000
     assert api.idc.SegStart(0x689db000 - 1) == 0x68901000

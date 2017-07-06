@@ -419,6 +419,13 @@ class idc:
             if seg.startEA <= ea < seg.endEA:
                 return segs[i + 1].startEA
 
+    def SegName(self, ea):
+        segstrings = idb.analysis.SegStrings(self.idb).strings
+        segs = idb.analysis.Segments(self.idb).segments
+        for seg in segs.values():
+            if seg.startEA <= ea < seg.endEA:
+                return segstrings[seg.name_index]
+
     def GetFlags(self, ea):
         return self.idb.id1.get_flags(ea)
 
