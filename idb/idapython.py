@@ -538,6 +538,9 @@ class idc:
         nn = ida_netnode(self.idb).netnode(ea)
         return nn.name()
 
+    def GetInputMD5(self):
+        return idb.analysis.Root(self.idb).md5
+
     @staticmethod
     def hasValue(flags):
         return flags & FLAGS.FF_IVL > 0

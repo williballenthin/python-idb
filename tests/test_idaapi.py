@@ -421,3 +421,7 @@ def test_fixups(kernel32_idb):
     assert api.idaapi.get_next_fixup_ea(0x68901025) == 0x68901025
     assert api.idaapi.get_next_fixup_ea(0x68901025 + 1) == 0x68901034
 
+
+def test_input_md5(kernel32_idb):
+    api = idb.IDAPython(kernel32_idb)
+    assert api.idc.GetInputMD5() == '00bf1bf1b779ce1af41371426821e0c2'
