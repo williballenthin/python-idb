@@ -927,6 +927,129 @@ class ida_funcs:
                 return func
 
 
+def is_empty(s):
+    for c in s:
+        return False
+    return True
+
+
+class idaapi:
+    # xref flags
+    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group__xref__type.html#ga78aab6d0d6bd9cb4904bbdbb5ac4fa71
+
+    # unknown – for compatibility with old versions.
+    # Should not be used anymore.
+    fl_U = 0
+    # Call Far
+    fl_CF = 0x10
+    # Call Near
+    fl_CN = 0x11
+    # Jump Far.
+    fl_JF = 0x12
+    # Jump Near.
+    fl_JN = 0x13
+    # User specified (obsolete)
+    fl_USobsolete = 0x14
+    # Ordinary flow: used to specify execution flow to the next instruction.
+    fl_F = 0x15
+    # unknown – for compatibility with old versions.
+    # Should not be used anymore.
+    dr_U = 0
+    # Offset
+    # The reference uses 'offset' of data rather than its value OR
+    # The reference appeared because the "OFFSET" flag of instruction is set.
+    # The meaning of this type is IDP dependent.
+    dr_O = 1
+    # Write access.
+    dr_W = 2
+    # Read access.
+    dr_R = 3
+    # Text (for forced operands only) Name of data is used in manual operand.
+    dr_T = 4
+    # Informational (a derived java class references its base class informationally)
+    dr_I = 5
+
+    def __init__(self, db):
+        self.idb = db
+
+    def _find_bb_end(self, ea):
+        '''
+        Args:
+          ea (int): address at which a basic block begins. behavior undefined if its not a block start.
+
+        Returns:
+          int: the address of the final instruction in the basic block. it may be the same as the start.
+        '''
+        api = IDAPython(self.idb)
+
+        if not is_empty(idb.analysis.get_crefs_from(self.idb, ea)):
+            # single insn in this bb
+            return ea
+
+        while True:
+            last_ea = ea
+            ea = api.idc.NextHead(ea)
+
+            flags = api.idc.GetFlags(ea)
+            if api.ida_bytes.hasRef(flags):
+                # start of bb
+                return last_ea
+
+            if api.ida_bytes.isFunc(flags):
+                return last_ea
+
+            # TODO: could probably optimize here by re-using the same cursor.
+            if not is_empty(idb.analysis.get_crefs_from(self.idb, ea)):
+                # end of bb
+                return ea
+
+    def _get_flow_preds(self, ea):
+        # this is basically CodeRefsTo with flow=True.
+        # need to fixup the return types, though.
+        api = IDAPython(self.idb)
+
+        flags = api.idc.GetFlags(ea)
+        if api.ida_bytes.isFlow(flags):
+            # prev instruction fell through to this insn
+            yield idb.analysis.Xref(api.idc.PrevHead(ea), ea, idaapi.fl_F)
+
+        # get all the flow xrefs to this instruction.
+        # a flow xref is like a fallthrough or jump, not like a call.
+        for xref in idb.analysis.get_crefs_to(self.idb, ea):
+            xtype = xref.type
+            if xtype == idaapi.fl_JN:    # jump near
+                yield xref
+            elif xtype == idaapi.fl_JF:  # jump far
+                yield xref
+            elif xtype == idaapi.fl_F:   # normal flow
+                yield xref
+            else:
+                continue
+
+    def _get_flow_succs(self, ea):
+        # this is basically CodeRefsFrom with flow=True.
+        # need to fixup the return types, though.
+        api = IDAPython(self.idb)
+
+        nextea = api.idc.NextHead(ea)
+        nextflags = api.idc.GetFlags(nextea)
+        if api.ida_bytes.isFlow(nextflags):
+            # instruction falls through to next insn
+            yield idb.analysis.Xref(ea, nextea, idaapi.fl_F)
+
+        # get all the flow xrefs from this instruction.
+        # a flow xref is like a fallthrough or jump, not like a call.
+        for xref in idb.analysis.get_crefs_from(self.idb, ea):
+            xtype = xref.type
+            if xtype == idaapi.fl_JN:    # jump near
+                yield xref
+            elif xtype == idaapi.fl_JF:  # jump far
+                yield xref
+            elif xtype == idaapi.fl_F:   # normal flow
+                yield xref
+            else:
+                continue
+
 class IDAPython:
     def __init__(self, db):
         self.idb = db

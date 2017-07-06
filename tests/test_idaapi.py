@@ -302,3 +302,48 @@ def test_find_bb_end(kernel32_idb):
     # single insn in the bb:
     # .text:68906227 220 A3 44 B0 9D 68                          mov     dword_689DB044, eax
     assert api.idaapi._find_bb_end(0x68906227) == 0x68906227
+
+
+def pluck(prop, s):
+    '''
+    generate the values from the given attribute with name `prop` from the given sequence of items `s`.
+
+    Args:
+      prop (str): the name of an attribute.
+      s (sequnce): a bunch of objects.
+
+    Yields:
+      any: the values of the requested field across the sequence
+    '''
+    for x in s:
+        yield getattr(x, prop)
+
+
+def lpluck(prop, s):
+    '''
+    like `pluck`, but returns the result in a single list.
+    '''
+    return list(pluck(prop, s))
+
+
+def test_flow_preds(kernel32_idb):
+    api = idb.IDAPython(kernel32_idb)
+
+    assert lpluck('src', api.idaapi._get_flow_preds(0x68901695)) == []
+    assert lpluck('src', api.idaapi._get_flow_preds(0x68901697)) == [0x68901695]
+    assert lpluck('src', api.idaapi._get_flow_preds(0x68901698)) == [0x68901697]
+
+    assert lpluck('src', api.idaapi._get_flow_preds(0x68906156)) == [0x6890169E]
+    assert lpluck('type', api.idaapi._get_flow_preds(0x68906156)) == [api.idaapi.fl_JN]
+
+
+def test_flow_succs(kernel32_idb):
+    api = idb.IDAPython(kernel32_idb)
+
+    assert lpluck('dst', api.idaapi._get_flow_succs(0x68901695)) == [0x68901697]
+    assert lpluck('dst', api.idaapi._get_flow_succs(0x68901697)) == [0x68901698]
+    assert lpluck('dst', api.idaapi._get_flow_succs(0x68901698)) == [0x6890169A]
+
+    assert lpluck('dst', api.idaapi._get_flow_succs(0x6890169E)) == [0x689016A4, 0x68906156]
+    assert lpluck('type', api.idaapi._get_flow_succs(0x6890169E)) == [api.idaapi.fl_F, api.idaapi.fl_JN]
+
