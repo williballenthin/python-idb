@@ -791,16 +791,25 @@ class Function:
             yield StackChangePoint(offset, change)
 
 
-def _get_xrefs(db, ea, tag):
-    nn = idb.netnode.Netnode(db, ea)
+Xref = namedtuple('Xref', ['src', 'dst', 'type'])
+
+
+def _get_xrefs(db, tag, src=None, dst=None):
+    if not src and not dst:
+        raise ValueError('one of src or dst must be provided')
+
+    nn = idb.netnode.Netnode(db, src or dst)
     try:
-        for xref in nn.chars(tag=tag):
-            yield xref
+        for entry in nn.charentries(tag=tag):
+            if src:
+                yield Xref(src, entry.parsed_key.index, entry.value)
+            else:  # have dst
+                yield Xref(entry.parsed_key.index, dst, entry.value)
     except KeyError:
         return
 
 
-def crefs_to(db, ea):
+def get_crefs_to(db, ea):
     '''
     fetches the code references to the given address.
 
@@ -811,10 +820,10 @@ def crefs_to(db, ea):
     Yields:
       int: xref address.
     '''
-    return _get_xrefs(db, ea, 'X')
+    return _get_xrefs(db, dst=ea, tag='X')
 
 
-def crefs_from(db, ea):
+def get_crefs_from(db, ea):
     '''
     fetches the code references from the given address.
 
@@ -825,10 +834,10 @@ def crefs_from(db, ea):
     Yields:
       int: xref address.
     '''
-    return _get_xrefs(db, ea, 'x')
+    return _get_xrefs(db, src=ea, tag='x')
 
 
-def drefs_to(db, ea):
+def get_drefs_to(db, ea):
     '''
     fetches the data references to the given address.
 
@@ -839,10 +848,10 @@ def drefs_to(db, ea):
     Yields:
       int: xref address.
     '''
-    return _get_xrefs(db, ea, 'D')
+    return _get_xrefs(db, dst=ea, tag='D')
 
 
-def drefs_from(db, ea):
+def get_drefs_from(db, ea):
     '''
     fetches the data references from the given address.
 
@@ -853,5 +862,4 @@ def drefs_from(db, ea):
     Yields:
       int: xref address.
     '''
-    return _get_xrefs(db, ea, 'd')
-
+    return _get_xrefs(db, src=ea, tag='d')
