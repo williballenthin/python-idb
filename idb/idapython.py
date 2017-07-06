@@ -335,18 +335,19 @@ class AFLAGS:
     AFL_NOTCODE = 0x10000000
 
 
-
 class ida_netnode:
-    def __init__(self, db):
+    def __init__(self, db, api):
         self.idb = db
+        self.api = api
 
     def netnode(self, *args, **kwargs):
         return idb.netnode.Netnode(self.idb, *args, **kwargs)
 
 
 class idc:
-    def __init__(self, db):
+    def __init__(self, db, api):
         self.idb = db
+        self.api = api
         self.dis = None  # this will be the capstone disassembler, lazily loaded.
 
         # apparently this enum changes with bitness.
@@ -395,6 +396,9 @@ class idc:
         else:
             raise RuntimeError('unexpected wordsize')
 
+    def ScreenEA(self):
+        return self.api.ScreenEA
+
     def SegStart(self, ea):
         segs = idb.analysis.Segments(self.idb).segments
         for seg in segs.values():
@@ -439,7 +443,7 @@ class idc:
 
     def Head(self, ea):
         flags = self.GetFlags(ea)
-        while not ida_bytes.isHead(flags):
+        while not self.api.ida_bytes.isHead(flags):
             ea -= 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
@@ -448,12 +452,12 @@ class idc:
     def ItemSize(self, ea):
         oea = ea
         flags = self.GetFlags(ea)
-        if not ida_bytes.isHead(flags):
+        if not self.api.ida_bytes.isHead(flags):
             raise ValueError('ItemSize must only be called on a head address.')
 
         ea += 1
         flags = self.GetFlags(ea)
-        while not ida_bytes.isHead(flags):
+        while not self.api.ida_bytes.isHead(flags):
             ea += 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
@@ -462,7 +466,7 @@ class idc:
     def NextHead(self, ea):
         ea += 1
         flags = self.GetFlags(ea)
-        while not ida_bytes.isHead(flags):
+        while not self.api.ida_bytes.isHead(flags):
             ea += 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
@@ -473,7 +477,7 @@ class idc:
         ea -= 1
         return self.Head(ea)
 
-    def GetManyBytes(self, ea, size, use_dbg= False):
+    def GetManyBytes(self, ea, size, use_dbg=False):
         '''
         Raises:
           IndexError: if the range extends beyond a segment.
@@ -541,21 +545,21 @@ class idc:
         if what != idc.CIC_ITEM:
             raise NotImplementedError()
 
-        if not ida_nalt(self.idb).is_colored_item(ea):
+        if not self.api.ida_nalt.is_colored_item(ea):
             return idc.DEFCOLOR
 
-        nn = ida_netnode(self.idb).netnode(ea)
+        nn = self.api.ida_netnode.netnode(ea)
         try:
             return nn.altval(tag='A', index=0x14) - 1
         except KeyError:
             return idc.DEFCOLOR
 
     def GetFunctionFlags(self, ea):
-        func = ida_funcs(self.idb).get_func(ea)
+        func = self.api.ida_funcs.get_func(ea)
         return func.flags
 
     def GetFunctionAttr(self, ea, attr):
-        func = ida_funcs(self.idb).get_func(ea)
+        func = self.api.ida_funcs.get_func(ea)
 
         if attr == self.FUNCATTR_START:
             return func.startEA
@@ -579,7 +583,7 @@ class idc:
             raise ValueError('unknown attr: %x' % (attr))
 
     def GetFunctionName(self, ea):
-        nn = ida_netnode(self.idb).netnode(ea)
+        nn = self.api.ida_netnode.netnode(ea)
         return nn.name()
 
     def GetInputMD5(self):
@@ -687,8 +691,9 @@ class idc:
 
 
 class ida_bytes:
-    def __init__(self, db):
+    def __init__(self, db, api):
         self.idb = db
+        self.api = api
 
     @staticmethod
     def isFunc(flags):
@@ -835,11 +840,12 @@ class ida_bytes:
 
 
 class ida_nalt:
-    def __init__(self, db):
+    def __init__(self, db, api):
         self.idb = db
+        self.api = api
 
     def get_aflags(self, ea):
-        nn = ida_netnode(self.idb).netnode(ea)
+        nn = self.api.ida_netnode.netnode(ea)
         try:
             return nn.altval(tag='A', index=0x8)
         except KeyError:
@@ -921,10 +927,6 @@ class ida_nalt:
         return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_NOTCODE)
 
 
-    def __init__(self, db):
-        self.idb = db
-
-
 class ida_funcs:
     # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_u_n_c__.html
     # Function doesn't return.
@@ -966,8 +968,9 @@ class ida_funcs:
     # This is a function tail. More...
     FUNC_TAIL = 0x00008000
 
-    def __init__(self, db):
+    def __init__(self, db, api):
         self.idb = db
+        self.api = api
 
     def get_func(self, ea):
         '''
@@ -976,7 +979,7 @@ class ida_funcs:
          for a function that contains the given address.
         note: the range search is pretty slow, since we parse everything on-demand.
         '''
-        nn = ida_netnode(self.idb).netnode('$ funcs')
+        nn = self.api.ida_netnode.netnode('$ funcs')
         try:
             v = nn.supval(tag='S', index=ea)
         except KeyError:
@@ -1069,8 +1072,9 @@ class idaapi:
     # Informational (a derived java class references its base class informationally)
     dr_I = 5
 
-    def __init__(self, db):
+    def __init__(self, db, api):
         self.idb = db
+        self.api = api
 
     def _find_bb_end(self, ea):
         '''
@@ -1080,24 +1084,22 @@ class idaapi:
         Returns:
           int: the address of the final instruction in the basic block. it may be the same as the start.
         '''
-        api = IDAPython(self.idb)
-
         if not is_empty(idb.analysis.get_crefs_from(self.idb, ea,
                                                     types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F])):
             return ea
 
         while True:
             last_ea = ea
-            ea = api.idc.NextHead(ea)
+            ea = self.api.idc.NextHead(ea)
 
-            flags = api.idc.GetFlags(ea)
-            if api.ida_bytes.hasRef(flags):
+            flags = self.api.idc.GetFlags(ea)
+            if self.api.ida_bytes.hasRef(flags):
                 return last_ea
 
-            if api.ida_bytes.isFunc(flags):
+            if self.api.ida_bytes.isFunc(flags):
                 return last_ea
 
-            if not api.ida_bytes.isFlow(flags):
+            if not self.api.ida_bytes.isFlow(flags):
                 return last_ea
 
             if not is_empty(idb.analysis.get_crefs_from(self.idb, ea,
@@ -1112,35 +1114,32 @@ class idaapi:
         Returns:
           int: the address of the first instruction in the basic block. it may be the same as the end.
         '''
-        api = IDAPython(self.idb)
-
         while True:
-            flags = api.idc.GetFlags(ea)
-            if api.ida_bytes.hasRef(flags):
+            flags = self.api.idc.GetFlags(ea)
+            if self.api.ida_bytes.hasRef(flags):
                 return ea
 
-            if api.ida_bytes.isFunc(flags):
+            if self.api.ida_bytes.isFunc(flags):
                 return ea
 
             last_ea = ea
-            ea = api.idc.PrevHead(ea)
+            ea = self.api.idc.PrevHead(ea)
 
             if not is_empty(idb.analysis.get_crefs_from(self.idb, ea,
                                                         types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F])):
                 return last_ea
 
-            if not api.ida_bytes.isFlow(flags):
+            if not self.api.ida_bytes.isFlow(flags):
                 return last_ea
 
     def _get_flow_preds(self, ea):
         # this is basically CodeRefsTo with flow=True.
         # need to fixup the return types, though.
-        api = IDAPython(self.idb)
 
-        flags = api.idc.GetFlags(ea)
-        if api.ida_bytes.isFlow(flags):
+        flags = self.api.idc.GetFlags(ea)
+        if self.api.ida_bytes.isFlow(flags):
             # prev instruction fell through to this insn
-            yield idb.analysis.Xref(api.idc.PrevHead(ea), ea, idaapi.fl_F)
+            yield idb.analysis.Xref(self.api.idc.PrevHead(ea), ea, idaapi.fl_F)
 
         # get all the flow xrefs to this instruction.
         # a flow xref is like a fallthrough or jump, not like a call.
@@ -1151,11 +1150,10 @@ class idaapi:
     def _get_flow_succs(self, ea):
         # this is basically CodeRefsFrom with flow=True.
         # need to fixup the return types, though.
-        api = IDAPython(self.idb)
 
-        nextea = api.idc.NextHead(ea)
-        nextflags = api.idc.GetFlags(nextea)
-        if api.ida_bytes.isFlow(nextflags):
+        nextea = self.api.idc.NextHead(ea)
+        nextflags = self.api.idc.GetFlags(nextea)
+        if self.api.ida_bytes.isFlow(nextflags):
             # instruction falls through to next insn
             yield idb.analysis.Xref(ea, nextea, idaapi.fl_F)
 
@@ -1189,10 +1187,8 @@ class idaapi:
         # therefore, let's parse the basic blocks ourselves!
 
         class _FlowChart:
-            def __init__(self, db, ea):
+            def __init__(self, db, api, ea):
                 self.idb = db
-                api = IDAPython(db)
-
                 logger.debug('creating flowchart for %x', ea)
 
                 # set of startEA
@@ -1269,10 +1265,10 @@ class idaapi:
                 for bb in self.bbs.values():
                     yield bb
 
-        return _FlowChart(self.idb, func.startEA)
+        return _FlowChart(self.idb, self.api, func.startEA)
 
     def get_next_fixup_ea(self, ea):
-        nn = ida_netnode(self.idb).netnode('$ fixups')
+        nn = self.api.ida_netnode.netnode('$ fixups')
         # TODO: this is really bad algorithmically. we should cache.
         for index in nn.sups(tag='S'):
             if ea <= index:
@@ -1297,12 +1293,27 @@ class idaapi:
                 return seg
 
 
-class IDAPython:
-    def __init__(self, db):
+class idautils:
+    def __init__(self, db, api):
         self.idb = db
-        self.idc = idc(db)
-        self.idaapi = idaapi(db)
-        self.ida_funcs = ida_funcs(db)
-        self.ida_bytes = ida_bytes(db)
-        self.ida_netnode = ida_netnode(db)
-        self.ida_nalt = ida_nalt(db)
+        self.api = api
+
+    def GetInputFileMD5(self):
+        assert self.api.idc.GetInputMD5() == '00bf1bf1b779ce1af41371426821e0c2'
+
+    def Segments(self):
+        return sorted(idb.analysis.Segments(self.idb).segments.keys())
+
+
+class IDAPython:
+    def __init__(self, db, ScreenEA=None):
+        self.idb = db
+        self.ScreenEA = ScreenEA
+
+        self.idc = idc(db, self)
+        self.idaapi = idaapi(db, self)
+        self.idautils = idautils(db, self)
+        self.ida_funcs = ida_funcs(db, self)
+        self.ida_bytes = ida_bytes(db, self)
+        self.ida_netnode = ida_netnode(db, self)
+        self.ida_nalt = ida_nalt(db, self)
