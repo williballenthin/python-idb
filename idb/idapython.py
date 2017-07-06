@@ -1046,16 +1046,9 @@ class idaapi:
 
         # get all the flow xrefs to this instruction.
         # a flow xref is like a fallthrough or jump, not like a call.
-        for xref in idb.analysis.get_crefs_to(self.idb, ea):
-            xtype = xref.type
-            if xtype == idaapi.fl_JN:    # jump near
-                yield xref
-            elif xtype == idaapi.fl_JF:  # jump far
-                yield xref
-            elif xtype == idaapi.fl_F:   # normal flow
-                yield xref
-            else:
-                continue
+        for xref in idb.analysis.get_crefs_to(self.idb, ea,
+                                              types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]):
+            yield xref
 
     def _get_flow_succs(self, ea):
         # this is basically CodeRefsFrom with flow=True.
@@ -1070,16 +1063,10 @@ class idaapi:
 
         # get all the flow xrefs from this instruction.
         # a flow xref is like a fallthrough or jump, not like a call.
-        for xref in idb.analysis.get_crefs_from(self.idb, ea):
-            xtype = xref.type
-            if xtype == idaapi.fl_JN:    # jump near
-                yield xref
-            elif xtype == idaapi.fl_JF:  # jump far
-                yield xref
-            elif xtype == idaapi.fl_F:   # normal flow
-                yield xref
-            else:
-                continue
+        for xref in idb.analysis.get_crefs_from(self.idb, ea,
+                                                types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]):
+            yield xref
+
 
 class IDAPython:
     def __init__(self, db):
