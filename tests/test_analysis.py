@@ -202,11 +202,24 @@ def test_stack_change_points(kernel32_idb):
 
 
 def pluck(prop, s):
+    '''
+    generate the values from the given attribute with name `prop` from the given sequence of items `s`.
+
+    Args:
+      prop (str): the name of an attribute.
+      s (sequnce): a bunch of objects.
+
+    Yields:
+      any: the values of the requested field across the sequence
+    '''
     for x in s:
         yield getattr(x, prop)
 
 
 def lpluck(prop, s):
+    '''
+    like `pluck`, but returns the result in a single list.
+    '''
     return list(pluck(prop, s))
 
 
