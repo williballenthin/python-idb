@@ -538,81 +538,104 @@ class idc:
         nn = ida_netnode(self.idb).netnode(ea)
         return nn.name()
 
-    def hasValue(self, flags):
+    @staticmethod
+    def hasValue(flags):
         return flags & FLAGS.FF_IVL > 0
 
-    def isDefArg0(self, flags):
+    @staticmethod
+    def isDefArg0(flags):
         return flags & FLAGS.MS_0TYPE > 0
 
-    def isDefArg1(self, flags):
+    @staticmethod
+    def isDefArg1(flags):
         return flags & FLAGS.MS_1TYPE > 0
 
-    def isOff0(self, flags):
+    @staticmethod
+    def isOff0(flags):
         return flags & FLAGS.MS_0TYPE == FLAGS.FF_0CUST
 
-    def isOff1(self, flags):
+    @staticmethod
+    def isOff1(flags):
         return flags & FLAGS.MS_1TYPE == FLAGS.FF_1CUST
 
-    def isChar0(self, flags):
+    @staticmethod
+    def isChar0(flags):
         return flags & FLAGS.MS_0TYPE == FLAGS.FF_0CHAR
 
-    def isChar1(self, flags):
+    @staticmethod
+    def isChar1(flags):
         return flags & FLAGS.MS_1TYPE == FLAGS.FF_1CHAR
 
-    def isSeg0(self, flags):
+    @staticmethod
+    def isSeg0(flags):
         return flags & FLAGS.MS_0TYPE == FLAGS.FF_0SEG
 
-    def isSeg1(self, flags):
+    @staticmethod
+    def isSeg1(flags):
         return flags & FLAGS.MS_1TYPE == FLAGS.FF_1SEG
 
-    def isEnum0(self, flags):
+    @staticmethod
+    def isEnum0(flags):
         return flags & FLAGS.MS_0TYPE == FLAGS.FF_0ENUM
 
-    def isEnum1(self, flags):
+    @staticmethod
+    def isEnum1(flags):
         return flags & FLAGS.MS_1TYPE == FLAGS.FF_1ENUM
 
-    def isStroff0(self, flags):
+    @staticmethod
+    def isStroff0(flags):
         return flags & FLAGS.MS_0TYPE == FLAGS.FF_0STRO
 
-    def isStroff1(self, flags):
+    @staticmethod
+    def isStroff1(flags):
         return flags & FLAGS.MS_1TYPE == FLAGS.FF_1STRO
 
-    def isStkvar0(self, flags):
+    @staticmethod
+    def isStkvar0(flags):
         return flags & FLAGS.MS_0TYPE == FLAGS.FF_0STK
 
-    def isStkvar1(self, flags):
+    @staticmethod
+    def isStkvar1(flags):
         return flags & FLAGS.MS_1TYPE == FLAGS.FF_1STK
 
-    def isFloat0(self, flags):
+    @staticmethod
+    def isFloat0(flags):
         return flags & FLAGS.MS_0TYPE == FLAGS.FF_0FLT
 
-    def isFloat1(self, flags):
+    @staticmethod
+    def isFloat1(flags):
         return flags & FLAGS.MS_1TYPE == FLAGS.FF_1FLT
 
-    def isCustFmt0(self, flags):
+    @staticmethod
+    def isCustFmt0(flags):
         return flags & FLAGS.MS_0TYPE == FLAGS.FF_0CUST
 
-    def isCustFmt1(self, flags):
+    @staticmethod
+    def isCustFmt1(flags):
         return flags & FLAGS.MS_1TYPE == FLAGS.FF_1CUST
 
-    def isNum0(self, flags):
+    @staticmethod
+    def isNum0(flags):
         t = flags & FLAGS.MS_0TYPE
         return t == FLAGS.FF_0NUMB or \
                t == FLAGS.FF_0NUMO or \
                t == FLAGS.FF_0NUMD or \
                t == FLAGS.FF_0NUMH
 
-    def isNum1(self, flags):
+    @staticmethod
+    def isNum1(flags):
         t = flags & FLAGS.MS_1TYPE
         return t == FLAGS.FF_1NUMB or \
                t == FLAGS.FF_1NUMO or \
                t == FLAGS.FF_1NUMD or \
                t == FLAGS.FF_1NUMH
 
-    def get_optype_flags0(self, flags):
+    @staticmethod
+    def get_optype_flags0(flags):
         return flags & FLAGS.MS_0TYPE
 
-    def get_optype_flags1(self, flags):
+    @staticmethod
+    def get_optype_flags1(flags):
         return flags & FLAGS.MS_1TYPE
 
 
