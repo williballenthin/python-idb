@@ -326,20 +326,6 @@ def Analysis(nodeid, fields):
     return inner
 
 
-ROOT_NODEID = 'Root Node'
-class ROOT_INDEX:
-    '''
-    via: https://github.com/williballenthin/pyidbutil/blob/master/idbtool.py#L182
-    '''
-    VERSION = -1           # altval
-    VERSION_STRING = 1303  # supval
-    PARAM = 0x41b994       # supval
-    OPEN_COUNT = -4        # altval
-    CREATED = -2           # altval
-    CRC = -5               # altval
-    MD5 = 1302             # supval
-
-
 Root = Analysis('Root Node', [
     Field('crc',            'A', -5,    idb.netnode.as_int),
     Field('open_count',     'A', -4,    idb.netnode.as_int),
@@ -349,12 +335,6 @@ Root = Analysis('Root Node', [
     Field('version_string', 'S', 1303,  idb.netnode.as_string),
     Field('param',          'S', 0x41b94, bytes),
 ])
-
-
-LOADER_NODEID = '$ loader name'
-class LOADER_INDEX:
-    PLUGIN = 0x0  # supval
-    FORMAT = 0x1  # supval
 
 
 Loader = Analysis('$ loader name', [
