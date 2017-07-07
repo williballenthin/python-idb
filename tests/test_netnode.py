@@ -1,13 +1,6 @@
 from fixtures import *
 
-import logging
-import datetime
-import binascii
-
 import idb.netnode
-
-
-#logging.basicConfig(level=logging.DEBUG)
 
 
 debug = pytest.mark.skipif(

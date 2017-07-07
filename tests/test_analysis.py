@@ -3,10 +3,6 @@ from fixtures import *
 import idb.analysis
 
 
-import logging
-logging.basicConfig(level=logging.DEBUG)
-
-
 def test_root(kernel32_idb):
     root = idb.analysis.Root(kernel32_idb)
 

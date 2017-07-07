@@ -2,11 +2,6 @@ import pytest
 from fixtures import *
 
 import idb
-import idb.idapython
-
-
-import logging
-logging.basicConfig(level=logging.DEBUG)
 
 
 def test_heads(kernel32_idb):
@@ -462,4 +457,3 @@ def test_get_mnem(kernel32_idb):
     # .text:6890169A 004 83 7D 0C 01                             cmp     [ebp+fdwReason], 1
     # .text:6890169E 004 0F 84 B2 4A 00 00                       jz      loc_68906156
     assert api.idc.GetMnem(0x68901695) == 'mov'
-
