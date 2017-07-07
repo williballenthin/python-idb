@@ -991,12 +991,6 @@ SECTIONS = [
 ]
 
 
-# TODO: find where aflags are stored
-# ref: https://www.hex-rays.com/products/ida/support/sdkdoc/group___a_f_l__.html
-#
-# looks like they are stored in a binary tree (at least in memory)
-
-
 class IDB(vstruct.VStruct):
     def __init__(self, buf):
         vstruct.VStruct.__init__(self)

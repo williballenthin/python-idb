@@ -908,26 +908,6 @@ Fixups = Analysis('$ fixups', [
 ])
 
 
-class Segment(vstruct.VStruct):
-    def __init__(self):
-        vstruct.VStruct.__init__(self)
-        # sizeof() == 0xB (fixed)
-        self.type = v_uint8()    # possible values: 0x0 - 0xC. top bit has some meaning.
-        self.unk01 = v_uint16()  # this might be the segment index + 1?
-        self.offset = v_uint32()
-        self.unk07 = v_uint32()
-
-    def pcb_type(self):
-        if self.type != 0x04:
-            raise NotImplementedError('fixup type %x not yet supported' % (self.type))
-
-    def get_fixup_length(self):
-        if self.type == 0x4:
-            return 0x4
-        else:
-            raise NotImplementedError('fixup type %x not yet supported' % (self.type))
-
-
 def parse_seg_strings(buf):
     strings = []
     offset = 0x0
