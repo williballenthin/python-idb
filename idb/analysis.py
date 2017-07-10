@@ -6,6 +6,7 @@ import datetime
 import itertools
 from collections import namedtuple
 
+import six
 import vstruct
 from vstruct.primitives import v_str
 from vstruct.primitives import v_bytes
@@ -99,19 +100,19 @@ def unpack_dd(buf, offset=0):
         # this isn't particularly fast... but its more readable.
         buf = buf[offset:]
 
-    header = buf[0]
+    header = six.indexbytes(buf, 0x0)
     if header & 0x80 == 0:
         return header, 1
     elif header & 0xC0 != 0xC0:
-        return ((header & 0x7F) << 8) + buf[1], 2
+        return ((header & 0x7F) << 8) + six.indexbytes(buf, 0x1), 2
     else:
         if header & 0xE0 == 0xE0:
-            hi = (buf[1] << 8) + buf[2]
-            low = (buf[3] << 8) + buf[4]
+            hi = (six.indexbytes(buf, 0x1) << 8) + six.indexbytes(buf, 0x2)
+            low = (six.indexbytes(buf, 0x3) << 8) + six.indexbytes(buf, 0x4)
             size = 5
         else:
-            hi = (((header & 0x3F) << 8) + buf[1])
-            low = (buf[2] << 8) + buf[3]
+            hi = (((header & 0x3F) << 8) + six.indexbytes(buf, 0x1))
+            low = (six.indexbytes(buf, 0x2) << 8) + six.indexbytes(buf, 0x3)
             size = 4
         return (hi << 16) + low, size
 
@@ -123,13 +124,13 @@ def unpack_dw(buf, offset=0):
     if offset != 0:
         buf = buf[offset:]
 
-    header = buf[0]
+    header = six.indexbytes(buf, 0x0)
     if header & 0x80 == 0:
         return header, 1
     elif header & 0xC0 != 0xC0:
-        return ((header << 8) + buf[1]) & 0x7FFF, 2
+        return ((header << 8) + six.indexbytes(buf, 0x1)) & 0x7FFF, 2
     else:
-        return (buf[1] << 8) + buf[2], 3
+        return (six.indexbytes(buf, 0x1) << 8) + six.indexbytes(buf, 0x2), 3
 
 
 def unpack_dq(buf, offset=0):
@@ -699,10 +700,10 @@ class Function:
         typebuf = self.netnode.supval(tag='S', index=0x3000)
         namebuf = self.netnode.supval(tag='S', index=0x3001)
 
-        if typebuf[0] != 0xC:
+        if six.indexbytes(typebuf, 0x0) != 0xC:
             raise RuntimeError('unexpected signature header')
 
-        if typebuf[1] == ord('S'):
+        if six.indexbytes(typebuf, 0x1) == ord('S'):
             # this is just a guess...
             conv = 'stdcall'
         else:

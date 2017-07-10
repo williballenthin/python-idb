@@ -2,6 +2,8 @@ import struct
 import logging
 from collections import namedtuple
 
+import six
+
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +76,7 @@ def parse_key(buf, wordsize=4):
     else:
         raise ValueError('unexpected wordsize')
 
-    if buf[0] != 0x2E:
+    if six.indexbytes(buf, 0x0) != 0x2E:
         raise ValueError('buf is not a complex key')
 
     nodeid, tag = struct.unpack_from('>' + wordformat + 'c', buf, 1)
