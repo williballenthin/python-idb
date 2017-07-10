@@ -18,9 +18,10 @@ def empty_idb():
 
 @pytest.yield_fixture
 def kernel32_idb():
-    path = os.path.join(CD, 'data', 'kernel32', 'kernel32.idb')
+    path = os.path.join(CD, 'data', 'v6.95', 'x32', 'kernel32.idb')
     with idb.from_file(path) as db:
         yield db
+
 
 @pytest.yield_fixture
 def small_idb():
@@ -34,6 +35,7 @@ def load_idb(path):
         return idb.from_buffer(f.read())
 
 
+# decorator for tests that apply to all versions of IDA
 kernel32_all_versions = pytest.mark.parametrize("kernel32_idb", [
     load_idb(os.path.join(CD, 'data', 'v6.95', 'x32', 'kernel32.idb')),
     # TODO: .i64 support
@@ -51,6 +53,7 @@ kernel32_all_versions = pytest.mark.parametrize("kernel32_idb", [
 ])
 
 
+# decorator for tests that apply to x32 and x64 versions of IDA v6.95
 kernel32_v695 = pytest.mark.parametrize("kernel32_idb", [
     load_idb(os.path.join(CD, 'data', 'v6.95', 'x32', 'kernel32.idb')),
     # TODO: .i64 support
@@ -62,6 +65,7 @@ kernel32_v695 = pytest.mark.parametrize("kernel32_idb", [
 ])
 
 
+# decorator for tests that apply to x32 and x64 versions of IDA v7.0 beta
 kernel32_v70b = pytest.mark.parametrize("kernel32_idb", [
     load_idb(os.path.join(CD, 'data', 'v7.0b', 'x32', 'kernel32.idb')),
     # TODO: .i64 support
