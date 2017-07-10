@@ -27,3 +27,19 @@ def small_idb():
     path = os.path.join(CD, 'data', 'small', 'small-colored.idb')
     with idb.from_file(path) as db:
         yield db
+
+
+def load_idb(path):
+    with open(path, 'rb') as f:
+        return idb.from_buffer(f.read())
+
+
+kernel32_all_versions = pytest.mark.parametrize("kernel32_idb", [
+    load_idb(os.path.join(CD, 'data', 'v6.95', 'x32', 'kernel32.idb')),
+    load_idb(os.path.join(CD, 'data', 'v6.95', 'x64', 'kernel32.i64')),
+    load_idb(os.path.join(CD, 'data', 'v7.0b', 'x32', 'kernel32.idb')),
+], ids=[
+    '6.95/x32',
+    '6.95/x64',
+    'v7.0/x32',
+])
