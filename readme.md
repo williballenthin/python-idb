@@ -2,7 +2,7 @@
 
 python-idb is a library for accessing the contents of [IDA Pro](https://www.hex-rays.com/products/ida/) databases (.idb files).
 It provides read-only access to internal structures such as the B-tree (ID0 section), name address index (NAM section), and flags index (ID2 section).
-The library also provides analysis of B-tree entries to expose logical structures such as functions, cross references, bytes, and disassembly (via [Capstone](http://www.capstone-engine.org/)).
+The library also provides analysis of B-tree entries to expose logical structures like functions, cross references, bytes, and disassembly (via [Capstone](http://www.capstone-engine.org/)).
 An example use for python-idb might be to run IDA scripts in a pure-Python environment.
 
 Willem Hengeveld (<mailto:itsme@xs4all.nl>) provided the initial research into the low-level structures in his projects [pyidbutil](https://github.com/nlitsme/pyidbutil) and [idbutil](https://github.com/nlitsme/idbutil).
