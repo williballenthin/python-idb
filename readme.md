@@ -42,7 +42,7 @@ this to invoke `idc` and `idautils` routines to fetch data.
 
 In this example, we run the [yara_fn.py](https://gist.github.com/williballenthin/3abc9577bede0aeef25526b201732246) IDAPython script to generate a [YARA](https://virustotal.github.io/yara/) rule for the function at effective address 0x68901695 in kernel32.idb:
 
-[![asciicast](https://asciinema.org/a/14.png)](https://asciinema.org/a/14?theme=solarized-dark)
+[![asciicast](https://asciinema.org/a/14.png)](https://asciinema.org/a/14?theme=monokai)
 
 The target script `yara_fn.py` has only been slightly modified:
   - to make it Python 3.x compatible, and
