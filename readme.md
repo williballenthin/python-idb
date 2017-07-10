@@ -79,7 +79,7 @@ The target script `yara_fn.py` has only been slightly modified:
 
 ## what doesn't quite work
 
-support for the following features is feasible and planned, but not yet implemented:
+support for the following features are feasible and planned, but not yet implemented:
 
   - compressed databases
   - .i64 files
