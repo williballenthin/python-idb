@@ -12,7 +12,7 @@ This project heavily borrows from his knowledge, though there is little code ove
 
 ## example use:
 
-### example: list functions names
+### example: list function names
 
 In this example, we list the effective addresses and names of functions:
 
