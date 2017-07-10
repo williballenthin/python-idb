@@ -719,7 +719,7 @@ class Function:
         typeoffset = 0x2 + len(rtype) + 0x1
         nameoffset = 0x0
         while typeoffset < len(typebuf):
-            if typebuf[typeoffset] == 0x0:
+            if six.indexbytes(typebuf, typeoffset) == 0x0:
                 break
             typename = TypeString()
             typename.vsParse(typebuf, offset=typeoffset)
