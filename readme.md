@@ -74,7 +74,7 @@ The target script `yara_fn.py` has only been slightly modified:
     - `Functions`
     - `FlowChart` (basic blocks)
     - lots and lots of flags
-  - Python 3.x compatibility
+  - Python 2.7 & 3.x compatibility
 
 
 ## what doesn't quite work
@@ -83,7 +83,6 @@ support for the following features are feasible and planned, but not yet impleme
 
   - compressed databases
   - .i64 files
-  - Python 2.7 compatibility
   - performance (there's no caching yet for code clarity)
   - databases from versions other than v6.95
   - parsing TIL section
@@ -96,7 +95,7 @@ support for the following features are feasible and planned, but not yet impleme
 
 ## getting started
 
-python-idb is a pure-Python (currently: 3.x) library, with the exception of Capstone (required only when calling disassembly APIs).
+python-idb is a pure-Python library, with the exception of Capstone (required only when calling disassembly APIs).
 You can install it via pip or `setup.py install`, both of which should handle depedency resolution:
 
 ```
