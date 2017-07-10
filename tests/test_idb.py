@@ -20,6 +20,7 @@ debug = pytest.mark.skipif(
     )
 
 
+@kernel32_all_versions
 def test_validate(empty_idb, kernel32_idb):
     # should be no ValueErrors here.
     assert empty_idb.validate() is True
