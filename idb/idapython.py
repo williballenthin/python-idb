@@ -2,6 +2,8 @@
 import logging
 import collections
 
+import six
+
 import idb.analysis
 
 
@@ -493,7 +495,10 @@ class idc:
         ret = []
         for i in range(ea, ea + size):
             ret.append(self.IdbByte(i))
-        return bytes(ret)
+        if six.PY2:
+            return ''.join(map(chr, ret))
+        else:
+            return bytes(ret)
 
     def _load_dis(self):
         if self.dis is not None:
