@@ -1304,6 +1304,9 @@ class idautils:
     def Segments(self):
         return sorted(idb.analysis.Segments(self.idb).segments.keys())
 
+    def Functions(self):
+        return list(sorted(idb.analysis.Functions(self.idb).functions.keys()))
+
 
 class IDAPython:
     def __init__(self, db, ScreenEA=None):

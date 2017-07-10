@@ -457,3 +457,12 @@ def test_get_mnem(kernel32_idb):
     # .text:6890169A 004 83 7D 0C 01                             cmp     [ebp+fdwReason], 1
     # .text:6890169E 004 0F 84 B2 4A 00 00                       jz      loc_68906156
     assert api.idc.GetMnem(0x68901695) == 'mov'
+
+
+def test_functions(kernel32_idb):
+    api = idb.IDAPython(kernel32_idb)
+
+    funcs = api.idautils.Functions()
+    assert len(funcs) == 4776
+    assert funcs[0] == 0x68901010
+    assert funcs[-1] == 0x689ce1cf
