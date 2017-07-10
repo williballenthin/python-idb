@@ -5,7 +5,7 @@ It provides read-only access to internal structures such as the B-tree (ID0 sect
 The library also provides analysis of B-tree entries to expose logical structures such as functions, cross references, bytes, and disassembly (via [Capstone](http://www.capstone-engine.org/)).
 An example use for python-idb might be to run IDA scripts in a pure-Python environment.
 
-Willem Hengeveld ([mailto:itsme@xs4all.nl]) provided the initial research into the low-level structures in his projects [pyidbutil](https://github.com/nlitsme/pyidbutil) and [idbutil](https://github.com/nlitsme/idbutil).
+Willem Hengeveld (<mailto:itsme@xs4all.nl>) provided the initial research into the low-level structures in his projects [pyidbutil](https://github.com/nlitsme/pyidbutil) and [idbutil](https://github.com/nlitsme/idbutil).
 Willem deserves substantial credit for reversing the .idb file format and publishing his results online.
 This project heavily borrows from his knowledge, though there is little code overlap.
 
