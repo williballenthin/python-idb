@@ -12,7 +12,7 @@ This project heavily borrows from his knowledge, though there is little code ove
 
 ## example use:
 
-### Example: List functions names
+### example: list functions names
 
 In this example, we list the effective addresses and names of functions:
 
@@ -38,7 +38,7 @@ Note that we create an emulated instance of the IDAPython scripting interface, a
 this to invoke `idc` and `idautils` routines to fetch data.
 
 
-### Example: Run an existing IDAPython script
+### example: run an existing IDAPython script
 
 In this example, we run the [yara_fn.py](https://gist.github.com/williballenthin/3abc9577bede0aeef25526b201732246) IDAPython script to generate a [YARA](https://virustotal.github.io/yara/) rule for the function at effective address 0x68901695 in kernel32.idb:
 
