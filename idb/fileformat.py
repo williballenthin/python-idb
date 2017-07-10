@@ -29,7 +29,7 @@ class FileHeader(vstruct.VStruct):
         # order should line up with the SECTIONS definition.
         self.checksums = []
 
-        self.signature = v_bytes(size=0x4)  # IDA1
+        self.signature = v_bytes(size=0x4)  # IDA1 | IDA2
         self.unk04 = v_uint16()
         self.offset1 = v_uint64()
         self.offset2 = v_uint64()
@@ -68,7 +68,7 @@ class FileHeader(vstruct.VStruct):
         self.checksums.append(self.checksum6)
 
     def validate(self):
-        if self.signature != b'IDA1':
+        if self.signature not in (b'IDA1' or b'IDA2'):
             raise ValueError('bad signature')
         if self.sig2 != 0xAABBCCDD:
             raise ValueError('bad sig2')
@@ -689,9 +689,10 @@ class ID0(vstruct.VStruct):
     use `.find()` to identify a matching entry, and use the resulting cursor
      instance to access the value, or traverse to less/greater entries.
     '''
-    def __init__(self, buf):
+    def __init__(self, buf, wordsize):
         vstruct.VStruct.__init__(self)
         self.buf = memoryview(buf)
+        self.wordsize = wordsize
 
         self.next_free_offset = v_uint32()
         self.page_size = v_uint16()
@@ -960,8 +961,9 @@ class NAM(vstruct.VStruct):
 
 
 class TIL(vstruct.VStruct):
-    def __init__(self, buf=None):
+    def __init__(self, buf=None, wordsize=4):
         vstruct.VStruct.__init__(self)
+        self.wordsize = wordsize
         self.signature = v_bytes(size=0x06)
 
     def validate(self):
@@ -1013,11 +1015,16 @@ class IDB(vstruct.VStruct):
         # these are the only true vstruct fields for this struct.
         self.header = FileHeader()
 
-        # TODO: set this correctly.
-        # possibly inspect the magic header?
         self.wordsize = 4
 
     def pcb_header(self):
+        if self.header.signature == b'IDA1':
+            self.wordize = 4
+        elif self.header.signature == b'IDA2':
+            self.wordize = 8
+        else:
+            raise RuntimeError('unexpected file signature: %s' % (self.header.signature))
+
         # TODO: pass along checksum
         for offset in self.header.offsets:
             if offset == 0:
@@ -1043,7 +1050,7 @@ class IDB(vstruct.VStruct):
                 logger.warn('section class not implemented: %s', sectiondef.name)
                 continue
 
-            s = sectiondef.cls(buf=section.contents)
+            s = sectiondef.cls(buf=section.contents, wordsize=self.wordsize)
             s.vsParse(section.contents)
             # vivisect doesn't allow you to assign vstructs to
             #  attributes that are not part of the struct,
