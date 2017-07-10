@@ -84,6 +84,7 @@ support for the following features are feasible and planned, but not yet impleme
   - compressed databases
   - .i64 files
   - Python 2.7 compatibility
+  - performance (there's no caching yet for code clarity)
   - databases from versions other than v6.95
   - parsing TIL section
 
