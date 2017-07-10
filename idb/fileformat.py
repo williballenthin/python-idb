@@ -13,6 +13,7 @@ from vstruct.primitives import v_uint16
 from vstruct.primitives import v_uint32
 from vstruct.primitives import v_uint64
 
+import idb
 import idb.netnode
 
 
@@ -691,7 +692,7 @@ class ID0(vstruct.VStruct):
     '''
     def __init__(self, buf, wordsize):
         vstruct.VStruct.__init__(self)
-        self.buf = memoryview(buf)
+        self.buf = idb.memview(buf)
         self.wordsize = wordsize
 
         self.next_free_offset = v_uint32()
@@ -997,7 +998,7 @@ class IDB(vstruct.VStruct):
     def __init__(self, buf):
         vstruct.VStruct.__init__(self)
         # we use a memoryview since we'll take a bunch of read-only subslices.
-        self.buf = memoryview(buf)
+        self.buf = idb.memview(buf)
 
         # list of parsed Section instances or None.
         # the entries should line up with the SECTIONS definition.
