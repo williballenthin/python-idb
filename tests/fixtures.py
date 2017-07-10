@@ -40,8 +40,34 @@ kernel32_all_versions = pytest.mark.parametrize("kernel32_idb", [
     pytest.param(load_idb(os.path.join(CD, 'data', 'v6.95', 'x64', 'kernel32.i64')),
                  marks=pytest.mark.xfail),
     load_idb(os.path.join(CD, 'data', 'v7.0b', 'x32', 'kernel32.idb')),
+    # TODO: .i64 support
+    pytest.param(load_idb(os.path.join(CD, 'data', 'v7.0b', 'x64', 'kernel32.i64')),
+                 marks=pytest.mark.xfail),
 ], ids=[
     '6.95/x32',
     '6.95/x64',
     'v7.0/x32',
+    'v7.0/x64',
+])
+
+
+kernel32_v695 = pytest.mark.parametrize("kernel32_idb", [
+    load_idb(os.path.join(CD, 'data', 'v6.95', 'x32', 'kernel32.idb')),
+    # TODO: .i64 support
+    pytest.param(load_idb(os.path.join(CD, 'data', 'v6.95', 'x64', 'kernel32.i64')),
+                 marks=pytest.mark.xfail),
+], ids=[
+    '6.95/x32',
+    '6.95/x64',
+])
+
+
+kernel32_v70b = pytest.mark.parametrize("kernel32_idb", [
+    load_idb(os.path.join(CD, 'data', 'v7.0b', 'x32', 'kernel32.idb')),
+    # TODO: .i64 support
+    pytest.param(load_idb(os.path.join(CD, 'data', 'v7.0b', 'x64', 'kernel32.i64')),
+                 marks=pytest.mark.xfail),
+], ids=[
+    '7.0b/x32',
+    '7.0b/x64',
 ])

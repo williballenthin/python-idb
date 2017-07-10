@@ -4,6 +4,7 @@ from fixtures import *
 import idb
 
 
+@kernel32_all_versions
 def test_heads(kernel32_idb):
     idc = idb.IDAPython(kernel32_idb).idc
 
@@ -16,6 +17,7 @@ def test_heads(kernel32_idb):
     assert idc.PrevHead(first_ea + 2) == first_ea
 
 
+@kernel32_all_versions
 def test_bytes(kernel32_idb):
     idc = idb.IDAPython(kernel32_idb).idc
     ida_bytes = idb.IDAPython(kernel32_idb).ida_bytes
@@ -41,6 +43,7 @@ def test_bytes(kernel32_idb):
     assert idc.GetManyBytes(0x68901010, 0x3) == b'\x8B\xFF\x55'
 
 
+@kernel32_all_versions
 def test_state(kernel32_idb):
     idc = idb.IDAPython(kernel32_idb).idc
     ida_bytes = idb.IDAPython(kernel32_idb).ida_bytes
@@ -64,6 +67,7 @@ def test_state(kernel32_idb):
     assert ida_bytes.isHead(flags) == False
 
 
+@kernel32_all_versions
 def test_specific_state(kernel32_idb):
     idc = idb.IDAPython(kernel32_idb).idc
     ida_bytes = idb.IDAPython(kernel32_idb).ida_bytes
@@ -85,6 +89,7 @@ def test_specific_state(kernel32_idb):
     assert ida_bytes.has_cmt(flags) == True
 
 
+@kernel32_all_versions
 def test_code(kernel32_idb):
     idc = idb.IDAPython(kernel32_idb).idc
     ida_bytes = idb.IDAPython(kernel32_idb).ida_bytes
@@ -100,6 +105,7 @@ def test_code(kernel32_idb):
     assert ida_bytes.isImmd(flags) == False
 
 
+@kernel32_all_versions
 def test_data(kernel32_idb):
     idc = idb.IDAPython(kernel32_idb).idc
     ida_bytes = idb.IDAPython(kernel32_idb).ida_bytes
@@ -177,11 +183,13 @@ def test_data(kernel32_idb):
     assert ida_bytes.isCustom(flags) == False
 
 
+@kernel32_all_versions
 def test_function_name(kernel32_idb):
     api = idb.IDAPython(kernel32_idb)
     assert api.idc.GetFunctionName(0x68901695) == 'DllEntryPoint'
 
 
+@kernel32_all_versions
 def test_operand_types(kernel32_idb):
     idc = idb.IDAPython(kernel32_idb).idc
 
@@ -239,6 +247,7 @@ def test_colors(small_idb):
     assert api.idc.GetColor(0, api.idc.CIC_ITEM) == 0x888888
 
 
+@kernel32_all_versions
 def test_func_t(kernel32_idb):
     api = idb.IDAPython(kernel32_idb)
 
@@ -247,7 +256,9 @@ def test_func_t(kernel32_idb):
     assert DllEntryPoint.endEA == 0x689016B0
     # the netnode id of the frame structure
     # go look at netnode | FF 00 00 00 00 75 |
-    assert DllEntryPoint.frame == 0x75
+    # this is specific to the .idb
+    # assert DllEntryPoint.frame == 0x75
+
     # size of local variables
     assert DllEntryPoint.frsize == 0x0
     # size of saved registers.
@@ -285,6 +296,7 @@ def test_func_t(kernel32_idb):
     assert api.ida_funcs.get_func(0x68906156 + 1).startEA == 0x68901695
 
 
+@kernel32_all_versions
 def test_find_bb_end(kernel32_idb):
     # .text:68901695 000 8B FF                                   mov     edi, edi
     # .text:68901697 000 55                                      push    ebp
@@ -307,6 +319,7 @@ def test_find_bb_end(kernel32_idb):
     assert api.idaapi._find_bb_end(0x689016A4) == 0x689016AD
 
 
+@kernel32_all_versions
 def test_find_bb_start(kernel32_idb):
     # .text:68901695 000 8B FF                                   mov     edi, edi
     # .text:68901697 000 55                                      push    ebp
@@ -348,6 +361,7 @@ def lpluck(prop, s):
     return list(pluck(prop, s))
 
 
+@kernel32_all_versions
 def test_flow_preds(kernel32_idb):
     api = idb.IDAPython(kernel32_idb)
 
@@ -359,6 +373,7 @@ def test_flow_preds(kernel32_idb):
     assert lpluck('type', api.idaapi._get_flow_preds(0x68906156)) == [api.idaapi.fl_JN]
 
 
+@kernel32_all_versions
 def test_flow_succs(kernel32_idb):
     api = idb.IDAPython(kernel32_idb)
 
@@ -370,6 +385,7 @@ def test_flow_succs(kernel32_idb):
     assert lpluck('type', api.idaapi._get_flow_succs(0x6890169E)) == [api.idaapi.fl_F, api.idaapi.fl_JN]
 
 
+@kernel32_all_versions
 def test_flow_chart(kernel32_idb):
     api = idb.IDAPython(kernel32_idb)
 
@@ -394,6 +410,7 @@ def test_flow_chart(kernel32_idb):
             assert lpluck('startEA', bb.preds()) == [0x68901695]
 
 
+@kernel32_all_versions
 def test_fixups(kernel32_idb):
     api = idb.IDAPython(kernel32_idb)
 
@@ -417,12 +434,14 @@ def test_fixups(kernel32_idb):
     assert api.idaapi.get_next_fixup_ea(0x68901025 + 1) == 0x68901034
 
 
+@kernel32_all_versions
 def test_input_md5(kernel32_idb):
     api = idb.IDAPython(kernel32_idb)
     assert api.idc.GetInputMD5() == '00bf1bf1b779ce1af41371426821e0c2'
     assert api.idautils.GetInputFileMD5() == '00bf1bf1b779ce1af41371426821e0c2'
 
 
+@kernel32_all_versions
 def test_segments(kernel32_idb):
     api = idb.IDAPython(kernel32_idb)
 
@@ -448,6 +467,7 @@ def test_segments(kernel32_idb):
     assert seg.endEA == 0x689db000
 
 
+@kernel32_all_versions
 def test_get_mnem(kernel32_idb):
     api = idb.IDAPython(kernel32_idb)
 
@@ -459,10 +479,12 @@ def test_get_mnem(kernel32_idb):
     assert api.idc.GetMnem(0x68901695) == 'mov'
 
 
+@kernel32_all_versions
 def test_functions(kernel32_idb):
     api = idb.IDAPython(kernel32_idb)
 
     funcs = api.idautils.Functions()
-    assert len(funcs) == 4776
+    # exact number of detected functions varies by IDA version,
+    # but the first and last addresses should remain constant.
     assert funcs[0] == 0x68901010
     assert funcs[-1] == 0x689ce1cf

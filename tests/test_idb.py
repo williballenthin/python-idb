@@ -27,9 +27,10 @@ def test_validate(empty_idb, kernel32_idb):
     assert kernel32_idb.validate() is True
 
 
-def test_header(empty_idb):
-    assert empty_idb.header.signature == b'IDA1'
-    assert empty_idb.header.sig2 == 0xAABBCCDD
+@kernel32_all_versions
+def test_header(kernel32_idb):
+    assert kernel32_idb.header.signature == b'IDA1'
+    assert kernel32_idb.header.sig2 == 0xAABBCCDD
 
 
 def test_id0(kernel32_idb):
@@ -65,6 +66,7 @@ def b2h(somebytes):
     return binascii.hexlify(somebytes).decode('ascii')
 
 
+@kernel32_v695
 def test_find_exact_match(kernel32_idb):
     # this is found in the root node, first index
     key = h2b('2e6892663778689c4fb7')
@@ -120,6 +122,7 @@ def h(number):
     return '%02x' % number
 
 
+@kernel32_v695
 def test_find_prefix(kernel32_idb):
     # nodeid: ff000006 ($fixups)
     fixup_nodeid = '2eff000006'
@@ -141,6 +144,7 @@ def test_find_prefix(kernel32_idb):
         cursor = kernel32_idb.id0.find_prefix(b'does not exist')
 
 
+@kernel32_v695
 def test_cursor_easy_leaf(kernel32_idb):
     # this is found on a leaf, second to last index.
     # here's the surrounding layout:
@@ -159,6 +163,7 @@ def test_cursor_easy_leaf(kernel32_idb):
     assert b2h(cursor.key) == '2eff00002253689cc95b'
 
 
+@kernel32_v695
 def test_cursor_branch(kernel32_idb):
     # starting at a key that is found in a branch node, test next and prev.
     # these should traverse to leaf nodes and pick the min/max entries, respectively.
@@ -200,6 +205,7 @@ def test_cursor_branch(kernel32_idb):
     assert b2h(cursor.key) == '2eff00002253689bea26'
 
 
+@kernel32_v695
 def test_cursor_complex_leaf_next(kernel32_idb):
     # see the scenario in `test_cursor_branch`.
     key = h2b('2eff00002253689bea26')
@@ -208,6 +214,7 @@ def test_cursor_complex_leaf_next(kernel32_idb):
     assert b2h(cursor.key) == '2eff00002253689bea8e'
 
 
+@kernel32_v695
 def test_cursor_complex_leaf_prev(kernel32_idb):
     # see the scenario in `test_cursor_branch`.
     key = h2b('2eff00002253689bece5')
@@ -216,6 +223,7 @@ def test_cursor_complex_leaf_prev(kernel32_idb):
     assert b2h(cursor.key) == '2eff00002253689bea8e'
 
 
+@kernel32_all_versions
 def test_cursor_min(kernel32_idb):
     # test cursor movement from min key
     # min leaf keys:
@@ -236,6 +244,7 @@ def test_cursor_min(kernel32_idb):
         cursor.prev()
 
 
+@kernel32_all_versions
 def test_cursor_max(kernel32_idb):
     # test cursor movement from max key
     # max leaf keys:
@@ -258,6 +267,7 @@ def test_cursor_max(kernel32_idb):
 
 
 @slow
+@kernel32_all_versions
 def test_cursor_enum_all_asc(kernel32_idb):
     minkey = h2b('24204d4158204c494e4b')
     cursor = kernel32_idb.id0.find(minkey)
@@ -273,6 +283,7 @@ def test_cursor_enum_all_asc(kernel32_idb):
 
 
 @slow
+@kernel32_all_versions
 def test_cursor_enum_all_desc(kernel32_idb):
     maxkey = h2b('4e776373737472')
     cursor = kernel32_idb.id0.find(maxkey)
@@ -287,6 +298,7 @@ def test_cursor_enum_all_desc(kernel32_idb):
     assert kernel32_idb.id0.record_count == count
 
 
+@kernel32_all_versions
 def test_id1(kernel32_idb):
     segments = kernel32_idb.id1.segments
     # collected empirically
@@ -304,6 +316,7 @@ def test_id1(kernel32_idb):
     assert id1.get_flags(0x68901000) == 0x2590
 
 
+@kernel32_v695
 def test_nam(kernel32_idb):
     names = kernel32_idb.nam.names()
     # collected empirically
