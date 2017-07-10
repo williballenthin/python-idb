@@ -14,3 +14,13 @@ def from_file(path):
         db = idb.fileformat.IDB(buf)
         db.vsParse(buf)
         yield db
+
+
+def from_buffer(buf):
+    # break import cycle
+    import idb.fileformat
+
+    buf = memoryview(buf)
+    db = idb.fileformat.IDB(buf)
+    db.vsParse(buf)
+    return db
