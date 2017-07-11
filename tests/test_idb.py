@@ -25,9 +25,12 @@ def test_validate(empty_idb, kernel32_idb):
     assert kernel32_idb.validate() is True
 
 
-@kernel32_all_versions
-def test_header(kernel32_idb):
-    assert kernel32_idb.header.signature == b'IDA1'
+@kern32_test([
+    (695, 32, b'IDA1'),
+    (695, 64, b'IDA2'),
+])
+def test_header_magic(kernel32_idb, version, bitness, expected):
+    assert kernel32_idb.header.signature == expected
     assert kernel32_idb.header.sig2 == 0xAABBCCDD
 
 

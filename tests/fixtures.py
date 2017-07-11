@@ -35,6 +35,71 @@ def load_idb(path):
         return idb.from_buffer(f.read())
 
 
+def xfail(spec):
+    return ('xfail', spec)
+
+
+def skip(spec):
+    return ('skip', spec)
+
+
+def kern32_test(specs):
+    '''
+    Example::
+
+        @kern32_test([
+                 (695, 32, 'bar'),
+                 (695, 64, 'bar'),
+            xfail(700, 32, 'bar'),
+        ])
+        def test_foo(kernel32_idb, version, bitness, expected):
+            assert 'bar' == expected
+    '''
+    params = []
+    ids = []
+    for spec in specs:
+        if spec[0] == 'xfail':
+            marks = pytest.mark.xfail
+            spec = spec[1]
+        elif spec[0] == 'skip':
+            marks = pytest.mark.skip
+            spec = spec[1]
+        else:
+            marks = None
+
+        version = spec[0]
+        bitness = spec[1]
+        expected = spec[2:]
+
+        if version == 695:
+            sversion = 'v6.95'
+        elif version == 700:
+            sversion = 'v7.0b'
+        else:
+            raise ValueError('unexpected version')
+
+        if bitness == 32:
+            sbitness = 'x32'
+            filename = 'kernel32.idb'
+        elif bitness == 64:
+            sbitness = 'x64'
+            filename = 'kernel32.i64'
+        else:
+            raise ValueError('unexpected bitness')
+
+        path = os.path.join(CD, 'data', sversion, sbitness, filename)
+        db = load_idb(path)
+
+        if marks:
+            params.append(pytest.param(db, version, bitness, *expected, marks=marks))
+        else:
+            params.append(pytest.param(db, version, bitness, *expected))
+
+        ids.append(sversion + '/' + sbitness)
+
+    return pytest.mark.parametrize('kernel32_idb,version,bitness,expected', params, ids=ids)
+
+
 # decorator for tests that apply to all versions of IDA
 kernel32_all_versions = pytest.mark.parametrize("kernel32_idb", [
     load_idb(os.path.join(CD, 'data', 'v6.95', 'x32', 'kernel32.idb')),
