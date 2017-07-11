@@ -13,6 +13,7 @@ from vstruct.primitives import v_bytes
 from vstruct.primitives import v_uint8
 from vstruct.primitives import v_uint16
 from vstruct.primitives import v_uint32
+from vstruct.primitives import v_uint64
 
 import idb
 import idb.netnode
@@ -25,7 +26,7 @@ def is_flag_set(flags, flag):
     return flags & flag == flag
 
 
-def as_unix_timestamp(buf):
+def as_unix_timestamp(buf, wordsize=None):
     '''
     parse unix timestamp bytes into a timestamp.
     '''
@@ -33,14 +34,14 @@ def as_unix_timestamp(buf):
     return datetime.datetime.utcfromtimestamp(q)
 
 
-def as_md5(buf):
+def as_md5(buf, wordsize=None):
     '''
     parse raw md5 bytes into a hex-formatted string.
     '''
     return binascii.hexlify(buf).decode('ascii')
 
 
-def cast(buf, V):
+def cast(buf, V, wordsize=None):
     '''
     apply a vstruct class to a sequence of bytes.
 
@@ -56,7 +57,7 @@ def cast(buf, V):
         s = cast(buf, Stat)
         assert s.gid == 0x1000
     '''
-    v = V()
+    v = V(wordsize=wordsize)
     v.vsParse(buf)
     return v
 
@@ -77,8 +78,9 @@ def as_cast(V):
         s = S(buf)
         assert s.gid == 0x1000
     '''
-    def inner(buf):
-        return cast(buf, V)
+    def inner(buf, wordsize=None):
+        return cast(buf, V, wordsize=wordsize)
+    setattr(inner, 'V', V.__name__)
     return inner
 
 
@@ -278,7 +280,8 @@ class _Analysis(object):
                 if field.cast is None:
                     ret[sup.parsed_key.index] = bytes(sup.value)
                 else:
-                    ret[sup.parsed_key.index] = field.cast(bytes(sup.value), wordsize=self.idb.wordsize)
+                    v = field.cast(bytes(sup.value), wordsize=self.idb.wordsize)
+                    ret[sup.parsed_key.index] = v
             return ret
         else:
             # normal field with an explicit index
@@ -286,7 +289,8 @@ class _Analysis(object):
             if field.cast is None:
                 return bytes(v)
             else:
-                return field.cast(bytes(v), wordsize=self.idb.wordsize)
+                return field.cast(bytes(v),
+                                  wordsize=self.idb.wordsize)
 
     def get_field_tag(self, name):
         '''
@@ -375,7 +379,7 @@ EntryPoints = Analysis('$ entry points', [
 
 
 class FileRegion(vstruct.VStruct):
-    def __init__(self):
+    def __init__(self, wordsize=None):
         vstruct.VStruct.__init__(self)
         self.start = v_uint32()
         self.end = v_uint32()
@@ -399,7 +403,7 @@ FileRegions = Analysis('$ fileregions', [
 class func_t:
     FUNC_TAIL = 0x00008000
 
-    def __init__(self, buf):
+    def __init__(self, buf, wordsize=None):
         self.buf = buf
         self.vals = self.get_values()
 
@@ -867,14 +871,21 @@ def get_drefs_from(db, ea, types=None):
 
 
 class Fixup(vstruct.VStruct):
-    def __init__(self):
+    def __init__(self, wordsize=None):
         vstruct.VStruct.__init__(self)
         # sizeof() == 0xB (fixed)
         # possible values: 0x0 - 0xC. top bit has some meaning.
         self.type = v_uint8()
         self.unk01 = v_uint16()  # this might be the segment index + 1?
-        self.offset = v_uint32()
-        self.unk07 = v_uint32()
+        if wordsize == 4:
+            self.offset = v_uint32()
+            self.unk07 = v_uint32()
+        elif wordsize == 8:
+            self.unk03 = v_uint32()
+            self.unk07 = v_uint16()
+            self.offset = v_uint64()
+        else:
+            raise ValueError('unexpected wordsize')
 
     def pcb_type(self):
         if self.type != 0x04:
@@ -905,7 +916,7 @@ Fixups = Analysis('$ fixups', [
 ])
 
 
-def parse_seg_strings(buf):
+def parse_seg_strings(buf, wordsize=None):
     strings = []
     offset = 0x0
 

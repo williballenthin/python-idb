@@ -93,7 +93,7 @@ def parse_key(buf, wordsize=4):
     return ComplexKey(nodeid, tag, index)
 
 
-def as_uint(buf):
+def as_uint(buf, wordsize=None):
     if len(buf) == 1:
         return struct.unpack('<B', buf)[0]
     elif len(buf) == 2:
@@ -106,7 +106,7 @@ def as_uint(buf):
         return RuntimeError('unexpected buf size')
 
 
-def as_int(buf):
+def as_int(buf, wordsize=None):
     if len(buf) == 1:
         return struct.unpack('<b', buf)[0]
     elif len(buf) == 2:
@@ -119,7 +119,7 @@ def as_int(buf):
         return RuntimeError('unexpected buf size')
 
 
-def as_string(buf):
+def as_string(buf, wordsize=None):
     return bytes(buf).rstrip(b'\x00').decode('utf-8').rstrip('\x00')
 
 
