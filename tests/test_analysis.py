@@ -93,7 +93,12 @@ def test_entrypoints(kernel32_idb, version, bitness, expected):
     assert len(allofthem) == 0x624
 
 
-@kern32_test()
+@kern32_test([
+    (695, 32, 0x75),
+    xfail(695, 64, 0x75),  # not supported
+    xfail(700, 32, 0x7A),  # not supported
+    xfail(700, 64, 0x7A),  # not supported
+])
 def test_fileregions(kernel32_idb, version, bitness, expected):
     fileregions = idb.analysis.FileRegions(kernel32_idb)
 
@@ -123,8 +128,8 @@ def test_functions(kernel32_idb, version, bitness, expected):
 @kern32_test([
     (695, 32, 0x75),
     (695, 64, 0x75),
-    (700, 32, 0),
-    (700, 64, 0),
+    (700, 32, 0x7A),
+    (700, 64, 0x7A),
 ])
 def test_function_frame(kernel32_idb, version, bitness, expected):
     DllEntryPoint = idb.analysis.Functions(kernel32_idb).functions[0x68901695]
