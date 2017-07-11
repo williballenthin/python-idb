@@ -283,7 +283,12 @@ def test_xrefs(kernel32_idb, version, bitness, expected):
     assert lpluck('dst', idb.analysis.get_drefs_from(kernel32_idb, security_cookie)) == []
 
 
-@kern32_test()
+@kern32_test([
+    (695, 32, None),
+    (695, 64, None),
+    xfail(700, 32, None),  # not supported yet.
+    xfail(700, 64, None),  # not supported yet.
+])
 def test_fixups(kernel32_idb, version, bitness, expected):
     fixups = idb.analysis.Fixups(kernel32_idb).fixups
     assert len(fixups) == 31608
