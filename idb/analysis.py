@@ -767,11 +767,14 @@ class Function:
         last_ea = 0
         last_length = 0
 
-        unpacker = unpack_dds
-        if self.idb.wordsize == 8:
+        if self.idb.wordsize == 4:
+            unpacker = unpack_dds
+        elif self.idb.wordsize == 8:
             unpacker = unpack_dqs
+        else:
+            raise RuntimeError('unexpected wordsize')
 
-        for delta, length in pairs(unpack_dqs(v)):
+        for delta, length in pairs(unpacker(v)):
             ea = last_ea + last_length + delta
             yield Chunk(ea, length)
             last_ea = ea
@@ -787,9 +790,12 @@ class Function:
         v = self.netnode.supval(tag='S', index=0x1000)
         offset = self.nodeid
 
-        unpacker = unpack_dds
-        if self.idb.wordsize == 8:
+        if self.idb.wordsize == 4:
+            unpacker = unpack_dds
+        elif self.idb.wordsize == 8:
             unpacker = unpack_dqs
+        else:
+            raise RuntimeError('unexpected wordsize')
 
         for (delta, change) in pairs(unpacker(v)):
             offset += delta
