@@ -67,8 +67,14 @@ def make_key(nodeid, tag=None, index=None, wordsize=4):
 
 ComplexKey = namedtuple('ComplexKey', ['nodeid', 'tag', 'index'])
 
+TAG_LENGTH = 1
+KEY_HEADER_LENGTH = 1
+
 
 def parse_key(buf, wordsize=4):
+    if six.indexbytes(buf, 0x0) != 0x2E:
+        raise ValueError('buf is not a complex key')
+
     if wordsize == 4:
         wordformat = 'I'
     elif wordsize == 8:
@@ -76,20 +82,18 @@ def parse_key(buf, wordsize=4):
     else:
         raise ValueError('unexpected wordsize')
 
-    if six.indexbytes(buf, 0x0) != 0x2E:
-        raise ValueError('buf is not a complex key')
-
     nodeid, tag = struct.unpack_from('>' + wordformat + 'c', buf, 1)
     tag = tag.decode('ascii')
-    if len(buf) > 1 + 4 + 1:
-        index = struct.unpack_from('>' + wordformat.lower(), buf, 6)[0]
+    if len(buf) > TAG_LENGTH + wordsize + KEY_HEADER_LENGTH:
+        offset = TAG_LENGTH + KEY_HEADER_LENGTH + wordsize
+        index = struct.unpack_from('>' + wordformat.lower(), buf, offset)[0]
     else:
         index = None
 
     return ComplexKey(nodeid, tag, index)
 
 
-def as_int(buf):
+def as_uint(buf):
     if len(buf) == 1:
         return struct.unpack('<B', buf)[0]
     elif len(buf) == 2:
@@ -98,6 +102,19 @@ def as_int(buf):
         return struct.unpack('<L', buf)[0]
     elif len(buf) == 8:
         return struct.unpack('<Q', buf)[0]
+    else:
+        return RuntimeError('unexpected buf size')
+
+
+def as_int(buf):
+    if len(buf) == 1:
+        return struct.unpack('<b', buf)[0]
+    elif len(buf) == 2:
+        return struct.unpack('<h', buf)[0]
+    elif len(buf) == 4:
+        return struct.unpack('<l', buf)[0]
+    elif len(buf) == 8:
+        return struct.unpack('<q', buf)[0]
     else:
         return RuntimeError('unexpected buf size')
 
@@ -152,7 +169,7 @@ class Netnode(object):
         if isinstance(nodeid, str):
             key = make_key(nodeid, wordsize=self.wordsize)
             cursor = self.idb.id0.find(key)
-            self.nodeid = as_int(cursor.value)
+            self.nodeid = as_uint(cursor.value)
             logger.info('resolved string netnode %s to %x', nodeid, self.nodeid)
         elif isinstance(nodeid, int):
             self.nodeid = nodeid
@@ -312,7 +329,7 @@ class Netnode(object):
             return False
 
     def long_value(self):
-        return as_int(self.valobj())
+        return as_uint(self.valobj())
 
     def blobsize(self):
         '''
