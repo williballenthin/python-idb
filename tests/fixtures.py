@@ -69,7 +69,7 @@ def kern32_test(specs):
 
         version = spec[0]
         bitness = spec[1]
-        expected = spec[2:]
+        expected = spec[2]
 
         if version == 695:
             sversion = 'v6.95'
@@ -91,9 +91,9 @@ def kern32_test(specs):
         db = load_idb(path)
 
         if marks:
-            params.append(pytest.param(db, version, bitness, *expected, marks=marks))
+            params.append(pytest.param(db, version, bitness, expected, marks=marks))
         else:
-            params.append(pytest.param(db, version, bitness, *expected))
+            params.append(pytest.param(db, version, bitness, expected))
 
         ids.append(sversion + '/' + sbitness)
 
