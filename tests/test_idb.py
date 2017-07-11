@@ -118,7 +118,6 @@ def test_id0_record_count(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test([
-    # collected empirically
     (695, 32, None),
     (695, 64, None),
     (700, 32, None),
@@ -133,52 +132,144 @@ def test_id0_root_entries(kernel32_idb, version, bitness, expected):
         assert entry.key is not None
 
 
-@kernel32_v695
-def test_find_exact_match(kernel32_idb):
+@kern32_test([
+    (695, 32, '24204d4158204c494e4b'),
+    (695, 64, '24204d4158204c494e4b'),
+    (700, 32, '24204d4158204c494e4b'),
+    (700, 64, '24204d4158204c494e4b'),
+])
+def test_cursor_min(kernel32_idb, version, bitness, expected):
+    # test cursor movement from min key
+    # min leaf keys:
+    #   24204d4158204c494e4b
+    #   24204d4158204e4f4445
+    #   24204e45542044455343
+    #   2e0000000044689ae208
+    minkey = kernel32_idb.id0.get_min().key
+    assert minkey == h2b(expected)
+
+    cursor = kernel32_idb.id0.find(minkey)
+    cursor.next()
+    assert b2h(cursor.key) == '24204d4158204e4f4445'
+    cursor.prev()
+    assert b2h(cursor.key) == '24204d4158204c494e4b'
+    with pytest.raises(IndexError):
+        cursor.prev()
+
+
+@kern32_test([
+    (695, 32, '4e776373737472'),
+    (695, 64, '4e776373737472'),
+    (700, 32, '4e776373737472'),
+    (700, 64, '4e776373737472'),
+])
+def test_cursor_max(kernel32_idb, version, bitness, expected):
+    # test cursor movement from max key
+    # max leaf keys:
+    #   4e7763736e636d70
+    #   4e7763736e637079
+    #   4e7763736e6370795f73
+    #   4e77637372636872
+    #   4e776373737472
+    maxkey = kernel32_idb.id0.get_max().key
+    assert maxkey == h2b(expected)
+
+    cursor = kernel32_idb.id0.find(maxkey)
+    cursor.prev()
+    assert b2h(cursor.key) == '4e77637372636872'
+    cursor.next()
+    assert b2h(cursor.key) == '4e776373737472'
+    with pytest.raises(IndexError):
+        cursor.next()
+
+
+@kern32_test([
+    (695, 32, None),
+    (700, 32, None),
+])
+def test_find_exact_match1(kernel32_idb, version, bitness, expected):
     # this is found in the root node, first index
     key = h2b('2e6892663778689c4fb7')
     assert kernel32_idb.id0.find(key).key == key
     assert b2h(kernel32_idb.id0.find(key).value) == '13'
 
+
+@kern32_test([
+    (695, 32, None),
+    (700, 32, None),
+])
+def test_find_exact_match2(kernel32_idb, version, bitness, expected):
     # this is found in the second level, third index
     key = h2b('2e689017765300000009')
     assert kernel32_idb.id0.find(key).key == key
     assert b2h(kernel32_idb.id0.find(key).value) == '02'
 
+
+@kern32_test([
+    (695, 32, '24204636383931344133462e6c705375624b6579'),
+    (700, 32, '24204636383931344132452e6c705265736572766564'),
+])
+def test_find_exact_match3(kernel32_idb, version, bitness, expected):
     # this is found in the root node, last index.
     key = h2b('2eff001bc44e')
     assert kernel32_idb.id0.find(key).key == key
-    assert b2h(kernel32_idb.id0.find(key).value) == '24204636383931344133462e6c705375624b6579'
+    assert b2h(kernel32_idb.id0.find(key).value) == expected
 
+
+@kern32_test([
+    (695, 32, None),
+    (700, 32, None),
+])
+def test_find_exact_match4(kernel32_idb, version, bitness, expected):
     # this is found on a leaf node, first index
     key = h2b('2e6890142c5300001000')
     assert kernel32_idb.id0.find(key).key == key
     assert b2h(kernel32_idb.id0.find(key).value) == '01080709'
 
+
+@kern32_test([
+    (695, 32, None),
+    (700, 32, None),
+])
+def test_find_exact_match5(kernel32_idb, version, bitness, expected):
     # this is found on a leaf node, fourth index
     key = h2b('2e689a288c530000000a')
     assert kernel32_idb.id0.find(key).key == key
     assert b2h(kernel32_idb.id0.find(key).value) == '02'
 
+
+@kern32_test([
+    (695, 32, None),
+    (700, 32, None),
+])
+def test_find_exact_match6(kernel32_idb, version, bitness, expected):
     # this is found on a leaf node, last index
     key = h2b('2e6890157f5300000009')
     assert kernel32_idb.id0.find(key).key == key
     assert b2h(kernel32_idb.id0.find(key).value) == '02'
 
-    # exercise the max/min range
+
+@kern32_test()
+def test_find_exact_match_min(kernel32_idb, version, bitness, expected):
     minkey = h2b('24204d4158204c494e4b')
     assert kernel32_idb.id0.find(minkey).key == minkey
 
+
+@kern32_test()
+def test_find_exact_match_max(kernel32_idb, version, bitness, expected):
     maxkey = h2b('4e776373737472')
     assert kernel32_idb.id0.find(maxkey).key == maxkey
 
+
+@kern32_test()
+def test_find_exact_match_error(kernel32_idb, version, bitness, expected):
     # check our error handling
     with pytest.raises(KeyError):
         kernel32_idb.id0.find(b'does not exist!')
 
 
-@kernel32_v695
-def test_find_prefix(kernel32_idb):
+@kern32_test([(695, 32, None)])
+def test_find_prefix(kernel32_idb, version, bitness, expected):
     # nodeid: ff000006 ($fixups)
     fixup_nodeid = '2eff000006'
     key = h2b(fixup_nodeid)
@@ -199,8 +290,8 @@ def test_find_prefix(kernel32_idb):
         cursor = kernel32_idb.id0.find_prefix(b'does not exist')
 
 
-@kernel32_v695
-def test_cursor_easy_leaf(kernel32_idb):
+@kern32_test([(695, 32, None)])
+def test_cursor_easy_leaf(kernel32_idb, version, bitness, expected):
     # this is found on a leaf, second to last index.
     # here's the surrounding layout:
     #
@@ -218,8 +309,8 @@ def test_cursor_easy_leaf(kernel32_idb):
     assert b2h(cursor.key) == '2eff00002253689cc95b'
 
 
-@kernel32_v695
-def test_cursor_branch(kernel32_idb):
+@kern32_test([(695, 32, None)])
+def test_cursor_branch(kernel32_idb, version, bitness, expected):
     # starting at a key that is found in a branch node, test next and prev.
     # these should traverse to leaf nodes and pick the min/max entries, respectively.
     #
@@ -260,8 +351,8 @@ def test_cursor_branch(kernel32_idb):
     assert b2h(cursor.key) == '2eff00002253689bea26'
 
 
-@kernel32_v695
-def test_cursor_complex_leaf_next(kernel32_idb):
+@kern32_test([(695, 32, None)])
+def test_cursor_complex_leaf_next(kernel32_idb, version, bitness, expected):
     # see the scenario in `test_cursor_branch`.
     key = h2b('2eff00002253689bea26')
     cursor = kernel32_idb.id0.find(key)
@@ -269,56 +360,13 @@ def test_cursor_complex_leaf_next(kernel32_idb):
     assert b2h(cursor.key) == '2eff00002253689bea8e'
 
 
-@kernel32_v695
-def test_cursor_complex_leaf_prev(kernel32_idb):
+@kern32_test([(695, 32, None)])
+def test_cursor_complex_leaf_prev(kernel32_idb, version, bitness, expected):
     # see the scenario in `test_cursor_branch`.
     key = h2b('2eff00002253689bece5')
     cursor = kernel32_idb.id0.find(key)
     cursor.prev()
     assert b2h(cursor.key) == '2eff00002253689bea8e'
-
-
-@kernel32_all_versions
-def test_cursor_min(kernel32_idb):
-    # test cursor movement from min key
-    # min leaf keys:
-    #   24204d4158204c494e4b
-    #   24204d4158204e4f4445
-    #   24204e45542044455343
-    #   2e0000000044689ae208
-    key = h2b('24204d4158204c494e4b')
-
-    assert kernel32_idb.id0.get_min().key == key
-
-    cursor = kernel32_idb.id0.find(key)
-    cursor.next()
-    assert b2h(cursor.key) == '24204d4158204e4f4445'
-    cursor.prev()
-    assert b2h(cursor.key) == '24204d4158204c494e4b'
-    with pytest.raises(IndexError):
-        cursor.prev()
-
-
-@kernel32_all_versions
-def test_cursor_max(kernel32_idb):
-    # test cursor movement from max key
-    # max leaf keys:
-    #   4e7763736e636d70
-    #   4e7763736e637079
-    #   4e7763736e6370795f73
-    #   4e77637372636872
-    #   4e776373737472
-    key = h2b('4e776373737472')
-
-    assert kernel32_idb.id0.get_max().key == key
-
-    cursor = kernel32_idb.id0.find(key)
-    cursor.prev()
-    assert b2h(cursor.key) == '4e77637372636872'
-    cursor.next()
-    assert b2h(cursor.key) == '4e776373737472'
-    with pytest.raises(IndexError):
-        cursor.next()
 
 
 @slow

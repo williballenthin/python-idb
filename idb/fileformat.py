@@ -390,7 +390,8 @@ class PrefixMatchStrategy(FindStrategy):
 class RoundDownMatchStrategy(FindStrategy):
     '''
     strategy used to find the matching key, or the key just less than the given key.
-    it may be an exact match, or an exact match does not exist, and the result is less than the given key.
+    it may be an exact match, or an exact match does not exist,
+     and the result is less than the given key.
     if no entries are less than the given key, `KeyError` is raised.
     '''
 
@@ -535,13 +536,11 @@ class Cursor(object):
         #  the linear scan below is simpler to read, so we'll use that until it becomes an issue.
         if page.is_leaf():
             for i, entry in enumerate(page.get_entries()):
-                # TODO: exact match only
                 if key == entry.key:
                     return i
         else:
             for i, entry in enumerate(page.get_entries()):
                 entry_key = bytes(entry.key)
-                # TODO: exact match only
                 if key == entry_key:
                     return i
                 elif key < entry_key:
