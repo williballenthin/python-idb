@@ -69,7 +69,7 @@ class FileHeader(vstruct.VStruct):
         self.checksums.append(self.checksum6)
 
     def validate(self):
-        if self.signature not in (b'IDA1' or b'IDA2'):
+        if self.signature not in (b'IDA1', b'IDA2'):
             raise ValueError('bad signature')
         if self.sig2 != 0xAABBCCDD:
             raise ValueError('bad sig2')
