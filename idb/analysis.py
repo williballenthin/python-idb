@@ -140,16 +140,23 @@ def unpack_dq(buf, offset=0):
     if offset != 0:
         buf = buf[offset:]
 
-    dw1 = unpack_dd(buf)
-    dw2 = unpack_dd(buf, offset=0x4)
-    # TODO: check ordering.
-    return (dw1 << 32) + dw2
+    dw1, d1 = unpack_dd(buf)
+    dw2, d2 = unpack_dd(buf, offset=d1)
+    return (dw2 << 32) + dw1, d1 + d2
 
 
 def unpack_dds(buf):
     offset = 0
     while offset < len(buf):
         val, size = unpack_dd(buf, offset=offset)
+        yield val
+        offset += size
+
+
+def unpack_dqs(buf):
+    offset = 0
+    while offset < len(buf):
+        val, size = unpack_dq(buf, offset=offset)
         yield val
         offset += size
 
