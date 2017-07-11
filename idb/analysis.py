@@ -278,7 +278,7 @@ class _Analysis(object):
                 if field.cast is None:
                     ret[sup.parsed_key.index] = bytes(sup.value)
                 else:
-                    ret[sup.parsed_key.index] = field.cast(bytes(sup.value))
+                    ret[sup.parsed_key.index] = field.cast(bytes(sup.value), wordsize=self.idb.wordsize)
             return ret
         else:
             # normal field with an explicit index
@@ -286,7 +286,7 @@ class _Analysis(object):
             if field.cast is None:
                 return bytes(v)
             else:
-                return field.cast(bytes(v))
+                return field.cast(bytes(v), wordsize=self.idb.wordsize)
 
     def get_field_tag(self, name):
         '''
