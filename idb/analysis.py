@@ -927,9 +927,41 @@ SegStrings = Analysis('$ segstrings', [
 
 
 class Seg:
-    def __init__(self, buf):
+    def __init__(self, buf, wordsize=4):
         self.buf = buf
-        self.vals = list(unpack_dds(buf))
+
+        if wordsize == 4:
+            unpack_addr = unpack_dd
+        elif wordsize == 8:
+            unpack_addr = unpack_dq
+        else:
+            raise ValueError('unexpected wordsize')
+
+        unpackers = [
+            unpack_addr,
+            unpack_addr,
+            unpack_dd,
+            unpack_dd,
+            unpack_dd,
+            unpack_dd,
+            unpack_dd,
+            unpack_dd,
+            unpack_dd,
+            unpack_dd,
+            unpack_dd,
+            unpack_dd,
+            unpack_dd,
+            unpack_dd,
+            unpack_dd,
+        ]
+
+        self.vals = []
+        offset = 0x0
+        for unpacker in unpackers:
+            v, delta = unpacker(buf, offset=offset)
+            offset += delta
+            self.vals.append(v)
+
         self.startEA = self.vals[0]
         self.endEA = self.startEA + self.vals[1]
         # index into `$ segstrings` array of strings.
@@ -957,7 +989,7 @@ class Seg:
         # segment type (see Segment types). More...
         self.type = self.vals[12]
         # the segment color
-        self.color = self.vals[12]
+        self.color = self.vals[13]
 
 
 # '$ segs' maps from segment start address to details about it.
