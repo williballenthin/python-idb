@@ -11,6 +11,8 @@ matrix:
           python: 3.5
 
 install:
+    # via https://github.com/angr/angr/issues/52
+    - pip install -I --no-use-wheel capstone
     - pip install --upgrade pep8 pytest-cov pytest
     - pip install -e .
 
