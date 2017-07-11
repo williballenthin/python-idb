@@ -167,6 +167,7 @@ class IndexType:
     def str(self):
         return self.name.upper()
 
+
 ALL = IndexType('all')
 ADDRESSES = IndexType('addresses')
 NUMBERS = IndexType('numbers')
@@ -180,6 +181,7 @@ class _Analysis(object):
     this is basically a metaclass for analyzers of IDA Pro netnode namespaces (named nodeid).
     provide set of fields, and parse them from netnodes (nodeid, tag, and optional index) when accessed.
     '''
+
     def __init__(self, db, nodeid, fields):
         self.idb = db
         self.nodeid = nodeid
@@ -491,7 +493,7 @@ class func_t:
 #     index: effective address
 #     value: func_t
 Functions = Analysis('$ funcs', [
-    Field('functions',  'S', ADDRESSES, func_t),
+    Field('functions', 'S', ADDRESSES, func_t),
 ])
 
 
@@ -499,6 +501,7 @@ class PString(vstruct.VStruct):
     '''
     short pascal string, prefixed with single byte length.
     '''
+
     def __init__(self, length_is_total=True):
         vstruct.VStruct.__init__(self)
         self.length = v_uint8()
@@ -601,7 +604,6 @@ class STRUCT_FLAGS:
     SF_GHOST = 0x00001000
 
 
-
 class Struct:
     '''
     Example::
@@ -611,6 +613,7 @@ class Struct:
         assert len(struc.get_members()) == 5
         assert list(struc.get_members())[0].get_type() == 'DWORD'
     '''
+
     def __init__(self, db, structid):
         self.idb = db
         self.nodeid = structid
@@ -660,7 +663,7 @@ def chunks(l, n):
         i = 0
         while True:
             try:
-                v = l[i:i+n]
+                v = l[i:i + n]
                 yield v
             except IndexError:
                 return
@@ -685,6 +688,7 @@ class Function:
         assert func.get_name() == 'DllEntryPoint'
         assert func.get_signature() == '... DllEntryPoint(...)'
     '''
+
     def __init__(self, db, fva):
         self.idb = db
         self.nodeid = fva
@@ -713,7 +717,7 @@ class Function:
         rtype.vsParse(typebuf, offset=2)
 
         # this is a guess???
-        sp_delta = typebuf[2+len(rtype)]
+        sp_delta = typebuf[2 + len(rtype)]
 
         params = []
         typeoffset = 0x2 + len(rtype) + 0x1
@@ -859,20 +863,25 @@ class Fixup(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
         # sizeof() == 0xB (fixed)
-        self.type = v_uint8()    # possible values: 0x0 - 0xC. top bit has some meaning.
+        # possible values: 0x0 - 0xC. top bit has some meaning.
+        self.type = v_uint8()
         self.unk01 = v_uint16()  # this might be the segment index + 1?
         self.offset = v_uint32()
         self.unk07 = v_uint32()
 
     def pcb_type(self):
         if self.type != 0x04:
-            raise NotImplementedError('fixup type %x not yet supported' % (self.type))
+            raise NotImplementedError(
+                'fixup type %x not yet supported' %
+                (self.type))
 
     def get_fixup_length(self):
         if self.type == 0x4:
             return 0x4
         else:
-            raise NotImplementedError('fixup type %x not yet supported' % (self.type))
+            raise NotImplementedError(
+                'fixup type %x not yet supported' %
+                (self.type))
 
 
 # '$ fixups' maps from fixup start address to details about it.
@@ -885,7 +894,7 @@ class Fixup(vstruct.VStruct):
 #       0x4:
 #       0x8:
 Fixups = Analysis('$ fixups', [
-    Field('fixups',  'S', ADDRESSES, as_cast(Fixup))
+    Field('fixups', 'S', ADDRESSES, as_cast(Fixup))
 ])
 
 
@@ -906,7 +915,7 @@ def parse_seg_strings(buf):
 
 
 SegStrings = Analysis('$ segstrings', [
-    Field('strings',  'S', 0, parse_seg_strings),
+    Field('strings', 'S', 0, parse_seg_strings),
 ])
 
 
@@ -955,6 +964,5 @@ class Seg:
 #         3: name index
 #         ...
 Segments = Analysis('$ segs', [
-    Field('segments',  'S', ADDRESSES, Seg),
+    Field('segments', 'S', ADDRESSES, Seg),
 ])
-

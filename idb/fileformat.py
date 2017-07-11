@@ -198,6 +198,7 @@ class Page(vstruct.VStruct):
         +-----------------------------+
 
     '''
+
     def __init__(self, page_size):
         vstruct.VStruct.__init__(self)
         self.ppointer = v_uint32()
@@ -287,6 +288,7 @@ class FindStrategy(object):
     the method will update the cursor as it navigates the btree.
     '''
     __meta__ = abc.ABCMeta
+
     @abc.abstractmethod
     def find(self, cursor, key):
         raise NotImplementedError()
@@ -297,6 +299,7 @@ class ExactMatchStrategy(FindStrategy):
     strategy used to find the entry with exactly the key provided.
     if the exact key is not found, `KeyError` is raised.
     '''
+
     def _find(self, cursor, page_number, key):
         page = cursor.index.get_page(page_number)
         cursor.path.append(page)
@@ -340,6 +343,7 @@ class PrefixMatchStrategy(FindStrategy):
     it may be an exact match, or an exact match does not exist, and the result starts with the given key.
     if no entries start with the given key, `KeyError` is raised.
     '''
+
     def _find(self, cursor, page_number, key):
         page = cursor.index.get_page(page_number)
         cursor.path.append(page)
@@ -365,7 +369,8 @@ class PrefixMatchStrategy(FindStrategy):
                     return
                 elif entry_key.startswith(key):
                     # the sub-page pointed to by this entry contains larger entries.
-                    # so we need to look at the sub-page pointed to by the last entry (or ppointer).
+                    # so we need to look at the sub-page pointed to by the last
+                    # entry (or ppointer).
                     return self._find(cursor, next_page, key)
                 elif entry_key > key:
                     # as soon as we reach greater entries, we'll never match
@@ -387,6 +392,7 @@ class RoundDownMatchStrategy(FindStrategy):
     it may be an exact match, or an exact match does not exist, and the result is less than the given key.
     if no entries are less than the given key, `KeyError` is raised.
     '''
+
     def _find(self, cursor, page_number, key):
         page = cursor.index.get_page(page_number)
         cursor.path.append(page)
@@ -419,7 +425,8 @@ class RoundDownMatchStrategy(FindStrategy):
                     return
                 elif entry_key > key:
                     if i == 0:
-                        # may raise KeyError, and its meant to bubble all the way up.
+                        # may raise KeyError, and its meant to bubble all the
+                        # way up.
                         return self._find(cursor, page.ppointer, key)
                     else:
                         try:
@@ -449,6 +456,7 @@ class MinKeyStrategy(FindStrategy):
     strategy used to find the minimum key in the index.
     note: this completely ignores the provided key.
     '''
+
     def _find(self, cursor, page_number):
         page = cursor.index.get_page(page_number)
         cursor.path.append(page)
@@ -469,6 +477,7 @@ class MaxKeyStrategy(FindStrategy):
     strategy used to find the maximum key in the index.
     note: this completely ignores the provided key.
     '''
+
     def _find(self, cursor, page_number):
         page = cursor.index.get_page(page_number)
         cursor.path.append(page)
@@ -499,16 +508,17 @@ class Cursor(object):
     represents a particular location in the b-tree.
     can be navigated "forward" and "backwards".
     '''
+
     def __init__(self, index):
         super(Cursor, self).__init__()
         self.index = index
 
-        # ordered list of pages from root to leaf that we traversed to get to this point
+        # ordered list of pages from root to leaf that we traversed to get to
+        # this point
         self.path = []
 
         # populated once found
         self.entry = None
-
 
         self.entry_number = None
 
@@ -640,14 +650,16 @@ class Cursor(object):
 
                 # entry_number now points to the least-greater entry relative to start key.
                 # this should be the entry that points to the page from which we just came.
-                # we'll want to return the key from the entry that is just smaller than this one.
+                # we'll want to return the key from the entry that is just
+                # smaller than this one.
 
                 self.entry = current_page.get_entry(entry_number - 1)
                 self.entry_number = entry_number - 1
                 return
 
             else:  # is inner entry.
-                # simple case: simply decrement the entry number in the current node.
+                # simple case: simply decrement the entry number in the current
+                # node.
                 next_entry_number = self.entry_number - 1
                 next_entry = current_page.get_entry(next_entry_number)
 
@@ -690,6 +702,7 @@ class ID0(vstruct.VStruct):
     use `.find()` to identify a matching entry, and use the resulting cursor
      instance to access the value, or traverse to less/greater entries.
     '''
+
     def __init__(self, buf, wordsize):
         vstruct.VStruct.__init__(self)
         self.buf = idb.memview(buf)
@@ -769,6 +782,7 @@ class SegmentBounds(vstruct.VStruct):
     '''
     specifies the range of a segment.
     '''
+
     def __init__(self, wordsize=4):
         vstruct.VStruct.__init__(self)
 

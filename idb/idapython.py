@@ -16,7 +16,8 @@ def is_flag_set(flags, flag):
 
 class FLAGS:
     # instruction/data operands
-    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__op.html
+    # via:
+    # https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__op.html
 
     # outer offset base (combined with operand number). More...
     OPND_OUTER = 0x80
@@ -28,7 +29,8 @@ class FLAGS:
     OPND_ALL = OPND_MASK
 
     # byte states bits
-    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__statebits.html
+    # via:
+    # https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__statebits.html
 
     # Mask for typing.
     MS_CLS = 0x00000600
@@ -46,7 +48,8 @@ class FLAGS:
     FF_UNK = 0x00000000
 
     # specific state information bits
-    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__statespecb.html
+    # via:
+    # https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__statespecb.html
 
     # Mask of common bits.
     MS_COMM = 0x000FF800
@@ -79,7 +82,8 @@ class FLAGS:
     FF_VAR = 0x00080000
 
     # instruction operand types bites
-    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__opbits.html
+    # via:
+    # https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__opbits.html
 
     # Mask for 1st arg typing.
     MS_0TYPE = 0x00F00000
@@ -186,7 +190,8 @@ class FLAGS:
     FF_JUMP = 0x80000000
 
     # data bytes bits
-    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__databits.html
+    # via:
+    # https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__databits.html
 
     # Mask for DATA typing.
     DT_TYPE = 0xF0000000
@@ -237,7 +242,8 @@ class FLAGS:
     FF_YWRD = 0xE0000000
 
     # bytes
-    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__.html
+    # via:
+    # https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_f__.html
 
     # Mask for byte value.
     MS_VAL = 0x000000FF
@@ -248,7 +254,8 @@ class FLAGS:
 
 class AFLAGS:
     # additional flags
-    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___a_f_l__.html
+    # via:
+    # https://www.hex-rays.com/products/ida/support/sdkdoc/group___a_f_l__.html
 
     # has line number info
     AFL_LINNUM = 0x00000001
@@ -351,7 +358,8 @@ class idc:
     def __init__(self, db, api):
         self.idb = db
         self.api = api
-        self.dis = None  # this will be the capstone disassembler, lazily loaded.
+        # this will be the capstone disassembler, lazily loaded.
+        self.dis = None
 
         # apparently this enum changes with bitness.
         # this is annoying.
@@ -364,7 +372,8 @@ class idc:
         #
         #    idc.FUNCATTR_START
         #
-        # via: https://github.com/zachriggle/idapython/blob/37d2fd13b31fec8e6e53fbb9704fa3cd0cbd5b07/python/idc.py#L4149
+        # via:
+        # https://github.com/zachriggle/idapython/blob/37d2fd13b31fec8e6e53fbb9704fa3cd0cbd5b07/python/idc.py#L4149
         if self.idb.wordsize == 4:
             # function start address
             FUNCATTR_START = 0
@@ -490,7 +499,7 @@ class idc:
             raise NotImplementedError()
 
         if self.SegStart(ea) != self.SegStart(ea + size):
-            raise IndexError((ea, ea+size))
+            raise IndexError((ea, ea + size))
 
         ret = []
         for i in range(ea, ea + size):
@@ -675,17 +684,17 @@ class idc:
     def isNum0(flags):
         t = flags & FLAGS.MS_0TYPE
         return t == FLAGS.FF_0NUMB or \
-               t == FLAGS.FF_0NUMO or \
-               t == FLAGS.FF_0NUMD or \
-               t == FLAGS.FF_0NUMH
+            t == FLAGS.FF_0NUMO or \
+            t == FLAGS.FF_0NUMD or \
+            t == FLAGS.FF_0NUMH
 
     @staticmethod
     def isNum1(flags):
         t = flags & FLAGS.MS_1TYPE
         return t == FLAGS.FF_1NUMB or \
-               t == FLAGS.FF_1NUMO or \
-               t == FLAGS.FF_1NUMD or \
-               t == FLAGS.FF_1NUMH
+            t == FLAGS.FF_1NUMO or \
+            t == FLAGS.FF_1NUMD or \
+            t == FLAGS.FF_1NUMH
 
     @staticmethod
     def get_optype_flags0(flags):
@@ -790,59 +799,59 @@ class ida_bytes:
 
     @staticmethod
     def isWord(flags):
-       return flags & FLAGS.DT_TYPE == FLAGS.FF_WORD
+        return flags & FLAGS.DT_TYPE == FLAGS.FF_WORD
 
     @staticmethod
     def isDwrd(flags):
-       return flags & FLAGS.DT_TYPE == FLAGS.FF_DWRD
+        return flags & FLAGS.DT_TYPE == FLAGS.FF_DWRD
 
     @staticmethod
     def isQwrd(flags):
-       return flags & FLAGS.DT_TYPE == FLAGS.FF_QWRD
+        return flags & FLAGS.DT_TYPE == FLAGS.FF_QWRD
 
     @staticmethod
     def isOwrd(flags):
-       return flags & FLAGS.DT_TYPE == FLAGS.FF_OWRD
+        return flags & FLAGS.DT_TYPE == FLAGS.FF_OWRD
 
     @staticmethod
     def isYwrd(flags):
-       return flags & FLAGS.DT_TYPE == FLAGS.FF_YWRD
+        return flags & FLAGS.DT_TYPE == FLAGS.FF_YWRD
 
     @staticmethod
     def isTbyt(flags):
-       return flags & FLAGS.DT_TYPE == FLAGS.FF_TBYT
+        return flags & FLAGS.DT_TYPE == FLAGS.FF_TBYT
 
     @staticmethod
     def isFloat(flags):
-       return flags & FLAGS.DT_TYPE == FLAGS.FF_FLOAT
+        return flags & FLAGS.DT_TYPE == FLAGS.FF_FLOAT
 
     @staticmethod
     def isDouble(flags):
-       return flags & FLAGS.DT_TYPE == FLAGS.FF_DOUBLE
+        return flags & FLAGS.DT_TYPE == FLAGS.FF_DOUBLE
 
     @staticmethod
     def isPackReal(flags):
-       return flags & FLAGS.DT_TYPE == FLAGS.FF_PACKREAL
+        return flags & FLAGS.DT_TYPE == FLAGS.FF_PACKREAL
 
     @staticmethod
     def isASCII(flags):
-       return flags & FLAGS.DT_TYPE == FLAGS.FF_ASCI
+        return flags & FLAGS.DT_TYPE == FLAGS.FF_ASCI
 
     @staticmethod
     def isStruct(flags):
-       return flags & FLAGS.DT_TYPE == FLAGS.FF_STRU
+        return flags & FLAGS.DT_TYPE == FLAGS.FF_STRU
 
     @staticmethod
     def isAlign(flags):
-       return flags & FLAGS.DT_TYPE == FLAGS.FF_ALIGN
+        return flags & FLAGS.DT_TYPE == FLAGS.FF_ALIGN
 
     @staticmethod
     def is3byte(flags):
-       return flags & FLAGS.DT_TYPE == FLAGS.FF_3BYTE
+        return flags & FLAGS.DT_TYPE == FLAGS.FF_3BYTE
 
     @staticmethod
     def isCustom(flags):
-       return flags & FLAGS.DT_TYPE == FLAGS.FF_CUSTOM
+        return flags & FLAGS.DT_TYPE == FLAGS.FF_CUSTOM
 
 
 class ida_nalt:
@@ -1015,6 +1024,7 @@ class BasicBlock(object):
     '''
     interface extracted from: https://raw.githubusercontent.com/gabtremblay/idabearclean/master/idaapi.py
     '''
+
     def __init__(self, flowchart, startEA, endEA):
         self.fc = flowchart
         self.id = startEA
@@ -1044,7 +1054,8 @@ def is_empty(s):
 
 class idaapi:
     # xref flags
-    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group__xref__type.html#ga78aab6d0d6bd9cb4904bbdbb5ac4fa71
+    # via:
+    # https://www.hex-rays.com/products/ida/support/sdkdoc/group__xref__type.html#ga78aab6d0d6bd9cb4904bbdbb5ac4fa71
 
     # unknown – for compatibility with old versions.
     # Should not be used anymore.
