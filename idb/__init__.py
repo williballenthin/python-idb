@@ -1,19 +1,20 @@
 import sys
 import contextlib
 
+import six
 
 from idb.idapython import IDAPython
 
 
-if (sys.version_info > (3, 0)):
-    def memview(buf):
-        return memoryview(buf)
-else:
+if six.PY2:
     def memview(buf):
         # on py2.7, we get this madness::
         #
-        #     bytes(memoryview('foo')) == <memoryview ...>
+        #     bytes(memoryview('foo')) == "<memoryview ...>"
         return buf
+else:
+    def memview(buf):
+        return memoryview(buf)
 
 
 @contextlib.contextmanager
