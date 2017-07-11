@@ -4,6 +4,7 @@ lots of inspiration from: https://github.com/nlitsme/pyidbutil
 import abc
 import struct
 import logging
+import functools
 from collections import namedtuple
 
 import vstruct
@@ -783,16 +784,14 @@ class SegmentBounds(vstruct.VStruct):
     specifies the range of a segment.
     '''
 
-    def __init__(self, wordsize=4):
+    def __init__(self, wordsize):
         vstruct.VStruct.__init__(self)
 
         self.wordsize = wordsize
         if wordsize == 4:
             self.v_word = v_uint32
-            self.word_fmt = "I"
         elif wordsize == 8:
             self.v_word = v_uint64
-            self.word_fmt = "Q"
         else:
             raise RuntimeError('unexpected wordsize')
 
@@ -806,16 +805,14 @@ class ID1(vstruct.VStruct):
     '''
     PAGE_SIZE = 0x2000
 
-    def __init__(self, wordsize=4, buf=None):
+    def __init__(self, wordsize, buf=None):
         vstruct.VStruct.__init__(self)
 
         self.wordsize = wordsize
         if wordsize == 4:
             self.v_word = v_uint32
-            self.word_fmt = "I"
         elif wordsize == 8:
             self.v_word = v_uint64
-            self.word_fmt = "Q"
         else:
             raise RuntimeError('unexpected wordsize')
 
@@ -836,7 +833,10 @@ class ID1(vstruct.VStruct):
 
     def pcb_segment_count(self):
         # TODO: pass wordsize
-        self['_segments'].vsAddElements(self.segment_count, SegmentBounds)
+        self['_segments'].vsAddElements(self.segment_count,
+                                        functools.partial(
+                                            SegmentBounds,
+                                            self.wordsize))
         offset = 0
         for i in range(self.segment_count):
             segment = self._segments[i]
@@ -1030,13 +1030,14 @@ class IDB(vstruct.VStruct):
         # these are the only true vstruct fields for this struct.
         self.header = FileHeader()
 
-        self.wordsize = 4
+        # updated once header is parsed.
+        self.wordsize = 0
 
     def pcb_header(self):
         if self.header.signature == b'IDA1':
-            self.wordize = 4
+            self.wordsize = 4
         elif self.header.signature == b'IDA2':
-            self.wordize = 8
+            self.wordsize = 8
         else:
             raise RuntimeError('unexpected file signature: %s' % (self.header.signature))
 

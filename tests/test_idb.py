@@ -31,6 +31,15 @@ def b2h(somebytes):
     return binascii.hexlify(somebytes).decode('ascii')
 
 
+@kern32_test([
+    (695, 32, 4),
+    (695, 64, 8),
+    (700, 32, 4),
+    (700, 64, 8),
+])
+def test_wordsize(kernel32_idb, version, bitness, expected):
+    assert kernel32_idb.wordsize == expected
+
 
 @kern32_test([
     (695, 32, None),
