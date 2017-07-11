@@ -3,8 +3,31 @@ from fixtures import *
 import idb.analysis
 
 
-@kernel32_all_versions
-def test_root(kernel32_idb):
+
+def pluck(prop, s):
+    '''
+    generate the values from the given attribute with name `prop` from the given sequence of items `s`.
+
+    Args:
+      prop (str): the name of an attribute.
+      s (sequnce): a bunch of objects.
+
+    Yields:
+      any: the values of the requested field across the sequence
+    '''
+    for x in s:
+        yield getattr(x, prop)
+
+
+def lpluck(prop, s):
+    '''
+    like `pluck`, but returns the result in a single list.
+    '''
+    return list(pluck(prop, s))
+
+
+@kern32_test()
+def test_root(kernel32_idb, version, bitness, expected):
     root = idb.analysis.Root(kernel32_idb)
 
     assert root.version in (695, 700)
@@ -16,39 +39,43 @@ def test_root(kernel32_idb):
     assert root.md5 == '00bf1bf1b779ce1af41371426821e0c2'
 
 
-def test_root_details(kernel32_idb):
+@kern32_test([
+    (695, 32, '2017-06-20T22:31:34'),
+    (695, 64, '2017-07-10T01:36:23'),
+    (700, 32, '2017-07-10T18:28:22'),
+    (700, 64, '2017-07-10T21:37:15'),
+])
+def test_root_timestamp(kernel32_idb, version, bitness, expected):
     root = idb.analysis.Root(kernel32_idb)
-
-    # values specific to v6.95 x32
-    assert root.version == 695
-    assert root.get_field_tag('version') == 'A'
-    assert root.get_field_index('version') == -1
-
-    assert root.version_string == '6.95'
-    assert root.open_count == 1
-    assert root.created.isoformat() == '2017-06-20T22:31:34'
-    assert root.crc == 0xdf9bdf12
-    assert root.md5 == '00bf1bf1b779ce1af41371426821e0c2'
+    assert root.created.isoformat() == expected
 
 
-@kernel32_v695
-def test_loader_v695(kernel32_idb):
+@kern32_test([
+    (695, 32, 1),
+    (695, 64, 1),
+    (700, 32, 1),
+    (700, 64, 1),
+])
+def test_root_open_count(kernel32_idb, version, bitness, expected):
+    root = idb.analysis.Root(kernel32_idb)
+    assert root.open_count == expected
+
+
+@kern32_test([
+    (695, 32, 'pe.ldw'),
+    (695, 64, 'pe64.l64'),
+    (700, 32, 'pe.dll'),
+    (700, 64, 'pe64.dll'),
+])
+def test_loader(kernel32_idb, version, bitness, expected):
     loader = idb.analysis.Loader(kernel32_idb)
 
-    assert loader.plugin == 'pe.ldw'
     assert loader.format.startswith('Portable executable') == True
+    assert loader.plugin == expected
 
 
-@kernel32_v70b
-def test_loader_v70b(kernel32_idb):
-    loader = idb.analysis.Loader(kernel32_idb)
-
-    assert loader.plugin == 'pe.dll'
-    assert loader.format.startswith('Portable executable') == True
-
-
-@kernel32_all_versions
-def test_entrypoints(kernel32_idb):
+@kern32_test()
+def test_entrypoints(kernel32_idb, version, bitness, expected):
     entrypoints = idb.analysis.EntryPoints(kernel32_idb)
 
     addresses = entrypoints.addresses
@@ -59,15 +86,15 @@ def test_entrypoints(kernel32_idb):
     ordinals = entrypoints.ordinals
     assert len(ordinals) == 0x623
     assert 0x1 in ordinals
-    assert 0x623 in ordinals
+
     assert ordinals[0x1] == 'BaseThreadInitThunk'
 
     allofthem = entrypoints.all
     assert len(allofthem) == 0x624
 
 
-@kernel32_all_versions
-def test_fileregions(kernel32_idb):
+@kern32_test()
+def test_fileregions(kernel32_idb, version, bitness, expected):
     fileregions = idb.analysis.FileRegions(kernel32_idb)
 
     regions = fileregions.regions
@@ -79,8 +106,8 @@ def test_fileregions(kernel32_idb):
     assert regions[0x68901000].rva == 0x1000
 
 
-@kernel32_all_versions
-def test_functions(kernel32_idb):
+@kern32_test()
+def test_functions(kernel32_idb, version, bitness, expected):
     functions = idb.analysis.Functions(kernel32_idb)
     funcs = functions.functions
     for addr, func in funcs.items():
@@ -101,8 +128,8 @@ def test_functions_v70b(kernel32_idb):
     assert len(funcs) == 0x1290
 
 
-@kernel32_all_versions
-def test_struct(kernel32_idb):
+@kern32_test()
+def test_struct(kernel32_idb, version, bitness, expected):
     # ; BOOL __stdcall DllEntryPoint(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
     # .text:68901695                                         public DllEntryPoint
     # .text:68901695                         DllEntryPoint   proc near
@@ -122,8 +149,8 @@ def test_struct(kernel32_idb):
     assert members[2].get_type() == 'HINSTANCE'
 
 
-@kernel32_all_versions
-def test_function(kernel32_idb):
+@kern32_test()
+def test_function(kernel32_idb, version, bitness, expected):
     # .text:689016B5                         sub_689016B5    proc near
     # .text:689016B5
     # .text:689016B5                         var_214         = dword ptr -214h
@@ -183,8 +210,8 @@ def test_function(kernel32_idb):
         'hinstDLL', 'fdwReason', 'lpReserved']
 
 
-@kernel32_all_versions
-def test_stack_change_points(kernel32_idb):
+@kern32_test()
+def test_stack_change_points(kernel32_idb, version, bitness, expected):
     # .text:68901AEA                         CreateThread    proc near
     # .text:68901AEA
     # .text:68901AEA                         lpThreadAttributes= dword ptr  8
@@ -237,30 +264,8 @@ def test_stack_change_points(kernel32_idb):
         assert list(GetCurrentProcess.get_stack_change_points()) == []
 
 
-def pluck(prop, s):
-    '''
-    generate the values from the given attribute with name `prop` from the given sequence of items `s`.
-
-    Args:
-      prop (str): the name of an attribute.
-      s (sequnce): a bunch of objects.
-
-    Yields:
-      any: the values of the requested field across the sequence
-    '''
-    for x in s:
-        yield getattr(x, prop)
-
-
-def lpluck(prop, s):
-    '''
-    like `pluck`, but returns the result in a single list.
-    '''
-    return list(pluck(prop, s))
-
-
-@kernel32_all_versions
-def test_xrefs(kernel32_idb):
+@kern32_test()
+def test_xrefs(kernel32_idb, version, bitness, expected):
     assert lpluck('dst', idb.analysis.get_crefs_from(kernel32_idb, 0x68901695)) == []
     assert lpluck('dst', idb.analysis.get_crefs_from(kernel32_idb, 0x6890169E)) == [0x68906156]
 
@@ -278,8 +283,8 @@ def test_xrefs(kernel32_idb):
     assert lpluck('dst', idb.analysis.get_drefs_from(kernel32_idb, security_cookie)) == []
 
 
-@kernel32_all_versions
-def test_fixups(kernel32_idb):
+@kern32_test()
+def test_fixups(kernel32_idb, version, bitness, expected):
     fixups = idb.analysis.Fixups(kernel32_idb).fixups
     assert len(fixups) == 31608
 
@@ -290,8 +295,8 @@ def test_fixups(kernel32_idb):
     assert fixups[0x68901023 + 2].get_fixup_length() == 0x4
 
 
-@kernel32_all_versions
-def test_segments(kernel32_idb):
+@kern32_test()
+def test_segments(kernel32_idb, version, bitness, expected):
     segs = idb.analysis.Segments(kernel32_idb).segments
     assert list(sorted(map(lambda s: s.startEA, segs.values()))) == [
         0x68901000, 0x689db000, 0x689dd000]
@@ -299,8 +304,8 @@ def test_segments(kernel32_idb):
         0x689db000, 0x689dd000, 0x689de230]
 
 
-@kernel32_all_versions
-def test_segstrings(kernel32_idb):
+@kern32_test()
+def test_segstrings(kernel32_idb, version, bitness, expected):
     strs = idb.analysis.SegStrings(kernel32_idb).strings
 
     # the first string is some binary data.
