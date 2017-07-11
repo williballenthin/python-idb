@@ -35,11 +35,11 @@ def load_idb(path):
         return idb.from_buffer(f.read())
 
 
-def xfail(spec):
+def xfail(*spec):
     return ('xfail', spec)
 
 
-def skip(spec):
+def skip(*spec):
     return ('skip', spec)
 
 
