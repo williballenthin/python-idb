@@ -12,42 +12,6 @@ slow = pytest.mark.skipif(
 )
 
 
-debug = pytest.mark.skipif(
-    not pytest.config.getoption("--rundebug"),
-    reason="need --rundebug option to run"
-)
-
-
-@kernel32_all_versions
-def test_validate(empty_idb, kernel32_idb):
-    # should be no ValueErrors here.
-    assert empty_idb.validate() is True
-    assert kernel32_idb.validate() is True
-
-
-@kern32_test([
-    (695, 32, b'IDA1'),
-    (695, 64, b'IDA2'),
-])
-def test_header_magic(kernel32_idb, version, bitness, expected):
-    assert kernel32_idb.header.signature == expected
-    assert kernel32_idb.header.sig2 == 0xAABBCCDD
-
-
-def test_id0(kernel32_idb):
-    assert kernel32_idb.id0.next_free_offset == 0x30
-    assert kernel32_idb.id0.page_size == 0x2000
-    assert kernel32_idb.id0.root_page == 0x1
-    assert kernel32_idb.id0.record_count == 0x6735b
-    assert kernel32_idb.id0.page_count == 0x638
-
-    p1 = kernel32_idb.id0.get_page(0x1)
-    for entry in p1.get_entries():
-        assert entry.key is not None
-
-    p1.validate()
-
-
 def h2b(somehex):
     '''
     convert the given hex string into bytes.
@@ -65,6 +29,87 @@ def b2h(somebytes):
     also, its many more characters to type.
     '''
     return binascii.hexlify(somebytes).decode('ascii')
+
+
+
+@kern32_test([
+    (695, 32, None),
+    (695, 64, None),
+    (700, 32, None),
+    (700, 64, None),
+])
+def test_validate(kernel32_idb, version, bitness, expected):
+    # should be no ValueErrors here.
+    assert kernel32_idb.validate() is True
+
+
+@kern32_test([
+    (695, 32, b'IDA1'),
+    (695, 64, b'IDA2'),
+    (700, 32, b'IDA1'),
+    (700, 64, b'IDA2'),
+])
+def test_header_magic(kernel32_idb, version, bitness, expected):
+    assert kernel32_idb.header.signature == expected
+    assert kernel32_idb.header.sig2 == 0xAABBCCDD
+
+
+@kern32_test([
+    (695, 32, 0x2000),
+    (695, 64, 0x2000),
+    (700, 32, 0x2000),
+    (700, 64, 0x2000),
+])
+def test_id0_page_size(kernel32_idb, version, bitness, expected):
+    assert kernel32_idb.id0.page_size == expected
+
+
+@kern32_test([
+    (695, 32, 0x1),
+    (695, 64, 0x1),
+    (700, 32, 0x1),
+    (700, 64, 0x1),
+])
+def test_id0_root_page(kernel32_idb, version, bitness, expected):
+    assert kernel32_idb.id0.root_page == expected
+
+
+@kern32_test([
+    # collected empirically
+    (695, 32, 1592),
+    (695, 64, 1979),
+    (700, 32, 1566),
+    (700, 64, 1884),
+])
+def test_id0_page_count(kernel32_idb, version, bitness, expected):
+    assert kernel32_idb.id0.page_count == expected
+
+
+@kern32_test([
+    # collected empirically
+    (695, 32, 422747),
+    (695, 64, 422753),
+    (700, 32, 426644),
+    (700, 64, 426647),
+])
+def test_id0_record_count(kernel32_idb, version, bitness, expected):
+    assert kernel32_idb.id0.record_count == expected
+
+
+@kern32_test([
+    # collected empirically
+    (695, 32, None),
+    (695, 64, None),
+    (700, 32, None),
+    (700, 64, None),
+])
+def test_id0_root_entries(kernel32_idb, version, bitness, expected):
+    '''
+    Args:
+      expected: ignored
+    '''
+    for entry in kernel32_idb.id0.get_page(kernel32_idb.id0.root_page).get_entries():
+        assert entry.key is not None
 
 
 @kernel32_v695
