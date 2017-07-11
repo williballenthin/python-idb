@@ -353,9 +353,17 @@ def test_cursor_enum_all_desc(kernel32_idb):
     assert kernel32_idb.id0.record_count == count
 
 
-@kernel32_all_versions
-def test_id1(kernel32_idb):
-    segments = kernel32_idb.id1.segments
+@kern32_test([
+    # collected empirically
+    (695, 32, None),
+    (695, 64, None),
+    (700, 32, None),
+    (700, 64, None),
+])
+def test_id1(kernel32_idb, version, bitness, expected):
+    id1 = kernel32_idb.id1
+    segments = id1.segments
+
     # collected empirically
     assert len(segments) == 2
     for segment in segments:
@@ -363,7 +371,6 @@ def test_id1(kernel32_idb):
     assert segments[0].bounds.start == 0x68901000
     assert segments[1].bounds.start == 0x689DD000
 
-    id1 = kernel32_idb.id1
     assert id1.get_segment(0x68901000).bounds.start == 0x68901000
     assert id1.get_segment(0x68901001).bounds.start == 0x68901000
     assert id1.get_segment(0x689dc000 - 1).bounds.start == 0x68901000
