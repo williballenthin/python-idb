@@ -163,6 +163,38 @@ def unpack_dqs(buf):
         offset += size
 
 
+class Unpacker:
+    def __init__(self, buf, wordsize, offset=0):
+        self.offset = offset
+        self.wordsize = wordsize
+        self.buf = buf
+
+    def _do_unpack(self, unpack_fn):
+        v, delta = unpack_fn(self.buf, offset=self.offset)
+        self.offset += delta
+        return v
+
+    def dd(self):
+        return self._do_unpack(unpack_dd)
+
+    def dq(self):
+        return self._do_unpack(unpack_dq)
+
+    def dw(self):
+        return self._do_unpack(unpack_dw)
+
+    def db(self):
+        return self._do_unpack(unpack_db)
+
+    def addr(self):
+        if self.wordsize == 4:
+            return self._do_unpack(unpack_dd)
+        elif self.wordsize == 8:
+            return self._do_unpack(unpack_dq)
+        else:
+            raise RuntimeError('unexpected wordsize')
+
+
 Field = namedtuple('Field', ['name', 'tag', 'index', 'cast'])
 # namedtuple default args.
 # via: https://stackoverflow.com/a/18348004/87207
@@ -405,11 +437,11 @@ class func_t:
 
     def __init__(self, buf, wordsize=None):
         self.buf = buf
-        self.vals = self.get_values()
+        u = Unpacker(buf, wordsize=wordsize)
 
-        self.startEA = self.vals[0]
-        self.endEA = self.startEA + self.vals[1]
-        self.flags = self.vals[2]
+        self.startEA = u.addr()
+        self.endEA = self.startEA + u.addr()
+        self.flags = u.dw()
 
         self.frame = None
         self.frsize = None
@@ -422,79 +454,26 @@ class func_t:
 
         if not is_flag_set(self.flags, func_t.FUNC_TAIL):
             try:
-                self.frame = self.vals[3]
-                self.frsize = self.vals[4]
-                self.frregs = self.vals[5]
-                self.argsize = self.vals[6]
-                self.fpd = self.vals[7]
-                self.color = self.vals[8]
+                self.frame = u.dd()
+                self.frsize = u.dd()
+                self.frregs = u.dw()
+                self.argsize = u.dd()
+                self.fpd = u.dw()
+                self.color = u.dd()
+
+                # there is some other stuff here, based on... IDB version???
             except IndexError:
                 # some of these we don't have, so we'll fall back to the default value of None.
                 # eg. owner, refqty only present in some idb versions
                 # eg. all of these, if high bit of flags not set.
                 pass
         else:
-            self.owner = self.startEA - self.vals[3]
-            self.refqty = self.vals[4]
-
-    def get_values(self):
-        # see `func_loader` (my name) in ida.wll.
-        # used to initialize from "$ funcs" netnode, and references `unpack_dw`.
-        offset = 0
-        vals = []
-
-        v, size = unpack_dd(self.buf, offset=offset)
-        offset += size
-        vals.append(v)
-
-        v, size = unpack_dd(self.buf, offset=offset)
-        offset += size
-        vals.append(v)
-
-        v, size = unpack_dw(self.buf, offset=offset)
-        offset += size
-        vals.append(v)
-
-        try:
-            if not is_flag_set(vals[2], func_t.FUNC_TAIL):
-                v, size = unpack_dd(self.buf, offset=offset)
-                offset += size
-                # 0x1000000
-                vals.append(v)
-
-                v, size = unpack_dd(self.buf, offset=offset)
-                offset += size
-                vals.append(v)
-
-                v, size = unpack_dw(self.buf, offset=offset)
-                offset += size
-                vals.append(v)
-
-                v, size = unpack_dd(self.buf, offset=offset)
-                offset += size
-                vals.append(v)
-
-                v, size = unpack_dw(self.buf, offset=offset)
-                offset += size
-                vals.append(v)
-
-                # there is some other stuff here, based on... IDB version???
-
-            else:
-                v, size = unpack_dd(self.buf, offset=offset)
-                offset += size
-                vals.append(v)
-
-                v, size = unpack_dw(self.buf, offset=offset)
-                offset += size
-                vals.append(v)
-        except IndexError:
-            # this is dangerous.
-            # i don't know all the combinations of which fields can exist.
-            # so, we'll do the best we can...
-            pass
-        finally:
-            return vals
+            try:
+                self.owner = self.startEA - u.addr()
+                self.refqty = u.dd()
+            except IndexError:
+                # see warning note above
+                pass
 
 
 # '$ funcs' maps from function effective address to details about it.
@@ -545,6 +524,7 @@ class TypeString(vstruct.VStruct):
 class StructMember:
     def __init__(self, db, nodeid):
         self.idb = db
+
         self.nodeid = nodeid
         self.netnode = idb.netnode.Netnode(db, self.nodeid)
 
@@ -624,30 +604,41 @@ class Struct:
         assert len(struc.get_members()) == 5
         assert list(struc.get_members())[0].get_type() == 'DWORD'
     '''
-
     def __init__(self, db, structid):
         self.idb = db
+
+        # if structid doesn't start with 0xFF0000..., add it.
+        nodebase = idb.netnode.Netnode.get_nodebase(db)
+        if structid < nodebase:
+            structid += nodebase
+
         self.nodeid = structid
         self.netnode = idb.netnode.Netnode(db, self.nodeid)
 
+
     def get_members(self):
         v = self.netnode.supval(tag='M', index=0)
-        vals = list(unpack_dds(v))
+        u = Unpacker(v, wordsize=self.idb.wordsize)
+        flags = u.dd()
+        count = u.dd()
 
-        if not vals[0] & STRUCT_FLAGS.SF_FRAME:
+        if not flags & STRUCT_FLAGS.SF_FRAME:
             raise RuntimeError('unexpected frame header')
 
-        count = vals[1]
-        offset = 2
         for i in range(count):
-            if self.idb.wordsize == 4:
-                member_vals = vals[offset:offset + 5]
-                offset += 5
-                nodeid_offset, unk1, unk2, unk3, unk4 = member_vals
-                member_nodeid = self.netnode.nodebase + nodeid_offset
-                yield StructMember(self.idb, member_nodeid)
+            nodeid_offset = u.addr()
+            unk1 = u.addr()
+            unk2 = u.addr()
+            unk3 = u.dd()
+            unk4 = u.dd()
+
+            member_nodeid = self.netnode.nodebase + nodeid_offset
+            yield StructMember(self.idb, member_nodeid)
+
+            '''
             elif self.idb.wordsize == 8:
                 member_vals = vals[offset:offset + 8]
+                print(list(map(hex, member_vals)))
                 offset += 8
                 nodeid_offseta, nodeid_offsetb, unk1a, unk1b, unk2a, unk2b, unk3, unk4 = member_vals
                 nodeid_offset = nodeid_offseta | (nodeid_offset << 32)
@@ -657,6 +648,7 @@ class Struct:
                 yield StructMember(self.idb, member_nodeid)
             else:
                 raise RuntimeError('unexpected wordsize')
+            '''
 
 
 def chunks(l, n):
@@ -956,67 +948,36 @@ SegStrings = Analysis('$ segstrings', [
 class Seg:
     def __init__(self, buf, wordsize=4):
         self.buf = buf
+        u = Unpacker(buf, wordsize=wordsize)
 
-        if wordsize == 4:
-            unpack_addr = unpack_dd
-        elif wordsize == 8:
-            unpack_addr = unpack_dq
-        else:
-            raise ValueError('unexpected wordsize')
-
-        unpackers = [
-            unpack_addr,
-            unpack_addr,
-            unpack_dd,
-            unpack_dd,
-            unpack_dd,
-            unpack_dd,
-            unpack_dd,
-            unpack_dd,
-            unpack_dd,
-            unpack_dd,
-            unpack_dd,
-            unpack_dd,
-            unpack_dd,
-            unpack_dd,
-            unpack_dd,
-        ]
-
-        self.vals = []
-        offset = 0x0
-        for unpacker in unpackers:
-            v, delta = unpacker(buf, offset=offset)
-            offset += delta
-            self.vals.append(v)
-
-        self.startEA = self.vals[0]
-        self.endEA = self.startEA + self.vals[1]
+        self.startEA = u.addr()
+        self.endEA = self.startEA + u.addr()
         # index into `$ segstrings` array of strings.
-        self.name_index = self.vals[2]
+        self.name_index = u.dd()
 
         # via: https://www.hex-rays.com/products/ida/support/sdkdoc/classsegment__t.html
         # use get/set_segm_class() functions
-        self.sclass = self.vals[3]
+        self.sclass = u.dd()
         # this field is IDP dependent.
-        self.orgbase = self.vals[4]
+        self.orgbase = u.dd()
         # Segment alignment codes
-        self.align = self.vals[5]
+        self.align = u.dd()
         # Segment combination codes
-        self.comb = self.vals[6]
+        self.comb = u.dd()
         # Segment permissions (0 means no information)
-        self.perm = self.vals[7]
+        self.perm = u.dd()
         # Number of bits in the segment addressing.
-        self.bitness = self.vals[8]
+        self.bitness = u.dd()
         # Segment flags
-        self.flags = self.vals[9]
+        self.flags = u.dd()
         # segment selector - should be unique.
-        self.sel = self.vals[10]
+        self.sel = u.dd()
         # default segment register values.
-        self.defsr = self.vals[11]
+        self.defsr = u.dd()
         # segment type (see Segment types). More...
-        self.type = self.vals[12]
+        self.type = u.dd()
         # the segment color
-        self.color = self.vals[13]
+        self.color = u.dd()
 
 
 # '$ segs' maps from segment start address to details about it.

@@ -106,29 +106,39 @@ def test_fileregions(kernel32_idb, version, bitness, expected):
     assert regions[0x68901000].rva == 0x1000
 
 
-@kern32_test()
+@kern32_test([
+    (695, 32, 0x12a8),
+    (695, 64, 0x12a8),
+    (700, 32, 0x1290),
+    (700, 64, 0x1290),
+])
 def test_functions(kernel32_idb, version, bitness, expected):
     functions = idb.analysis.Functions(kernel32_idb)
     funcs = functions.functions
     for addr, func in funcs.items():
         assert addr == func.startEA
+    assert len(funcs) == expected
 
 
-@kernel32_v695
-def test_functions_v695(kernel32_idb):
-    functions = idb.analysis.Functions(kernel32_idb)
-    funcs = functions.functions
-    assert len(funcs) == 0x12a8
+@kern32_test([
+    (695, 32, 0x75),
+    (695, 64, 0x75),
+    (700, 32, 0),
+    (700, 64, 0),
+])
+def test_function_frame(kernel32_idb, version, bitness, expected):
+    DllEntryPoint = idb.analysis.Functions(kernel32_idb).functions[0x68901695]
+    assert DllEntryPoint.startEA == 0x68901695
+    assert DllEntryPoint.endEA == 0x689016B0
+    assert DllEntryPoint.frame == expected
 
 
-@kernel32_v70b
-def test_functions_v70b(kernel32_idb):
-    functions = idb.analysis.Functions(kernel32_idb)
-    funcs = functions.functions
-    assert len(funcs) == 0x1290
-
-
-@kern32_test()
+@kern32_test([
+    (695, 32, None),
+    (695, 64, None),
+    (700, 32, None),
+    (700, 64, None),
+])
 def test_struct(kernel32_idb, version, bitness, expected):
     # ; BOOL __stdcall DllEntryPoint(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
     # .text:68901695                                         public DllEntryPoint
@@ -137,7 +147,9 @@ def test_struct(kernel32_idb, version, bitness, expected):
     # .text:68901695                         hinstDLL        = dword ptr  8
     # .text:68901695                         fdwReason       = dword ptr  0Ch
     # .text:68901695                         lpReserved      = dword ptr  10h
-    struc = idb.analysis.Struct(kernel32_idb, 0xFF000075)
+    DllEntryPoint = idb.analysis.Functions(kernel32_idb).functions[0x68901695]
+    struc = idb.analysis.Struct(kernel32_idb, DllEntryPoint.frame)
+
     members = list(struc.get_members())
 
     assert list(map(lambda m: m.get_name(), members)) == [' s',

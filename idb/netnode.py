@@ -176,6 +176,13 @@ class Netnode(object):
         else:
             raise ValueError('unexpected type for nodeid')
 
+    @staticmethod
+    def get_nodebase(db):
+        if db.wordsize == 4:
+            return 0xFF000000
+        elif db.wordsize == 8:
+            return 0xFF00000000000000
+
     def name(self):
         '''
         fetch the name associated with the netnode.
