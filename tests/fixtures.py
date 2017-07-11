@@ -43,7 +43,7 @@ def skip(spec):
     return ('skip', spec)
 
 
-def kern32_test(specs):
+def kern32_test(specs=None):
     '''
     Example::
 
@@ -55,8 +55,17 @@ def kern32_test(specs):
         def test_foo(kernel32_idb, version, bitness, expected):
             assert 'bar' == expected
     '''
-    params = []
+    if specs is None:
+        specs = [
+            (695, 32, None),
+            (695, 64, None),
+            (700, 32, None),
+            (700, 64, None),
+        ]
+
     ids = []
+    params = []
+
     for spec in specs:
         if spec[0] == 'xfail':
             marks = pytest.mark.xfail

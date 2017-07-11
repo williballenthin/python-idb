@@ -322,9 +322,9 @@ def test_cursor_max(kernel32_idb):
 
 
 @slow
-@kernel32_all_versions
-def test_cursor_enum_all_asc(kernel32_idb):
-    minkey = h2b('24204d4158204c494e4b')
+@kern32_test()
+def test_cursor_enum_all_asc(kernel32_idb, version, bitness, expected):
+    minkey = kernel32_idb.id0.get_min().key
     cursor = kernel32_idb.id0.find(minkey)
     count = 1
     while True:
@@ -338,9 +338,9 @@ def test_cursor_enum_all_asc(kernel32_idb):
 
 
 @slow
-@kernel32_all_versions
-def test_cursor_enum_all_desc(kernel32_idb):
-    maxkey = h2b('4e776373737472')
+@kern32_test()
+def test_cursor_enum_all_desc(kernel32_idb, version, bitness, expected):
+    maxkey = kernel32_idb.id0.get_max().key
     cursor = kernel32_idb.id0.find(maxkey)
     count = 1
     while True:
@@ -354,7 +354,6 @@ def test_cursor_enum_all_desc(kernel32_idb):
 
 
 @kern32_test([
-    # collected empirically
     (695, 32, None),
     (695, 64, None),
     (700, 32, None),
