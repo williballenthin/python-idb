@@ -31,6 +31,18 @@ def b2h(somebytes):
     return binascii.hexlify(somebytes).decode('ascii')
 
 
+def h(number):
+    '''
+    convert a number to a hex representation, with no leading '0x'.
+
+    Example::
+
+        assert h(16)   == '10'
+        assert hex(16) == '0x10'
+    '''
+    return '%02x' % number
+
+
 @kern32_test([
     (695, 32, 4),
     (695, 64, 8),
@@ -163,18 +175,6 @@ def test_find_exact_match(kernel32_idb):
     # check our error handling
     with pytest.raises(KeyError):
         kernel32_idb.id0.find(b'does not exist!')
-
-
-def h(number):
-    '''
-    convert a number to a hex representation, with no leading '0x'.
-
-    Example::
-
-        assert h(16)   == '10'
-        assert hex(16) == '0x10'
-    '''
-    return '%02x' % number
 
 
 @kernel32_v695
@@ -371,10 +371,44 @@ def test_id1(kernel32_idb):
     assert id1.get_flags(0x68901000) == 0x2590
 
 
-@kernel32_v695
-def test_nam(kernel32_idb):
-    names = kernel32_idb.nam.names()
+@kern32_test([
     # collected empirically
-    assert len(names) == 14252
+    (695, 32, 14252),
+    (695, 64, 28504),
+    (700, 32, 14247),
+    (700, 64, 28494),
+])
+def test_nam_name_count(kernel32_idb, version, bitness, expected):
+    assert kernel32_idb.nam.name_count == expected
+
+
+@kern32_test([
+    # collected empirically
+    (695, 32, 8),
+    (695, 64, 15),
+    (700, 32, 8),
+    (700, 64, 15),
+])
+def test_nam_page_count(kernel32_idb, version, bitness, expected):
+    assert kernel32_idb.nam.page_count == expected
+
+    nam = kernel32_idb.nam
+    if bitness == 32:
+        assert nam.name_count * nam.wordsize < len(nam.buffer)
+    elif bitness == 64:
+        assert nam.name_count * nam.wordsize > len(nam.buffer)
+        assert nam.name_count * nam.wordsize < len(nam.buffer) * 2
+
+
+@kern32_test([
+    # collected empirically
+    (695, 32, 14252),
+    (695, 64, 14252),
+    (700, 32, 14247),
+    (700, 64, 14247),
+])
+def test_nam_names(kernel32_idb, version, bitness, expected):
+    names = kernel32_idb.nam.names()
+    assert len(names) == expected
     assert names[0] == 0x68901010
     assert names[-1] == 0x689DE228

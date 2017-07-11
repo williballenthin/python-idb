@@ -928,7 +928,7 @@ class NAM(vstruct.VStruct):
     '''
     PAGE_SIZE = 0x2000
 
-    def __init__(self, wordsize=4, buf=None):
+    def __init__(self, wordsize, buf=None):
         vstruct.VStruct.__init__(self)
 
         self.wordsize = wordsize
@@ -947,6 +947,8 @@ class NAM(vstruct.VStruct):
         self.unk0C = v_uint32()      # 0x800
         self.page_count = v_uint32()
         self.unk14 = self.v_word()   # 0x0
+        # this appears to actually be the number of dwords used by the names.
+        # so for an .i64, this is 2x the name count.
         self.name_count = v_uint32()
         self.padding = v_bytes(size=NAM.PAGE_SIZE - (6 * 4 + wordsize))
         self.buffer = v_bytes()
@@ -968,7 +970,11 @@ class NAM(vstruct.VStruct):
         return True
 
     def names(self):
-        fmt = "<{0.name_count:d}{0.word_fmt:s}".format(self)
+        count = self.name_count
+        if self.wordsize == 8:
+            count //= 2
+
+        fmt = "<{count:d}{word_fmt:s}".format(count=count, word_fmt=self.word_fmt)
         size = struct.calcsize(fmt)
         if size > len(self.buffer):
             raise ValueError('buffer too small')
