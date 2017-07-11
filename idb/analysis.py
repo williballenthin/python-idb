@@ -766,7 +766,12 @@ class Function:
 
         last_ea = 0
         last_length = 0
-        for delta, length in pairs(unpack_dds(v)):
+
+        unpacker = unpack_dds
+        if self.idb.wordsize == 8:
+            unpacker = unpack_dqs
+
+        for delta, length in pairs(unpack_dqs(v)):
             ea = last_ea + last_length + delta
             yield Chunk(ea, length)
             last_ea = ea
@@ -781,7 +786,12 @@ class Function:
         # ref: ida.wll@0x100793d0
         v = self.netnode.supval(tag='S', index=0x1000)
         offset = self.nodeid
-        for (delta, change) in pairs(unpack_dds(v)):
+
+        unpacker = unpack_dds
+        if self.idb.wordsize == 8:
+            unpacker = unpack_dqs
+
+        for (delta, change) in pairs(unpacker(v)):
             offset += delta
             if change & 1:
                 change = change >> 1
