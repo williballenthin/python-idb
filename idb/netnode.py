@@ -60,7 +60,7 @@ def make_key(nodeid, tag=None, index=None, wordsize=4):
         if index is None:
             return b'.' + struct.pack('>' + wordformat + 'c', nodeid, tag)
         else:
-            return b'.' + struct.pack('>' + wordformat + 'ci', nodeid, tag, index)
+            return b'.' + struct.pack('>' + wordformat + 'c' + wordformat.lower(), nodeid, tag, index)
     else:
         raise ValueError('unexpected type of nodeid')
 
