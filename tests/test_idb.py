@@ -6,18 +6,16 @@ import binascii
 import idb.netnode
 
 
-#logging.basicConfig(level=logging.DEBUG)
-
 slow = pytest.mark.skipif(
     not pytest.config.getoption("--runslow"),
     reason="need --runslow option to run"
-    )
+)
 
 
 debug = pytest.mark.skipif(
     not pytest.config.getoption("--rundebug"),
     reason="need --rundebug option to run"
-    )
+)
 
 
 @kernel32_all_versions

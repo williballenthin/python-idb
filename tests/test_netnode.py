@@ -6,7 +6,7 @@ import idb.netnode
 debug = pytest.mark.skipif(
     not pytest.config.getoption("--rundebug"),
     reason="need --rundebug option to run"
-    )
+)
 
 
 ROOT_NODEID = 'Root Node'

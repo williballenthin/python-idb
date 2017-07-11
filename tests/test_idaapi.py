@@ -25,7 +25,7 @@ def test_bytes(kernel32_idb):
     # .text:68901010 8B FF                                   mov     edi, edi
     # .text:68901012 55                                      push    ebp
     flags = idc.GetFlags(0x68901010)
-    assert idc.hasValue(flags) == True
+    assert idc.hasValue(flags) is True
 
     byte = idc.IdbByte(0x68901010)
     assert byte == 0x8B
@@ -33,7 +33,7 @@ def test_bytes(kernel32_idb):
     with pytest.raises(KeyError):
         # this effective address does not exist
         idc.GetFlags(0x88888888)
-        assert idc.hasValue(idc.GetFlags(0x88888888)) == True
+        assert idc.hasValue(idc.GetFlags(0x88888888)) is True
 
     assert idc.ItemSize(0x68901010) == 2
     with pytest.raises(ValueError):
@@ -51,20 +51,20 @@ def test_state(kernel32_idb):
     # .text:68901010 8B FF                                   mov     edi, edi
     # .text:68901012 55                                      push    ebp
     flags = idc.GetFlags(0x68901010)
-    assert ida_bytes.isCode(flags) == True
-    assert ida_bytes.isData(flags) == False
-    assert ida_bytes.isTail(flags) == False
-    assert ida_bytes.isNotTail(flags) == True
-    assert ida_bytes.isUnknown(flags) == False
-    assert ida_bytes.isHead(flags) == True
+    assert ida_bytes.isCode(flags) is True
+    assert ida_bytes.isData(flags) is False
+    assert ida_bytes.isTail(flags) is False
+    assert ida_bytes.isNotTail(flags) is True
+    assert ida_bytes.isUnknown(flags) is False
+    assert ida_bytes.isHead(flags) is True
 
     flags = idc.GetFlags(0x68901011)
-    assert ida_bytes.isCode(flags) == False
-    assert ida_bytes.isData(flags) == False
-    assert ida_bytes.isTail(flags) == True
-    assert ida_bytes.isNotTail(flags) == False
-    assert ida_bytes.isUnknown(flags) == False
-    assert ida_bytes.isHead(flags) == False
+    assert ida_bytes.isCode(flags) is False
+    assert ida_bytes.isData(flags) is False
+    assert ida_bytes.isTail(flags) is True
+    assert ida_bytes.isNotTail(flags) is False
+    assert ida_bytes.isUnknown(flags) is False
+    assert ida_bytes.isHead(flags) is False
 
 
 @kernel32_all_versions
@@ -75,18 +75,18 @@ def test_specific_state(kernel32_idb):
     # .text:68901010 8B FF                                   mov     edi, edi
     # .text:68901012 55                                      push    ebp
     flags = idc.GetFlags(0x68901010)
-    assert ida_bytes.isFlow(flags) == False
-    assert ida_bytes.isVar(flags) == False
-    assert ida_bytes.hasExtra(flags) == True
-    assert ida_bytes.has_cmt(flags) == False
-    assert ida_bytes.hasRef(flags) == True
-    assert ida_bytes.has_name(flags) == True
-    assert ida_bytes.has_dummy_name(flags) == False
+    assert ida_bytes.isFlow(flags) is False
+    assert ida_bytes.isVar(flags) is False
+    assert ida_bytes.hasExtra(flags) is True
+    assert ida_bytes.has_cmt(flags) is False
+    assert ida_bytes.hasRef(flags) is True
+    assert ida_bytes.has_name(flags) is True
+    assert ida_bytes.has_dummy_name(flags) is False
 
     # .text:68901044 FF 70 18                                push    dword ptr [eax+18h] ; HeapHandle
     flags = idc.GetFlags(0x68901044)
-    assert ida_bytes.isFlow(flags) == True
-    assert ida_bytes.has_cmt(flags) == True
+    assert ida_bytes.isFlow(flags) is True
+    assert ida_bytes.has_cmt(flags) is True
 
 
 @kernel32_all_versions
@@ -97,12 +97,12 @@ def test_code(kernel32_idb):
     # .text:68901010 8B FF                                   mov     edi, edi
     # .text:68901012 55                                      push    ebp
     flags = idc.GetFlags(0x68901010)
-    assert ida_bytes.isFunc(flags) == True
-    assert ida_bytes.isImmd(flags) == False
+    assert ida_bytes.isFunc(flags) is True
+    assert ida_bytes.isImmd(flags) is False
 
     flags = idc.GetFlags(0x68901012)
-    assert ida_bytes.isFunc(flags) == False
-    assert ida_bytes.isImmd(flags) == False
+    assert ida_bytes.isFunc(flags) is False
+    assert ida_bytes.isImmd(flags) is False
 
 
 @kernel32_all_versions
@@ -112,75 +112,75 @@ def test_data(kernel32_idb):
 
     # text:689011EB 90 90 90 90 90 90 90 90+                align 20h
     flags = idc.GetFlags(0x689011eb)
-    assert ida_bytes.isByte(flags) == False
-    assert ida_bytes.isWord(flags) == False
-    assert ida_bytes.isDwrd(flags) == False
-    assert ida_bytes.isQwrd(flags) == False
-    assert ida_bytes.isOwrd(flags) == False
-    assert ida_bytes.isYwrd(flags) == False
-    assert ida_bytes.isTbyt(flags) == False
-    assert ida_bytes.isFloat(flags) == False
-    assert ida_bytes.isDouble(flags) == False
-    assert ida_bytes.isPackReal(flags) == False
-    assert ida_bytes.isASCII(flags) == False
-    assert ida_bytes.isStruct(flags) == False
-    assert ida_bytes.isAlign(flags) == True
-    assert ida_bytes.is3byte(flags) == False
-    assert ida_bytes.isCustom(flags) == False
+    assert ida_bytes.isByte(flags) is False
+    assert ida_bytes.isWord(flags) is False
+    assert ida_bytes.isDwrd(flags) is False
+    assert ida_bytes.isQwrd(flags) is False
+    assert ida_bytes.isOwrd(flags) is False
+    assert ida_bytes.isYwrd(flags) is False
+    assert ida_bytes.isTbyt(flags) is False
+    assert ida_bytes.isFloat(flags) is False
+    assert ida_bytes.isDouble(flags) is False
+    assert ida_bytes.isPackReal(flags) is False
+    assert ida_bytes.isASCII(flags) is False
+    assert ida_bytes.isStruct(flags) is False
+    assert ida_bytes.isAlign(flags) is True
+    assert ida_bytes.is3byte(flags) is False
+    assert ida_bytes.isCustom(flags) is False
 
     # .text:68901497 90 90 90 90 90                          db 5 dup(90h)
     flags = idc.GetFlags(0x68901497)
-    assert ida_bytes.isByte(flags) == True
-    assert ida_bytes.isWord(flags) == False
-    assert ida_bytes.isDwrd(flags) == False
-    assert ida_bytes.isQwrd(flags) == False
-    assert ida_bytes.isOwrd(flags) == False
-    assert ida_bytes.isYwrd(flags) == False
-    assert ida_bytes.isTbyt(flags) == False
-    assert ida_bytes.isFloat(flags) == False
-    assert ida_bytes.isDouble(flags) == False
-    assert ida_bytes.isPackReal(flags) == False
-    assert ida_bytes.isASCII(flags) == False
-    assert ida_bytes.isStruct(flags) == False
-    assert ida_bytes.isAlign(flags) == False
-    assert ida_bytes.is3byte(flags) == False
-    assert ida_bytes.isCustom(flags) == False
+    assert ida_bytes.isByte(flags) is True
+    assert ida_bytes.isWord(flags) is False
+    assert ida_bytes.isDwrd(flags) is False
+    assert ida_bytes.isQwrd(flags) is False
+    assert ida_bytes.isOwrd(flags) is False
+    assert ida_bytes.isYwrd(flags) is False
+    assert ida_bytes.isTbyt(flags) is False
+    assert ida_bytes.isFloat(flags) is False
+    assert ida_bytes.isDouble(flags) is False
+    assert ida_bytes.isPackReal(flags) is False
+    assert ida_bytes.isASCII(flags) is False
+    assert ida_bytes.isStruct(flags) is False
+    assert ida_bytes.isAlign(flags) is False
+    assert ida_bytes.is3byte(flags) is False
+    assert ida_bytes.isCustom(flags) is False
 
     # .text:6893A7BC 24 83 98 68                             dd offset sub_68988324
     flags = idc.GetFlags(0x6893a7bc)
-    assert ida_bytes.isByte(flags) == False
-    assert ida_bytes.isWord(flags) == False
-    assert ida_bytes.isDwrd(flags) == True
-    assert ida_bytes.isQwrd(flags) == False
-    assert ida_bytes.isOwrd(flags) == False
-    assert ida_bytes.isYwrd(flags) == False
-    assert ida_bytes.isTbyt(flags) == False
-    assert ida_bytes.isFloat(flags) == False
-    assert ida_bytes.isDouble(flags) == False
-    assert ida_bytes.isPackReal(flags) == False
-    assert ida_bytes.isASCII(flags) == False
-    assert ida_bytes.isStruct(flags) == False
-    assert ida_bytes.isAlign(flags) == False
-    assert ida_bytes.is3byte(flags) == False
-    assert ida_bytes.isCustom(flags) == False
+    assert ida_bytes.isByte(flags) is False
+    assert ida_bytes.isWord(flags) is False
+    assert ida_bytes.isDwrd(flags) is True
+    assert ida_bytes.isQwrd(flags) is False
+    assert ida_bytes.isOwrd(flags) is False
+    assert ida_bytes.isYwrd(flags) is False
+    assert ida_bytes.isTbyt(flags) is False
+    assert ida_bytes.isFloat(flags) is False
+    assert ida_bytes.isDouble(flags) is False
+    assert ida_bytes.isPackReal(flags) is False
+    assert ida_bytes.isASCII(flags) is False
+    assert ida_bytes.isStruct(flags) is False
+    assert ida_bytes.isAlign(flags) is False
+    assert ida_bytes.is3byte(flags) is False
+    assert ida_bytes.isCustom(flags) is False
 
     # .text:6893A840 42 69 41 63 74 69 76 61+aBiactivatework db 'BiActivateWorkItem',0
     flags = idc.GetFlags(0x6893a840)
-    assert ida_bytes.isByte(flags) == False
-    assert ida_bytes.isWord(flags) == False
-    assert ida_bytes.isDwrd(flags) == False
-    assert ida_bytes.isQwrd(flags) == False
-    assert ida_bytes.isOwrd(flags) == False
-    assert ida_bytes.isYwrd(flags) == False
-    assert ida_bytes.isTbyt(flags) == False
-    assert ida_bytes.isFloat(flags) == False
-    assert ida_bytes.isDouble(flags) == False
-    assert ida_bytes.isPackReal(flags) == False
-    assert ida_bytes.isASCII(flags) == True
-    assert ida_bytes.isStruct(flags) == False
-    assert ida_bytes.isAlign(flags) == False
-    assert ida_bytes.is3byte(flags) == False
-    assert ida_bytes.isCustom(flags) == False
+    assert ida_bytes.isByte(flags) is False
+    assert ida_bytes.isWord(flags) is False
+    assert ida_bytes.isDwrd(flags) is False
+    assert ida_bytes.isQwrd(flags) is False
+    assert ida_bytes.isOwrd(flags) is False
+    assert ida_bytes.isYwrd(flags) is False
+    assert ida_bytes.isTbyt(flags) is False
+    assert ida_bytes.isFloat(flags) is False
+    assert ida_bytes.isDouble(flags) is False
+    assert ida_bytes.isPackReal(flags) is False
+    assert ida_bytes.isASCII(flags) is True
+    assert ida_bytes.isStruct(flags) is False
+    assert ida_bytes.isAlign(flags) is False
+    assert ida_bytes.is3byte(flags) is False
+    assert ida_bytes.isCustom(flags) is False
 
 
 @kernel32_all_versions
@@ -196,52 +196,53 @@ def test_operand_types(kernel32_idb):
     # .text:68901010 8B FF                                   mov     edi, edi
     # .text:68901012 55                                      push    ebp
     flags = idc.GetFlags(0x68901012)
-    assert idc.isDefArg0(flags) == False  # there is an operand, but its not a number, so...
-    assert idc.isDefArg1(flags) == False
-    assert idc.isOff0(flags) == False
-    assert idc.isChar0(flags) == False
-    assert idc.isSeg0(flags) == False
-    assert idc.isEnum0(flags) == False
-    assert idc.isStroff0(flags) == False
-    assert idc.isStkvar0(flags) == False
-    assert idc.isFloat0(flags) == False
-    assert idc.isCustFmt0(flags) == False
-    assert idc.isNum0(flags) == False
+    # there is an operand, but its not a number, so...
+    assert idc.isDefArg0(flags) is False
+    assert idc.isDefArg1(flags) is False
+    assert idc.isOff0(flags) is False
+    assert idc.isChar0(flags) is False
+    assert idc.isSeg0(flags) is False
+    assert idc.isEnum0(flags) is False
+    assert idc.isStroff0(flags) is False
+    assert idc.isStkvar0(flags) is False
+    assert idc.isFloat0(flags) is False
+    assert idc.isCustFmt0(flags) is False
+    assert idc.isNum0(flags) is False
 
     # .text:68901015 64 A1 30 00 00 00                       mov     eax, large fs:30h
     # .text:6890101B 83 EC 18                                sub     esp, 18h
     flags = idc.GetFlags(0x6890101B)
-    assert idc.isDefArg0(flags) == False
-    assert idc.isDefArg1(flags) == True
-    assert idc.isOff1(flags) == False
-    assert idc.isChar1(flags) == False
-    assert idc.isSeg1(flags) == False
-    assert idc.isEnum1(flags) == False
-    assert idc.isStroff1(flags) == False
-    assert idc.isStkvar1(flags) == False
-    assert idc.isFloat1(flags) == False
-    assert idc.isCustFmt1(flags) == False
-    assert idc.isNum1(flags) == True
+    assert idc.isDefArg0(flags) is False
+    assert idc.isDefArg1(flags) is True
+    assert idc.isOff1(flags) is False
+    assert idc.isChar1(flags) is False
+    assert idc.isSeg1(flags) is False
+    assert idc.isEnum1(flags) is False
+    assert idc.isStroff1(flags) is False
+    assert idc.isStkvar1(flags) is False
+    assert idc.isFloat1(flags) is False
+    assert idc.isCustFmt1(flags) is False
+    assert idc.isNum1(flags) is True
 
     # .text:68901964 FF 75 24                                push    [ebp+lpOverlapped] ; lpOverlapped
     flags = idc.GetFlags(0x68901964)
-    assert idc.isDefArg0(flags) == True
-    assert idc.isDefArg1(flags) == False
-    assert idc.isOff0(flags) == False
-    assert idc.isChar0(flags) == False
-    assert idc.isSeg0(flags) == False
-    assert idc.isEnum0(flags) == False
-    assert idc.isStroff0(flags) == False
-    assert idc.isStkvar0(flags) == True
-    assert idc.isFloat0(flags) == False
-    assert idc.isCustFmt0(flags) == False
-    assert idc.isNum0(flags) == False
+    assert idc.isDefArg0(flags) is True
+    assert idc.isDefArg1(flags) is False
+    assert idc.isOff0(flags) is False
+    assert idc.isChar0(flags) is False
+    assert idc.isSeg0(flags) is False
+    assert idc.isEnum0(flags) is False
+    assert idc.isStroff0(flags) is False
+    assert idc.isStkvar0(flags) is True
+    assert idc.isFloat0(flags) is False
+    assert idc.isCustFmt0(flags) is False
+    assert idc.isNum0(flags) is False
 
 
 def test_colors(small_idb):
     api = idb.IDAPython(small_idb)
 
-    assert api.ida_nalt.is_colored_item(0) == True
+    assert api.ida_nalt.is_colored_item(0) is True
 
     # this is what i set it to via IDAPython when creating the idb.
     assert api.idc.GetColor(0, api.idc.CIC_ITEM) == 0x888888
@@ -274,24 +275,32 @@ def test_func_t(kernel32_idb):
 
     flags = DllEntryPoint.flags
     # collected empirically
-    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_NORET) == False
-    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_FAR) == False
-    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_LIB) == False
-    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_STATICDEF) == False
-    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_FRAME) == True
-    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_USERFAR) == False
-    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_HIDDEN) == False
-    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_THUNK) == False
-    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_BOTTOMBP) == False
-    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_NORET_PENDING) == False
-    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_SP_READY) == True
-    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_PURGED_OK) == True
-    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_TAIL) == False
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_NORET) is False
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_FAR) is False
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_LIB) is False
+    assert idb.idapython.is_flag_set(
+        flags, api.ida_funcs.FUNC_STATICDEF) is False
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_FRAME) is True
+    assert idb.idapython.is_flag_set(
+        flags, api.ida_funcs.FUNC_USERFAR) is False
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_HIDDEN) is False
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_THUNK) is False
+    assert idb.idapython.is_flag_set(
+        flags, api.ida_funcs.FUNC_BOTTOMBP) is False
+    assert idb.idapython.is_flag_set(
+        flags, api.ida_funcs.FUNC_NORET_PENDING) is False
+    assert idb.idapython.is_flag_set(
+        flags, api.ida_funcs.FUNC_SP_READY) is True
+    assert idb.idapython.is_flag_set(
+        flags, api.ida_funcs.FUNC_PURGED_OK) is True
+    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_TAIL) is False
     # also demonstrate finding the func from an address it may contain.
-    # note: this can be a pretty slow search, since we do everything on demand with no caching.
+    # note: this can be a pretty slow search, since we do everything on demand
+    # with no caching.
     assert api.ida_funcs.get_func(0x68901695 + 1).startEA == 0x68901695
 
-    # this is the function chunk for DllEntryPoint, but gets resolved to the non-tail func.
+    # this is the function chunk for DllEntryPoint, but gets resolved to the
+    # non-tail func.
     assert api.ida_funcs.get_func(0x68906156).startEA == 0x68901695
     assert api.ida_funcs.get_func(0x68906156 + 1).startEA == 0x68901695
 
@@ -391,11 +400,18 @@ def test_flow_chart(kernel32_idb):
 
     DllEntryPoint = api.ida_funcs.get_func(0x68901695)
     bbs = list(api.idaapi.FlowChart(DllEntryPoint))
-    assert list(sorted(lpluck('startEA', bbs))) == [0x68901695, 0x689016A4, 0x68906156]
+    assert list(sorted(lpluck('startEA', bbs))) == [
+        0x68901695, 0x689016A4, 0x68906156]
 
     for bb in bbs:
         if bb.startEA == 0x68901695:
-            assert list(sorted(lpluck('startEA', bb.succs()))) == [0x689016A4, 0x68906156]
+            assert list(
+                sorted(
+                    lpluck(
+                        'startEA',
+                        bb.succs()))) == [
+                0x689016A4,
+                0x68906156]
         elif bb.startEA == 0x689016A4:
             assert lpluck('startEA', bb.succs()) == []
         elif bb.startEA == 0x68906156:
@@ -419,14 +435,14 @@ def test_fixups(kernel32_idb):
     # .text:68901022 020 57                                      push    edi
     # .text:68901023 024 8B 3D 98 B1 9D 68                       mov     edi, dword_689DB198
     # .text:68901029 024 85 FF                                   test    edi, edi
-    assert api.idaapi.contains_fixups(0x6890101E, 1) == False
-    assert api.idaapi.contains_fixups(0x6890101E, 2) == False
-    assert api.idaapi.contains_fixups(0x6890101E, 5) == False
-    assert api.idaapi.contains_fixups(0x6890101E, 7) == False
-    assert api.idaapi.contains_fixups(0x6890101E, 8) == True
-    assert api.idaapi.contains_fixups(0x6890101E, 9) == True
-    assert api.idaapi.contains_fixups(0x68901023 + 2, 1) == True
-    assert api.idaapi.contains_fixups(0x68901023 + 2, 0x10) == True
+    assert api.idaapi.contains_fixups(0x6890101E, 1) is False
+    assert api.idaapi.contains_fixups(0x6890101E, 2) is False
+    assert api.idaapi.contains_fixups(0x6890101E, 5) is False
+    assert api.idaapi.contains_fixups(0x6890101E, 7) is False
+    assert api.idaapi.contains_fixups(0x6890101E, 8) is True
+    assert api.idaapi.contains_fixups(0x6890101E, 9) is True
+    assert api.idaapi.contains_fixups(0x68901023 + 2, 1) is True
+    assert api.idaapi.contains_fixups(0x68901023 + 2, 0x10) is True
 
     assert api.idaapi.get_next_fixup_ea(0x6890101E) == 0x68901025
     assert api.idaapi.get_next_fixup_ea(0x68901023) == 0x68901025

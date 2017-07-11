@@ -74,7 +74,6 @@ def test_fileregions(kernel32_idb):
     assert len(regions) == 3
     assert list(regions.keys()) == [0x68901000, 0x689db000, 0x689dd000]
 
-
     assert regions[0x68901000].start == 0x68901000
     assert regions[0x68901000].end == 0x689db000
     assert regions[0x68901000].rva == 0x1000
@@ -118,7 +117,7 @@ def test_struct(kernel32_idb):
                                                           ' r',
                                                           'hinstDLL',
                                                           'fdwReason',
-                                                          'lpReserved',]
+                                                          'lpReserved', ]
 
     assert members[2].get_type() == 'HINSTANCE'
 
@@ -163,8 +162,7 @@ def test_function(kernel32_idb):
                       (0x68934D65, 0x3D),
                       (0x68937707, 0x84)]
 
-    #sub_689016B5.get_unk()
-
+    # sub_689016B5.get_unk()
 
     # ; BOOL __stdcall DllEntryPoint(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
     # .text:68901695                                         public DllEntryPoint
@@ -179,8 +177,10 @@ def test_function(kernel32_idb):
     assert sig.calling_convention == 'stdcall'
     assert sig.rtype == 'BOOL'
     assert len(sig.parameters) == 3
-    assert list(map(lambda p: p.type, sig.parameters)) == ['HINSTANCE', 'DWORD', 'LPVOID']
-    assert list(map(lambda p: p.name, sig.parameters)) == ['hinstDLL', 'fdwReason', 'lpReserved']
+    assert list(map(lambda p: p.type, sig.parameters)) == [
+        'HINSTANCE', 'DWORD', 'LPVOID']
+    assert list(map(lambda p: p.name, sig.parameters)) == [
+        'hinstDLL', 'fdwReason', 'lpReserved']
 
 
 @kernel32_all_versions
@@ -293,8 +293,10 @@ def test_fixups(kernel32_idb):
 @kernel32_all_versions
 def test_segments(kernel32_idb):
     segs = idb.analysis.Segments(kernel32_idb).segments
-    assert list(sorted(map(lambda s: s.startEA, segs.values()))) == [0x68901000, 0x689db000, 0x689dd000]
-    assert list(sorted(map(lambda s: s.endEA, segs.values()))) == [0x689db000, 0x689dd000, 0x689de230]
+    assert list(sorted(map(lambda s: s.startEA, segs.values()))) == [
+        0x68901000, 0x689db000, 0x689dd000]
+    assert list(sorted(map(lambda s: s.endEA, segs.values()))) == [
+        0x689db000, 0x689dd000, 0x689de230]
 
 
 @kernel32_all_versions
