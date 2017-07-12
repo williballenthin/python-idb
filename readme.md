@@ -51,8 +51,8 @@ The target script `yara_fn.py` has only been slightly modified:
 
 ## what works
 
-  - 50 unit tests that demonstrate functionality including file format, B-tree, analysis, and idaapi features.
-  - read-only parsing of .idb files from IDA Pro v6.95
+  - ~250 unit tests that demonstrate functionality including file format, B-tree, analysis, and idaapi features.
+  - read-only parsing of .idb and .i64 files from IDA Pro v6.95 and v7.0
     - extraction of file sections
     - B-tree lookups and queries (ID0 section)
     - flag enumeration (ID1 section)
@@ -82,9 +82,8 @@ The target script `yara_fn.py` has only been slightly modified:
 support for the following features are feasible and planned, but not yet implemented:
 
   - compressed databases
-  - .i64 files
   - performance (there's no caching yet for code clarity)
-  - databases from versions other than v6.95
+  - databases from versions other than v6.95 and v7.0b
   - parsing TIL section
 
 
