@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/williballenthin/python-idb.svg?branch=master)](https://travis-ci.org/williballenthin/python-idb)
+
 # python-idb
 
 python-idb is a library for accessing the contents of [IDA Pro](https://www.hex-rays.com/products/ida/) databases (.idb files).
