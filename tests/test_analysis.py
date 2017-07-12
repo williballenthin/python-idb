@@ -95,7 +95,7 @@ def test_entrypoints(kernel32_idb, version, bitness, expected):
 
 @kern32_test([
     (695, 32, 0x75),
-    xfail(695, 64, 0x75),  # not supported
+    (695, 64, 0x75),
     xfail(700, 32, 0x7A),  # not supported
     xfail(700, 64, 0x7A),  # not supported
 ])

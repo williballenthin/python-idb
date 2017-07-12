@@ -413,8 +413,15 @@ EntryPoints = Analysis('$ entry points', [
 class FileRegion(vstruct.VStruct):
     def __init__(self, wordsize=None):
         vstruct.VStruct.__init__(self)
-        self.start = v_uint32()
-        self.end = v_uint32()
+        if wordsize == 4:
+            v_word = v_uint32
+        elif wordsize == 8:
+            v_word = v_uint64
+        else:
+            raise ValueError('unexpected wordsize')
+
+        self.start = v_word()
+        self.end = v_word()
         self.rva = v_uint32()
 
 
