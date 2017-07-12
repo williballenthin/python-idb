@@ -468,21 +468,16 @@ class func_t:
         self.frsize = None
         self.frregs = None
         self.argsize = None
-        self.fpd = None
-        self.color = None
         self.owner = None
         self.refqty = None
 
         if not is_flag_set(self.flags, func_t.FUNC_TAIL):
             try:
-                self.frame = u.dd()
-                self.frsize = u.dd()
+                self.frame = u.addr()
+                self.frsize = u.addr()
                 self.frregs = u.dw()
-                self.argsize = u.dd()
-                self.fpd = u.dw()
-                self.color = u.dd()
-
-                # there is some other stuff here, based on... IDB version???
+                self.argsize = u.addr()
+                # there is some other stuff here, based on IDB version/features
             except IndexError:
                 # some of these we don't have, so we'll fall back to the default value of None.
                 # eg. owner, refqty only present in some idb versions

@@ -290,10 +290,6 @@ def test_func_t(kernel32_idb, version, bitness, expected):
     assert DllEntryPoint.frregs == 0x4
     # size on stack of arguments
     assert DllEntryPoint.argsize == 0xC
-    # frame pointer delta. not clear on how this is computed.
-    # in fact, a value of 0x9 doesn't make much sense. so this might be wrong.
-    # more likely to be the stack change point count.
-    assert DllEntryPoint.fpd == 0x9
 
     flags = DllEntryPoint.flags
     # collected empirically
