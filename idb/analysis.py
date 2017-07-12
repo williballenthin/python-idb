@@ -439,6 +439,15 @@ class FileRegion(vstruct.VStruct):
         self.rva = v_uint32()
 
 
+class FileRegionV70:
+    def __init__(self, buf, wordsize):
+        self.buf = buf
+        u = Unpacker(buf, wordsize=wordsize)
+        self.start = u.addr()
+        self.end = self.start + u.addr()
+        self.rva = u.addr()
+
+
 # '$ fileregions' maps from idb segment start address to details about it.
 #
 # supvals:
@@ -449,7 +458,8 @@ class FileRegion(vstruct.VStruct):
 #       0x4: end effective address
 #       0x8: rva start?
 FileRegions = Analysis('$ fileregions', [
-    Field('regions',  'S', ADDRESSES, as_cast(FileRegion))
+    Field('regions',  'S', ADDRESSES, as_cast(FileRegion)),
+    Field('regions',  'S', ADDRESSES, FileRegionV70, minver=700),
 ])
 
 
