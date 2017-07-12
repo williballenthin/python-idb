@@ -376,35 +376,35 @@ class idc:
         # https://github.com/zachriggle/idapython/blob/37d2fd13b31fec8e6e53fbb9704fa3cd0cbd5b07/python/idc.py#L4149
         if self.idb.wordsize == 4:
             # function start address
-            FUNCATTR_START = 0
+            self.FUNCATTR_START = 0
             # function end address
-            FUNCATTR_END = 4
+            self.FUNCATTR_END = 4
             # function flags
-            FUNCATTR_FLAGS = 8
+            self.FUNCATTR_FLAGS = 8
             # function frame id
-            FUNCATTR_FRAME = 10
+            self.FUNCATTR_FRAME = 10
             # size of local variables
-            FUNCATTR_FRSIZE = 14
+            self.FUNCATTR_FRSIZE = 14
             # size of saved registers area
-            FUNCATTR_FRREGS = 18
+            self.FUNCATTR_FRREGS = 18
             # number of bytes purged from the stack
-            FUNCATTR_ARGSIZE = 20
+            self.FUNCATTR_ARGSIZE = 20
             # frame pointer delta
-            FUNCATTR_FPD = 24
+            self.FUNCATTR_FPD = 24
             # function color code
-            FUNCATTR_COLOR = 28
+            self.FUNCATTR_COLOR = 28
         elif self.idb.wordsize == 8:
-            FUNCATTR_START   = 0
-            FUNCATTR_END     = 8
-            FUNCATTR_FLAGS   = 16
-            FUNCATTR_FRAME   = 18
-            FUNCATTR_FRSIZE  = 26
-            FUNCATTR_FRREGS  = 34
-            FUNCATTR_ARGSIZE = 36
-            FUNCATTR_FPD     = 44
-            FUNCATTR_COLOR   = 52
-            FUNCATTR_OWNER   = 18
-            FUNCATTR_REFQTY  = 26
+            self.FUNCATTR_START   = 0
+            self.FUNCATTR_END     = 8
+            self.FUNCATTR_FLAGS   = 16
+            self.FUNCATTR_FRAME   = 18
+            self.FUNCATTR_FRSIZE  = 26
+            self.FUNCATTR_FRREGS  = 34
+            self.FUNCATTR_ARGSIZE = 36
+            self.FUNCATTR_FPD     = 44
+            self.FUNCATTR_COLOR   = 52
+            self.FUNCATTR_OWNER   = 18
+            self.FUNCATTR_REFQTY  = 26
         else:
             raise RuntimeError('unexpected wordsize')
 

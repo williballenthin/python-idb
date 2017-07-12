@@ -9,7 +9,6 @@ from collections import namedtuple
 import six
 import vstruct
 from vstruct.primitives import v_str
-from vstruct.primitives import v_bytes
 from vstruct.primitives import v_uint8
 from vstruct.primitives import v_uint16
 from vstruct.primitives import v_uint32
@@ -232,6 +231,8 @@ class _Analysis(object):
 
         idb_version = idb.netnode.Netnode(db, 'Root Node').altval(index=-1)
 
+        # note that order of fields is important:
+        #   fields with matching minvers override previously defined fields of the same name
         self._fields_by_name = {f.name: f for f in self.fields
                                 if (not f.minver) or
                                    (f.minver and
@@ -587,7 +588,7 @@ class StructMember:
         except KeyError:
             return 'StructMember(name: %s)' % (self.get_name())
         else:
-            return 'StructMember(name: %s, type: %s)' % (self.get_name(), self.get_type())
+            return 'StructMember(name: %s, type: %s)' % (self.get_name(), typ)
 
 
 class STRUCT_FLAGS:
@@ -641,7 +642,6 @@ class Struct:
         self.nodeid = structid
         self.netnode = idb.netnode.Netnode(db, self.nodeid)
 
-
     def get_members(self):
         v = self.netnode.supval(tag='M', index=0)
         u = Unpacker(v, wordsize=self.idb.wordsize)
@@ -653,28 +653,13 @@ class Struct:
 
         for i in range(count):
             nodeid_offset = u.addr()
-            unk1 = u.addr()
-            unk2 = u.addr()
-            unk3 = u.dd()
-            unk4 = u.dd()
+            _ = u.addr()
+            _ = u.addr()
+            _ = u.dd()
+            _ = u.dd()
 
             member_nodeid = self.netnode.nodebase + nodeid_offset
             yield StructMember(self.idb, member_nodeid)
-
-            '''
-            elif self.idb.wordsize == 8:
-                member_vals = vals[offset:offset + 8]
-                print(list(map(hex, member_vals)))
-                offset += 8
-                nodeid_offseta, nodeid_offsetb, unk1a, unk1b, unk2a, unk2b, unk3, unk4 = member_vals
-                nodeid_offset = nodeid_offseta | (nodeid_offset << 32)
-                unk1 = unk1a | (unk1b << 32)
-                unk2 = unk2a | (unk2b << 32)
-                member_nodeid = self.netnode.nodebase + nodeid_offset
-                yield StructMember(self.idb, member_nodeid)
-            else:
-                raise RuntimeError('unexpected wordsize')
-            '''
 
 
 def chunks(l, n):

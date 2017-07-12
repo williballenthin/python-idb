@@ -1,9 +1,6 @@
-import sys
 import contextlib
 
 import six
-
-from idb.idapython import IDAPython
 
 
 if six.PY2:

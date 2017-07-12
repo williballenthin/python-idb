@@ -1,7 +1,8 @@
-from fixtures import *
+import pytest
 
 import idb.analysis
 
+from fixtures import *
 
 
 def pluck(prop, s):
@@ -70,7 +71,7 @@ def test_root_open_count(kernel32_idb, version, bitness, expected):
 def test_loader(kernel32_idb, version, bitness, expected):
     loader = idb.analysis.Loader(kernel32_idb)
 
-    assert loader.format.startswith('Portable executable') == True
+    assert loader.format.startswith('Portable executable') is True
     assert loader.plugin == expected
 
 

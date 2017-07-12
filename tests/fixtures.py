@@ -88,21 +88,15 @@ def kern32_test(specs=None):
         bitness = spec[1]
         expected = spec[2]
 
-        if version == 695:
-            sversion = 'v6.95'
-        elif version == 700:
-            sversion = 'v7.0b'
-        else:
-            raise ValueError('unexpected version')
+        sversion = {
+            695: 'v6.95',
+            700: 'v7.0b',
+        }[version]
 
-        if bitness == 32:
-            sbitness = 'x32'
-            filename = 'kernel32.idb'
-        elif bitness == 64:
-            sbitness = 'x64'
-            filename = 'kernel32.i64'
-        else:
-            raise ValueError('unexpected bitness')
+        sbitness, filename = {
+            32: ('x32', 'kernel32.idb'),
+            64: ('x64', 'kernel32.i64'),
+        }[bitness]
 
         if (version, bitness) in COMMON_FIXTURES:
             db = COMMON_FIXTURES[(version, bitness)]

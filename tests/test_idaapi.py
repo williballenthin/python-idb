@@ -1,7 +1,8 @@
 import pytest
-from fixtures import *
 
 import idb
+
+from fixtures import *
 
 
 def pluck(prop, s):
@@ -42,7 +43,6 @@ def test_heads(kernel32_idb, version, bitness, expected):
 @kern32_test()
 def test_bytes(kernel32_idb, version, bitness, expected):
     idc = idb.IDAPython(kernel32_idb).idc
-    ida_bytes = idb.IDAPython(kernel32_idb).ida_bytes
 
     # .text:68901010 8B FF                                   mov     edi, edi
     # .text:68901012 55                                      push    ebp

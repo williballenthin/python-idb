@@ -1,6 +1,8 @@
-from fixtures import *
+import pytest
 
 import idb.netnode
+
+from fixtures import *
 
 
 debug = pytest.mark.skipif(
@@ -27,7 +29,7 @@ def test_valobj(kernel32_idb, version, bitness, expected):
     # In[29]:  idaapi.netnode("Root Node").valobj()
     # Out[29]: 'Z:\\home\\user\\Downloads\\kernel32\\kernel32.dll\x00'
     root = idb.netnode.Netnode(kernel32_idb, ROOT_NODEID)
-    assert root.value_exists() == True
+    assert root.value_exists() is True
     assert root.valobj().endswith(b'kernel32.dll\x00')
     assert root.valstr().endswith('kernel32.dll')
 

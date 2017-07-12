@@ -10,7 +10,6 @@ import logging
 import importlib.abc
 import importlib.util
 
-import hexdump
 import argparse
 
 import idb
@@ -78,7 +77,6 @@ def main(argv=None):
         logging.getLogger().setLevel(logging.INFO)
         logging.getLogger('idb.netnode').setLevel(logging.ERROR)
         logging.getLogger('idb.fileformat').setLevel(logging.ERROR)
-
 
     with idb.from_file(args.idbpath) as db:
         if args.ScreenEA:

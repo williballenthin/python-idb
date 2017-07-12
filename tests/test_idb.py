@@ -1,9 +1,7 @@
-from fixtures import *
-
-import logging
+import pytest
 import binascii
 
-import idb.netnode
+from fixtures import *
 
 
 slow = pytest.mark.skipif(
