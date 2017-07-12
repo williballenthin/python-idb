@@ -164,13 +164,16 @@ def unpack_dqs(buf):
 
 
 class Unpacker:
-    def __init__(self, buf, wordsize, offset=0):
+    def __init__(self, buf, wordsize, offset=0, should_log=False):
         self.offset = offset
         self.wordsize = wordsize
         self.buf = buf
+        self.should_log = should_log
 
     def _do_unpack(self, unpack_fn):
         v, delta = unpack_fn(self.buf, offset=self.offset)
+        if self.should_log:
+            logger.debug('%s at %x: %x', unpack_fn.__name__, self.offset, v)
         self.offset += delta
         return v
 
