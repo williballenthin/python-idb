@@ -43,6 +43,14 @@ def skip(*spec):
     return ('skip', spec)
 
 
+COMMON_FIXTURES = {
+    (695, 32): load_idb(os.path.join(CD, 'data', 'v6.95', 'x32', 'kernel32.idb')),
+    (695, 64): load_idb(os.path.join(CD, 'data', 'v6.95', 'x64', 'kernel32.i64')),
+    (700, 32): load_idb(os.path.join(CD, 'data', 'v7.0b', 'x32', 'kernel32.idb')),
+    (700, 64): load_idb(os.path.join(CD, 'data', 'v7.0b', 'x64', 'kernel32.i64')),
+}
+
+
 def kern32_test(specs=None):
     '''
     Example::
@@ -96,8 +104,11 @@ def kern32_test(specs=None):
         else:
             raise ValueError('unexpected bitness')
 
-        path = os.path.join(CD, 'data', sversion, sbitness, filename)
-        db = load_idb(path)
+        if (version, bitness) in COMMON_FIXTURES:
+            db = COMMON_FIXTURES[(version, bitness)]
+        else:
+            path = os.path.join(CD, 'data', sversion, sbitness, filename)
+            db = load_idb(path)
 
         if marks:
             params.append(pytest.param(db, version, bitness, expected, marks=marks))
