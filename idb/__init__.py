@@ -5,7 +5,7 @@ import six
 # keep this here, so that its exposed as::
 #
 #    import idb.IDAPython
-import idb.idapython.IDAPython
+from idb.idapython import IDAPython
 
 
 if six.PY2:
