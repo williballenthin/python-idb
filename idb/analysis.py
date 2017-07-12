@@ -422,7 +422,7 @@ EntryPoints = Analysis('$ entry points', [
 # TODO: need a way to detect versions and switch analysis implementations.
 
 class FileRegion(vstruct.VStruct):
-    def __init__(self, wordsize=None):
+    def __init__(self, wordsize):
         vstruct.VStruct.__init__(self)
         if wordsize == 4:
             v_word = v_uint32
@@ -453,7 +453,7 @@ FileRegions = Analysis('$ fileregions', [
 class func_t:
     FUNC_TAIL = 0x00008000
 
-    def __init__(self, buf, wordsize=None):
+    def __init__(self, buf, wordsize):
         self.buf = buf
         u = Unpacker(buf, wordsize=wordsize)
 
@@ -898,7 +898,7 @@ def get_drefs_from(db, ea, types=None):
 
 # under v6.95, this works.
 class Fixup(vstruct.VStruct):
-    def __init__(self, wordsize=None):
+    def __init__(self, wordsize):
         vstruct.VStruct.__init__(self)
         # sizeof() == 0xB (fixed)
         # possible values: 0x0 - 0xC. top bit has some meaning.
@@ -930,7 +930,7 @@ class Fixup(vstruct.VStruct):
 
 
 class FixupV70:
-    def __init__(self, buf, wordsize=4):
+    def __init__(self, buf, wordsize):
         self.buf = buf
         u = Unpacker(buf, wordsize=wordsize)
 
@@ -983,7 +983,7 @@ SegStrings = Analysis('$ segstrings', [
 
 
 class Seg:
-    def __init__(self, buf, wordsize=4):
+    def __init__(self, buf, wordsize):
         self.buf = buf
         u = Unpacker(buf, wordsize=wordsize)
 

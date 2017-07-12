@@ -1030,7 +1030,8 @@ class BasicBlock(object):
         self.id = startEA
         self.startEA = startEA
         self.endEA = endEA
-        # types are declared here: https://www.hex-rays.com/products/ida/support/sdkdoc/gdl_8hpp.html#afa6fb2b53981d849d63273abbb1624bd
+        # types are declared here:
+        #  https://www.hex-rays.com/products/ida/support/sdkdoc/gdl_8hpp.html#afa6fb2b53981d849d63273abbb1624bd
         # not sure if they are stored in the idb. seems like probably not.
         self.type = NotImplementedError()
 
