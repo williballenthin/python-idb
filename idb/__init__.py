@@ -2,6 +2,11 @@ import contextlib
 
 import six
 
+# keep this here, so that its exposed as::
+#
+#    import idb.IDAPython
+import idb.idapython.IDAPython
+
 
 if six.PY2:
     def memview(buf):
