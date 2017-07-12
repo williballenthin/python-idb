@@ -183,9 +183,6 @@ class Unpacker:
     def dw(self):
         return self._do_unpack(unpack_dw)
 
-    def db(self):
-        return self._do_unpack(unpack_db)
-
     def addr(self):
         if self.wordsize == 4:
             return self._do_unpack(unpack_dd)
@@ -195,7 +192,7 @@ class Unpacker:
             raise RuntimeError('unexpected wordsize')
 
 
-Field = namedtuple('Field', ['name', 'tag', 'index', 'cast'])
+Field = namedtuple('Field', ['name', 'tag', 'index', 'cast', 'minver'])
 # namedtuple default args.
 # via: https://stackoverflow.com/a/18348004/87207
 Field.__new__.__defaults__ = (None,) * len(Field._fields)
@@ -230,7 +227,12 @@ class _Analysis(object):
         self.netnode = idb.netnode.Netnode(db, nodeid)
         self.fields = fields
 
-        self._fields_by_name = {f.name: f for f in self.fields}
+        idb_version = idb.netnode.Netnode(db, 'Root Node').altval(index=-1)
+
+        self._fields_by_name = {f.name: f for f in self.fields
+                                if (not f.minver) or
+                                   (f.minver and
+                                    idb_version >= f.minver)}
 
     def _is_address(self, index):
         '''
@@ -894,6 +896,7 @@ def get_drefs_from(db, ea, types=None):
     return _get_xrefs(db, src=ea, tag='d', types=types)
 
 
+# under v6.95, this works.
 class Fixup(vstruct.VStruct):
     def __init__(self, wordsize=None):
         vstruct.VStruct.__init__(self)
@@ -926,17 +929,35 @@ class Fixup(vstruct.VStruct):
                 (self.type))
 
 
+class FixupV70:
+    def __init__(self, buf, wordsize=4):
+        self.buf = buf
+        u = Unpacker(buf, wordsize=wordsize)
+
+        # tbh, don't really know what these fields are...
+        self.type = u.dw()
+        self.unk1 = u.dd()
+        self.unk2 = u.addr()
+        self.offset = u.dd()  # strange this is not an offset
+
+        if self.type != 0x8:
+            raise NotImplementedError(
+                'fixup type %x not yet supported' %
+                (self.type))
+
+    def get_fixup_length(self):
+        if self.type == 0x8:
+            return 0x4
+        else:
+            raise NotImplementedError(
+                'fixup type %x not yet supported' %
+                (self.type))
+
+
 # '$ fixups' maps from fixup start address to details about it.
-#
-# supvals:
-#   format1:
-#     index: start effective address
-#     value:
-#       0x0:
-#       0x4:
-#       0x8:
 Fixups = Analysis('$ fixups', [
-    Field('fixups', 'S', ADDRESSES, as_cast(Fixup))
+    Field('fixups', 'S', ADDRESSES, as_cast(Fixup)),
+    Field('fixups', 'S', ADDRESSES, FixupV70, minver=700),
 ])
 
 

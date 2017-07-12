@@ -96,8 +96,8 @@ def test_entrypoints(kernel32_idb, version, bitness, expected):
 @kern32_test([
     (695, 32, 0x75),
     (695, 64, 0x75),
-    xfail(700, 32, 0x7A),  # not supported
-    xfail(700, 64, 0x7A),  # not supported
+    xfail(700, 32, 0x7A),  # not supported.
+    xfail(700, 64, 0x7A),  # not supported.
 ])
 def test_fileregions(kernel32_idb, version, bitness, expected):
     fileregions = idb.analysis.FileRegions(kernel32_idb)
@@ -303,8 +303,8 @@ def test_xrefs(kernel32_idb, version, bitness, expected):
 @kern32_test([
     (695, 32, None),
     (695, 64, None),
-    xfail(700, 32, None),  # not supported yet.
-    xfail(700, 64, None),  # not supported yet.
+    (700, 32, None),
+    (700, 64, None),
 ])
 def test_fixups(kernel32_idb, version, bitness, expected):
     fixups = idb.analysis.Fixups(kernel32_idb).fixups
