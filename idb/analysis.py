@@ -220,7 +220,8 @@ VARIABLE_INDEXES = (ALL, ADDRESSES, NUMBERS, NODES)
 class _Analysis(object):
     '''
     this is basically a metaclass for analyzers of IDA Pro netnode namespaces (named nodeid).
-    provide set of fields, and parse them from netnodes (nodeid, tag, and optional index) when accessed.
+    provide set of fields, and parse them from netnodes (nodeid, tag, and optional index)
+     when accessed.
     '''
 
     def __init__(self, db, nodeid, fields):
@@ -409,6 +410,14 @@ EntryPoints = Analysis('$ entry points', [
     Field('all',       'S', ALL, idb.netnode.as_string),
 ])
 
+
+# this works for v6.95.
+# for v7.0b, the data looks something like:
+#
+#     00000000: FF 68 90 10 00 C0 0D A0  00 90 00 00              .h..........
+#
+# which looks pack_dd/dq to me.
+# TODO: need a way to detect versions and switch analysis implementations.
 
 class FileRegion(vstruct.VStruct):
     def __init__(self, wordsize=None):
