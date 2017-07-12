@@ -1013,7 +1013,7 @@ class ida_funcs:
 
             raise KeyError(ea)
         else:
-            func = idb.analysis.func_t(v)
+            func = idb.analysis.func_t(v, wordsize=self.idb.wordsize)
             if is_flag_set(func.flags, self.FUNC_TAIL):
                 return self.get_func(func.owner)
             else:
