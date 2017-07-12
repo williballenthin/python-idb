@@ -44,10 +44,10 @@ def make_key(nodeid, tag=None, index=None, wordsize=4):
     else:
         raise ValueError('unexpected wordsize')
 
-    if isinstance(nodeid, str):
+    if isinstance(nodeid, six.string_types):
         return b'N' + nodeid.encode('utf-8')
 
-    elif isinstance(nodeid, int):
+    elif isinstance(nodeid, six.integer_types):
         if tag is None:
             raise ValueError('tag required')
         if not isinstance(tag, str):
@@ -62,7 +62,7 @@ def make_key(nodeid, tag=None, index=None, wordsize=4):
         else:
             return b'.' + struct.pack('>' + wordformat + 'c' + wordformat.lower(), nodeid, tag, index)
     else:
-        raise ValueError('unexpected type of nodeid')
+        raise ValueError('unexpected type of nodeid: ' + str(type(nodeid)))
 
 
 ComplexKey = namedtuple('ComplexKey', ['nodeid', 'tag', 'index'])
@@ -166,12 +166,12 @@ class Netnode(object):
         else:
             raise RuntimeError('unexpected wordsize')
 
-        if isinstance(nodeid, str):
+        if isinstance(nodeid, six.string_types):
             key = make_key(nodeid, wordsize=self.wordsize)
             cursor = self.idb.id0.find(key)
             self.nodeid = as_uint(cursor.value)
             logger.info('resolved string netnode %s to %x', nodeid, self.nodeid)
-        elif isinstance(nodeid, int):
+        elif isinstance(nodeid, six.integer_types):
             self.nodeid = nodeid
         else:
             raise ValueError('unexpected type for nodeid')
