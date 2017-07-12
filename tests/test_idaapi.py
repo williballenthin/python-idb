@@ -4,8 +4,30 @@ from fixtures import *
 import idb
 
 
-@kernel32_all_versions
-def test_heads(kernel32_idb):
+def pluck(prop, s):
+    '''
+    generate the values from the given attribute with name `prop` from the given sequence of items `s`.
+
+    Args:
+      prop (str): the name of an attribute.
+      s (sequnce): a bunch of objects.
+
+    Yields:
+      any: the values of the requested field across the sequence
+    '''
+    for x in s:
+        yield getattr(x, prop)
+
+
+def lpluck(prop, s):
+    '''
+    like `pluck`, but returns the result in a single list.
+    '''
+    return list(pluck(prop, s))
+
+
+@kern32_test()
+def test_heads(kernel32_idb, version, bitness, expected):
     idc = idb.IDAPython(kernel32_idb).idc
 
     # .text:68901010 8B FF                                   mov     edi, edi
@@ -17,8 +39,8 @@ def test_heads(kernel32_idb):
     assert idc.PrevHead(first_ea + 2) == first_ea
 
 
-@kernel32_all_versions
-def test_bytes(kernel32_idb):
+@kern32_test()
+def test_bytes(kernel32_idb, version, bitness, expected):
     idc = idb.IDAPython(kernel32_idb).idc
     ida_bytes = idb.IDAPython(kernel32_idb).ida_bytes
 
@@ -43,8 +65,8 @@ def test_bytes(kernel32_idb):
     assert idc.GetManyBytes(0x68901010, 0x3) == b'\x8B\xFF\x55'
 
 
-@kernel32_all_versions
-def test_state(kernel32_idb):
+@kern32_test()
+def test_state(kernel32_idb, version, bitness, expected):
     idc = idb.IDAPython(kernel32_idb).idc
     ida_bytes = idb.IDAPython(kernel32_idb).ida_bytes
 
@@ -67,8 +89,8 @@ def test_state(kernel32_idb):
     assert ida_bytes.isHead(flags) is False
 
 
-@kernel32_all_versions
-def test_specific_state(kernel32_idb):
+@kern32_test()
+def test_specific_state(kernel32_idb, version, bitness, expected):
     idc = idb.IDAPython(kernel32_idb).idc
     ida_bytes = idb.IDAPython(kernel32_idb).ida_bytes
 
@@ -89,8 +111,8 @@ def test_specific_state(kernel32_idb):
     assert ida_bytes.has_cmt(flags) is True
 
 
-@kernel32_all_versions
-def test_code(kernel32_idb):
+@kern32_test()
+def test_code(kernel32_idb, version, bitness, expected):
     idc = idb.IDAPython(kernel32_idb).idc
     ida_bytes = idb.IDAPython(kernel32_idb).ida_bytes
 
@@ -105,8 +127,8 @@ def test_code(kernel32_idb):
     assert ida_bytes.isImmd(flags) is False
 
 
-@kernel32_all_versions
-def test_data(kernel32_idb):
+@kern32_test()
+def test_data(kernel32_idb, version, bitness, expected):
     idc = idb.IDAPython(kernel32_idb).idc
     ida_bytes = idb.IDAPython(kernel32_idb).ida_bytes
 
@@ -183,14 +205,14 @@ def test_data(kernel32_idb):
     assert ida_bytes.isCustom(flags) is False
 
 
-@kernel32_all_versions
-def test_function_name(kernel32_idb):
+@kern32_test()
+def test_function_name(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     assert api.idc.GetFunctionName(0x68901695) == 'DllEntryPoint'
 
 
-@kernel32_all_versions
-def test_operand_types(kernel32_idb):
+@kern32_test()
+def test_operand_types(kernel32_idb, version, bitness, expected):
     idc = idb.IDAPython(kernel32_idb).idc
 
     # .text:68901010 8B FF                                   mov     edi, edi
@@ -248,8 +270,8 @@ def test_colors(small_idb):
     assert api.idc.GetColor(0, api.idc.CIC_ITEM) == 0x888888
 
 
-@kernel32_all_versions
-def test_func_t(kernel32_idb):
+@kern32_test()
+def test_func_t(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
     DllEntryPoint = api.ida_funcs.get_func(0x68901695)
@@ -305,8 +327,8 @@ def test_func_t(kernel32_idb):
     assert api.ida_funcs.get_func(0x68906156 + 1).startEA == 0x68901695
 
 
-@kernel32_all_versions
-def test_find_bb_end(kernel32_idb):
+@kern32_test()
+def test_find_bb_end(kernel32_idb, version, bitness, expected):
     # .text:68901695 000 8B FF                                   mov     edi, edi
     # .text:68901697 000 55                                      push    ebp
     # .text:68901698 004 8B EC                                   mov     ebp, esp
@@ -328,8 +350,8 @@ def test_find_bb_end(kernel32_idb):
     assert api.idaapi._find_bb_end(0x689016A4) == 0x689016AD
 
 
-@kernel32_all_versions
-def test_find_bb_start(kernel32_idb):
+@kern32_test()
+def test_find_bb_start(kernel32_idb, version, bitness, expected):
     # .text:68901695 000 8B FF                                   mov     edi, edi
     # .text:68901697 000 55                                      push    ebp
     # .text:68901698 004 8B EC                                   mov     ebp, esp
@@ -348,30 +370,8 @@ def test_find_bb_start(kernel32_idb):
     assert api.idaapi._find_bb_start(0x68906227) == 0x68906227
 
 
-def pluck(prop, s):
-    '''
-    generate the values from the given attribute with name `prop` from the given sequence of items `s`.
-
-    Args:
-      prop (str): the name of an attribute.
-      s (sequnce): a bunch of objects.
-
-    Yields:
-      any: the values of the requested field across the sequence
-    '''
-    for x in s:
-        yield getattr(x, prop)
-
-
-def lpluck(prop, s):
-    '''
-    like `pluck`, but returns the result in a single list.
-    '''
-    return list(pluck(prop, s))
-
-
-@kernel32_all_versions
-def test_flow_preds(kernel32_idb):
+@kern32_test()
+def test_flow_preds(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
     assert lpluck('src', api.idaapi._get_flow_preds(0x68901695)) == []
@@ -382,8 +382,8 @@ def test_flow_preds(kernel32_idb):
     assert lpluck('type', api.idaapi._get_flow_preds(0x68906156)) == [api.idaapi.fl_JN]
 
 
-@kernel32_all_versions
-def test_flow_succs(kernel32_idb):
+@kern32_test()
+def test_flow_succs(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
     assert lpluck('dst', api.idaapi._get_flow_succs(0x68901695)) == [0x68901697]
@@ -394,8 +394,8 @@ def test_flow_succs(kernel32_idb):
     assert lpluck('type', api.idaapi._get_flow_succs(0x6890169E)) == [api.idaapi.fl_F, api.idaapi.fl_JN]
 
 
-@kernel32_all_versions
-def test_flow_chart(kernel32_idb):
+@kern32_test()
+def test_flow_chart(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
     DllEntryPoint = api.ida_funcs.get_func(0x68901695)
@@ -426,8 +426,8 @@ def test_flow_chart(kernel32_idb):
             assert lpluck('startEA', bb.preds()) == [0x68901695]
 
 
-@kernel32_all_versions
-def test_fixups(kernel32_idb):
+@kern32_test()
+def test_fixups(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
     # .text:6890101E 01C 53                                      push    ebx
@@ -450,15 +450,15 @@ def test_fixups(kernel32_idb):
     assert api.idaapi.get_next_fixup_ea(0x68901025 + 1) == 0x68901034
 
 
-@kernel32_all_versions
-def test_input_md5(kernel32_idb):
+@kern32_test()
+def test_input_md5(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     assert api.idc.GetInputMD5() == '00bf1bf1b779ce1af41371426821e0c2'
     assert api.idautils.GetInputFileMD5() == '00bf1bf1b779ce1af41371426821e0c2'
 
 
-@kernel32_all_versions
-def test_segments(kernel32_idb):
+@kern32_test()
+def test_segments(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
     assert api.idc.FirstSeg() == 0x68901000
@@ -483,8 +483,8 @@ def test_segments(kernel32_idb):
     assert seg.endEA == 0x689db000
 
 
-@kernel32_all_versions
-def test_get_mnem(kernel32_idb):
+@kern32_test()
+def test_get_mnem(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
     # .text:68901695 000 8B FF                                   mov     edi, edi
@@ -495,8 +495,8 @@ def test_get_mnem(kernel32_idb):
     assert api.idc.GetMnem(0x68901695) == 'mov'
 
 
-@kernel32_all_versions
-def test_functions(kernel32_idb):
+@kern32_test()
+def test_functions(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
     funcs = api.idautils.Functions()
