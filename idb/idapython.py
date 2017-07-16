@@ -598,8 +598,25 @@ class idc:
             raise ValueError('unknown attr: %x' % (attr))
 
     def GetFunctionName(self, ea):
+        func = self.api.ida_funcs.get_func(ea)
+        # ensure this is a function
+        if func.startEA != ea:
+            raise KeyError(ea)
+
+        # shouldn't be a chunk
+        if is_flag_set(func.flags, func.FUNC_TAIL):
+            raise KeyError(ea)
+
         nn = self.api.ida_netnode.netnode(ea)
-        return nn.name()
+        try:
+            return nn.name()
+        except:
+            if self.idb.wordsize == 4:
+                return 'sub_%04x' % (ea)
+            elif self.idb.wordsize == 8:
+                return 'sub_%08x' % (ea)
+            else:
+                raise RuntimeError('unexpected wordsize')
 
     def GetInputMD5(self):
         return idb.analysis.Root(self.idb).md5
@@ -1323,7 +1340,13 @@ class idautils:
         return sorted(idb.analysis.Segments(self.idb).segments.keys())
 
     def Functions(self):
-        return list(sorted(idb.analysis.Functions(self.idb).functions.keys()))
+        ret = []
+        for ea, func in idb.analysis.Functions(self.idb).functions.items():
+            # we won't report chunks
+            if is_flag_set(func.flags, func.FUNC_TAIL):
+                continue
+            ret.append(func.startEA)
+        return list(sorted(ret))
 
 
 class IDAPython:
