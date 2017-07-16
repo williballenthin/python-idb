@@ -500,3 +500,19 @@ def test_functions(kernel32_idb, version, bitness, expected):
     # but the first and last addresses should remain constant.
     assert funcs[0] == 0x68901010
     assert funcs[-1] == 0x689ce1cf
+
+    # this is a function chunk. should not be reported.
+    assert 0x689018e5 not in funcs
+
+
+@kern32_test()
+def test_function_names(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+
+    assert api.idc.GetFunctionName(0x68901695) == 'DllEntryPoint'
+    assert api.idc.GetFunctionName(0x689016b5) == 'sub_689016b5'
+
+    with pytest.raises(KeyError):
+        # this is issue #7.
+        _ = api.idc.GetFunctionName(0x689018e5)
+
