@@ -715,16 +715,25 @@ class ID0(vstruct.VStruct):
         self.unk12 = v_uint8()
         self.signature = v_bytes(size=0x09)
 
+        self._page_cache = {}
+
     def get_page_buffer(self, page_number):
         if page_number < 1:
             logger.warning('unexpected page number requested: %d', page_number)
+
         offset = self.page_size * page_number
         return self.buf[offset:offset + self.page_size]
 
     def get_page(self, page_number):
+        page = self._page_cache.get(page_number, None)
+        if page is not None:
+            return page
+
         buf = self.get_page_buffer(page_number)
         page = Page(self.page_size)
         page.vsParse(buf)
+
+        self._page_cache[page_number] = page
         return page
 
     def find(self, key, strategy=EXACT_MATCH):
