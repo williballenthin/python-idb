@@ -250,6 +250,31 @@ class Page(vstruct.VStruct):
         for entry in self._entries:
             yield entry
 
+    def find_index(self, key):
+        '''
+        find the index of the exact match, or in the case of a branch node,
+         the index of the least-greater entry.
+        '''
+        # implementation note:
+        #  suprisingly, using a binary search here does not substantially improve performance.
+        #  this is probably the the dominating operations are parsing and allocating entries.
+        #  the linear scan below is simpler to read, so we'll use that until it becomes an issue.
+        if self.is_leaf():
+            for i, entry in enumerate(self.get_entries()):
+                if key == entry.key:
+                    return i
+        else:
+            for i, entry in enumerate(self.get_entries()):
+                entry_key = bytes(entry.key)
+                if key == entry_key:
+                    return i
+                elif key < entry_key:
+                    # this is the least-greater entry
+                    return i
+                else:
+                    continue
+        raise KeyError(key)
+
     def get_entry(self, entry_number):
         '''
         get the entry at the given index.
@@ -307,7 +332,7 @@ class ExactMatchStrategy(FindStrategy):
 
         is_largest = False
         try:
-            entry_number = cursor.find_index(page, key)
+            entry_number = page.find_index(key)
         except KeyError:
             # an entry larger than the given key is not found.
             # but we know we should be searching this node,
@@ -524,32 +549,6 @@ class Cursor(object):
 
         self.entry_number = None
 
-    # TODO: consider moving this to the Page class.
-    def find_index(self, page, key):
-        '''
-        find the index of the exact match, or in the case of a branch node,
-         the index of the least-greater entry.
-        '''
-        # implementation note:
-        #  suprisingly, using a binary search here does not substantially improve performance.
-        #  this is probably the the dominating operations are parsing and allocating entries.
-        #  the linear scan below is simpler to read, so we'll use that until it becomes an issue.
-        if page.is_leaf():
-            for i, entry in enumerate(page.get_entries()):
-                if key == entry.key:
-                    return i
-        else:
-            for i, entry in enumerate(page.get_entries()):
-                entry_key = bytes(entry.key)
-                if key == entry_key:
-                    return i
-                elif key < entry_key:
-                    # this is the least-greater entry
-                    return i
-                else:
-                    continue
-        raise KeyError(key)
-
     def next(self):
         '''
         traverse to the next entry.
@@ -574,7 +573,7 @@ class Cursor(object):
 
                     current_page = self.path[-1]
                     try:
-                        entry_number = self.find_index(current_page, start_key)
+                        entry_number = current_page.find_index(start_key)
                     except KeyError:
                         # not found, becaues its too big for this node.
                         # so we need to go higher.
@@ -637,7 +636,7 @@ class Cursor(object):
 
                     current_page = self.path[-1]
                     try:
-                        entry_number = self.find_index(current_page, start_key)
+                        entry_number = current_page.find_index(start_key)
                     except KeyError:
                         entry_number = current_page.entry_count
 
