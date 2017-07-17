@@ -500,7 +500,7 @@ def test_functions(kernel32_idb, version, bitness, expected):
     # exact number of detected functions varies by IDA version,
     # but the first and last addresses should remain constant.
     assert funcs[0] == 0x68901010
-    assert funcs[-1] == 0x689ce1cf
+    assert funcs[-1] == 0x689bd410
 
     # this is a function chunk. should not be reported.
     assert 0x689018e5 not in funcs
