@@ -77,13 +77,13 @@ The target script `yara_fn.py` has only been slightly modified:
     - `FlowChart` (basic blocks)
     - lots and lots of flags
   - Python 2.7 & 3.x compatibility
+  - zlib-packed idb/i64 files
 
 
 ## what doesn't quite work
 
 support for the following features are feasible and planned, but not yet implemented:
 
-  - compressed databases
   - databases from versions other than v6.95 and v7.0b
   - parsing TIL section
 
