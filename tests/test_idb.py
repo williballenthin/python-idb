@@ -3,6 +3,8 @@ import binascii
 
 from fixtures import *
 
+import idb.fileformat
+
 
 slow = pytest.mark.skipif(
     not pytest.config.getoption("--runslow"),
@@ -60,6 +62,22 @@ def test_wordsize(kernel32_idb, version, bitness, expected):
 def test_validate(kernel32_idb, version, bitness, expected):
     # should be no ValueErrors here.
     assert kernel32_idb.validate() is True
+
+
+def do_test_compressed(db):
+    for section in db.sections:
+        if section is None:
+            continue
+        assert section.header.is_compressed is True
+        assert section.header.compression_method == idb.fileformat.COMPRESSION_METHOD.ZLIB
+
+    # should be no ValueErrors here.
+    assert db.validate() is True
+
+
+def test_compressed(compressed_idb, compressed_i64):
+    do_test_compressed(compressed_idb)
+    do_test_compressed(compressed_i64)
 
 
 @kern32_test([

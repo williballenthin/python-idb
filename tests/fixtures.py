@@ -37,6 +37,20 @@ def small_idb():
         yield db
 
 
+@pytest.yield_fixture
+def compressed_idb():
+    path = os.path.join(CD, 'data', 'compressed', 'kernel32.idb')
+    with idb.from_file(path) as db:
+        yield db
+
+
+@pytest.yield_fixture
+def compressed_i64():
+    path = os.path.join(CD, 'data', 'compressed', 'kernel32.i64')
+    with idb.from_file(path) as db:
+        yield db
+
+
 def load_idb(path):
     with open(path, 'rb') as f:
         return idb.from_buffer(f.read())

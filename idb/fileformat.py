@@ -2,6 +2,7 @@
 lots of inspiration from: https://github.com/nlitsme/pyidbutil
 '''
 import abc
+import zlib
 import struct
 import logging
 import functools
@@ -79,25 +80,48 @@ class FileHeader(vstruct.VStruct):
         return True
 
 
+class COMPRESSION_METHOD:
+    NONE = 0
+    ZLIB = 2
+
+
 class SectionHeader(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
-        self.is_compressed = v_uint8()
+        self.compression_method = v_uint8()
         self.length = v_uint64()
+        self.is_compressed = False
+
+    def pcb_compression_method(self):
+        if self.compression_method == COMPRESSION_METHOD.NONE:
+            self.is_compressed = False
+        else:
+            self.is_compressed = True
+
 
 
 class Section(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
         self.header = SectionHeader()
-        self.contents = v_bytes()
+        self._contents = v_bytes()
+        self.contents = b''
+
+    def vsEmit(self, **kwargs):
+        if self.header.is_compressed:
+            raise NotImplementedError('Section may not be serialized because it was compressed')
+
+        vstruct.VStruct.vsEmit(self, **kwargs)
 
     def pcb_header(self):
-        if self.header.is_compressed:
-            # TODO: support this.
-            raise NotImplementedError('compressed section')
+        self['_contents'].vsSetLength(self.header.length)
 
-        self['contents'].vsSetLength(self.header.length)
+    def pcb__contents(self):
+        if not self.header.is_compressed:
+            self.contents = self._contents
+        else:
+            self.contents = zlib.decompress(self._contents)
+            logger.debug('decompressed parsed section.')
 
     def validate(self):
         if self.header.length == 0:
