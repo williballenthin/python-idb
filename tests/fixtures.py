@@ -6,6 +6,13 @@ import pytest
 import idb
 
 
+try:
+    import capstone
+    no_capstone = False
+except:
+    no_capstone = True
+
+
 CD = os.path.dirname(__file__)
 
 
@@ -112,3 +119,6 @@ def kern32_test(specs=None):
         ids.append(sversion + '/' + sbitness)
 
     return pytest.mark.parametrize('kernel32_idb,version,bitness,expected', params, ids=ids)
+
+
+requires_capstone = pytest.mark.skipif(no_capstone, reason='capstone not installed')

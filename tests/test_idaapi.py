@@ -480,6 +480,7 @@ def test_segments(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test()
+@requires_capstone
 def test_get_mnem(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
