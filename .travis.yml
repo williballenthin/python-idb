@@ -9,6 +9,7 @@ matrix:
           python: 3.5
 
 install:
+    - pip install --upgrade pip
     # via https://github.com/angr/angr/issues/52
     - pip install -I --no-binary capstone
     - pip install --upgrade pep8 pytest-cov pytest flake8
