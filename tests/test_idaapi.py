@@ -5,6 +5,12 @@ import idb
 from fixtures import *
 
 
+slow = pytest.mark.skipif(
+    not pytest.config.getoption("--runslow"),
+    reason="need --runslow option to run"
+)
+
+
 def pluck(prop, s):
     '''
     generate the values from the given attribute with name `prop` from the given sequence of items `s`.
@@ -517,3 +523,13 @@ def test_function_names(kernel32_idb, version, bitness, expected):
         # this is issue #7.
         _ = api.idc.GetFunctionName(0x689018e5)
 
+
+@slow
+@kern32_test()
+def test_all_function_names(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+
+    # should not raise any exceptions
+    funcs = api.idautils.Functions()
+    for func in funcs:
+        _ = api.idc.GetFunctionName(func)
