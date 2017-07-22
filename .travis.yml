@@ -3,11 +3,9 @@ language: python
 matrix:
     include:
         - os: linux
-          sudo: required
           python: 2.7
 
         - os: linux
-          sudo: required
           python: 3.5
 
 install:

@@ -99,7 +99,6 @@ class SectionHeader(vstruct.VStruct):
             self.is_compressed = True
 
 
-
 class Section(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
