@@ -24,4 +24,4 @@ before_script:
 
 script:
     - find . -name \*.py -exec pep8 --ignore=E501 {} \;
-    - py.test ./tests/ -v --cov=idb
+    - py.test ./tests/ -v --cov=idb --runslow
