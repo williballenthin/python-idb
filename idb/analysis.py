@@ -997,6 +997,10 @@ class Seg:
         # Segment permissions (0 means no information)
         self.perm = u.dd()
         # Number of bits in the segment addressing.
+        # if 0: 16 bits
+        # if 1: 32 bits
+        # if 2: 64 bits
+        # see: https://github.com/fireeye/flare-ida/blob/master/python/flare/jayutils.py#L94
         self.bitness = u.dd()
         # Segment flags
         self.flags = u.dd()
