@@ -621,6 +621,15 @@ class idc:
     def GetInputMD5(self):
         return idb.analysis.Root(self.idb).md5
 
+    def Comment(self, ea):
+        return self.api.ida_bytes.get_cmt(ea, False)
+
+    def RptCmt(self, ea):
+        return self.api.ida_bytes.get_cmt(ea, True)
+
+    def GetCommentEx(self, ea, repeatable):
+        return self.api.ida_bytes.get_cmt(ea, repeatable)
+
     @staticmethod
     def hasValue(flags):
         return flags & FLAGS.FF_IVL > 0
@@ -726,6 +735,17 @@ class ida_bytes:
     def __init__(self, db, api):
         self.idb = db
         self.api = api
+
+    def get_cmt(self, ea, repeatable):
+        flags = self.api.idc.GetFlags(ea)
+        if not self.has_cmt(flags):
+            raise KeyError(ea)
+
+        nn = self.api.ida_netnode.netnode(ea)
+        if repeatable:
+            return nn.supstr(tag='S', index=1)
+        else:
+            return nn.supstr(tag='S', index=0)
 
     @staticmethod
     def isFunc(flags):

@@ -533,3 +533,60 @@ def test_all_function_names(kernel32_idb, version, bitness, expected):
     funcs = api.idautils.Functions()
     for func in funcs:
         _ = api.idc.GetFunctionName(func)
+
+
+@kern32_test()
+def test_comments(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+
+    assert api.ida_bytes.get_cmt(0x6890103c, False) == 'Flags'
+    assert api.ida_bytes.get_cmt(0x689023b4, True) == 'jumptable 6892FF97 default case'
+
+    assert api.idc.Comment(0x6890103c) == 'Flags'
+    with pytest.raises(KeyError):
+        _ = api.idc.RptCmt(0x6890103c)
+
+    assert api.idc.RptCmt(0x689023b4) == 'jumptable 6892FF97 default case'
+    with pytest.raises(KeyError):
+        _ = api.idc.Comment(0x689023b4)
+
+    assert api.idc.GetCommentEx(0x6890103c, False) == 'Flags'
+    assert api.idc.GetCommentEx(0x689023b4, True) == 'jumptable 6892FF97 default case'
+
+
+@slow
+@kern32_test([
+    (695, 32, (13369, 283)),
+    (695, 64, (13369, 283)),
+    (700, 32, (13368, 283)),
+    (700, 64, (13368, 283)),
+])
+def test_all_comments(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+
+    expreg, exprep = expected
+    regcmts = []
+    repcmts = []
+
+    textseg = 0x68901000
+    for ea in range(textseg, api.idc.SegEnd(textseg)):
+        flags = api.idc.GetFlags(ea)
+        if not api.ida_bytes.has_cmt(flags):
+            continue
+
+        try:
+            regcmt = api.ida_bytes.get_cmt(ea, False)
+        except KeyError:
+            regcmt = ''
+        else:
+            regcmts.append(regcmt)
+
+        try:
+            repcmt = api.ida_bytes.get_cmt(ea, True)
+        except KeyError:
+            repcmt = ''
+        else:
+            repcmts.append(repcmt)
+
+    assert len(regcmts) == expreg
+    assert len(repcmts) == exprep
