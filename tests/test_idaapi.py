@@ -564,7 +564,6 @@ def test_comments(kernel32_idb, version, bitness, expected):
 def test_all_comments(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
-    expreg, exprep = expected
     regcmts = []
     repcmts = []
 
@@ -588,5 +587,4 @@ def test_all_comments(kernel32_idb, version, bitness, expected):
         else:
             repcmts.append(repcmt)
 
-    assert len(regcmts) == expreg
-    assert len(repcmts) == exprep
+    assert len(regcmts), len(repcmnts) == expected
