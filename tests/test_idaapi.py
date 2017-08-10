@@ -71,6 +71,17 @@ def test_bytes(kernel32_idb, version, bitness, expected):
     assert idc.GetManyBytes(0x68901010, 0x3) == b'\x8B\xFF\x55'
 
 
+def test_bytes_2(elf_idb):
+    '''
+    Demonstrate issue reported as #12.
+    Thanks to @binoopang.
+
+    This exercises fetching of flags/bytes from a segment that is not the first.
+    '''
+    api = idb.IDAPython(elf_idb)
+    assert api.idc.GetManyBytes(0x8049df0, 0x10) == b'\x8D\x4C\x24\x04\x83\xE4\xF0\xFF\x71\xFC\x55\x89\xE5\x57\x56\x53'
+
+
 @kern32_test()
 def test_state(kernel32_idb, version, bitness, expected):
     idc = idb.IDAPython(kernel32_idb).idc

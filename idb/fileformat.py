@@ -862,16 +862,19 @@ class ID1(vstruct.VStruct):
     SegmentDescriptor = namedtuple('SegmentDescriptor', ['bounds', 'offset'])
 
     def pcb_segment_count(self):
-        # TODO: pass wordsize
         self['_segments'].vsAddElements(self.segment_count,
                                         functools.partial(
                                             SegmentBounds,
                                             self.wordsize))
+
+    def pcb__segments(self):
         offset = 0
         for i in range(self.segment_count):
             segment = self._segments[i]
-            offset += 4 * (segment.end - segment.start)
+            segment_byte_count = segment.end - segment.start
+            segment_length = 4 * segment_byte_count  # each flag entry is a uint32 on all platforms
             self.segments.append(ID1.SegmentDescriptor(segment, offset))
+            offset += segment_length
         offset = 0x14 + (self.segment_count * (2 * self.wordsize))
         padsize = ID1.PAGE_SIZE - offset
         self['padding'].vsSetLength(padsize)

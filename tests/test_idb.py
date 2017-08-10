@@ -441,6 +441,18 @@ def test_id1(kernel32_idb, version, bitness, expected):
     assert id1.get_flags(0x68901000) == 0x2590
 
 
+def test_id1_2(elf_idb):
+    assert list(map(lambda s: s.offset, elf_idb.id1.segments)) == [
+        0x0,
+        0x8c,
+        0x1cec,
+        0x47e4c,
+        0x7382c,
+        0x7385c,
+        0x73f9c,
+    ]
+
+
 @kern32_test([
     # collected empirically
     (695, 32, 14252),

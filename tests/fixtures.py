@@ -51,6 +51,13 @@ def compressed_i64():
         yield db
 
 
+@pytest.yield_fixture
+def elf_idb():
+    path = os.path.join(CD, 'data', 'elf', 'ls.idb')
+    with idb.from_file(path) as db:
+        yield db
+
+
 def load_idb(path):
     with open(path, 'rb') as f:
         return idb.from_buffer(f.read())

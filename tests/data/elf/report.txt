@@ -1,0 +1,3 @@
+contents: /bin/ls from Ubuntu 32-bit
+source: provided by @binoopang via issue #12
+md5: 7de7e111dcbd6b870bd4b00eb0232460
