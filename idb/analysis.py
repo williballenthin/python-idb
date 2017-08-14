@@ -992,7 +992,7 @@ class Seg:
         # TODO: needs non-zero test
         self.orgbase = u.dd()
         # Segment flags
-        self.flag = u.dd()
+        self.flags = u.dd()
         # Segment alignment codes
         self.align = u.dd()
         # Segment combination codes
