@@ -1026,5 +1026,11 @@ class Seg:
 #         3: name index
 #         ...
 Segments = Analysis('$ segs', [
-    Field('segments', 'S', ADDRESSES, Seg),
+    # we use `ALL` for the index type because `_is_address` above does not recognize
+    #  addresses not backed by flags/bytes in the IDB.
+    # there may be segments for the `.bss`, `extern`, etc sections here, and these
+    #  do not have associated flags/bytes.
+    # therefore, until we fix `is_address`, being slightly imprecise here works better.
+    # note: all indexes in the `$ segs` netnode are addresses, so this assumption works ok.
+    Field('segments', 'S', ALL, Seg),
 ])
