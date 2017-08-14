@@ -989,7 +989,10 @@ class Seg:
         # use get/set_segm_class() functions
         self.sclass = u.dd()
         # this field is IDP dependent.
+        # TODO: needs non-zero test
         self.orgbase = u.dd()
+        # Segment flags
+        self.flag = u.dd()
         # Segment alignment codes
         self.align = u.dd()
         # Segment combination codes
@@ -1002,16 +1005,14 @@ class Seg:
         # if 2: 64 bits
         # see: https://github.com/fireeye/flare-ida/blob/master/python/flare/jayutils.py#L94
         self.bitness = u.dd()
-        # Segment flags
-        self.flags = u.dd()
+        # segment type (see Segment types). More...
+        self.type = u.dd()
         # segment selector - should be unique.
         self.sel = u.dd()
         # default segment register values.
-        self.defsr = u.dd()
-        # segment type (see Segment types). More...
-        self.type = u.dd()
+        self.defsr = NotImplementedError()
         # the segment color
-        self.color = u.dd()
+        self.color = (u.dd() - 1) & 0xFFFFFFFF
 
 
 # '$ segs' maps from segment start address to details about it.
