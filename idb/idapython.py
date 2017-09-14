@@ -1384,6 +1384,19 @@ class idautils:
             ret.append(func.startEA)
         return list(sorted(ret))
 
+    def CodeRefsTo(self, ea, flow):
+        if flow:
+            flags = self.api.idc.GetFlags(ea)
+            if self.api.ida_bytes.isFlow(flags):
+                # prev instruction fell through to this insn
+                yield self.api.idc.PrevHead(ea)
+
+        # get all the code xrefs to this instruction.
+        # a code xref is like a fallthrough or jump, not like a call.
+        for xref in idb.analysis.get_crefs_to(self.idb, ea,
+                                              types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]):
+            yield xref.src
+
 
 class IDAPython:
     def __init__(self, db, ScreenEA=None):

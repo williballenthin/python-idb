@@ -618,3 +618,19 @@ def test_MinMaxEA(kernel32_idb, version, bitness, expected):
 
     assert api.idc.MinEA() == 0x68901000
     assert api.idc.MaxEA() == 0x689de230
+
+
+@kern32_test()
+def test_CodeRefsTo(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+
+    # this is the start of a function.
+    # calls are note code refs.
+    assert set(api.idautils.CodeRefsTo(0x689AD974, True)) == set([])
+
+    # this is the start of a basic block with one incoming edge, from a taken conditional jump.
+    assert set(api.idautils.CodeRefsTo(0x68901031, True)) == set([0x6890102b])
+
+    # this is an instruction at the middle of a basic block.
+    assert set(api.idautils.CodeRefsTo(0x68901012, True)) == set([0x68901010])
+    assert set(api.idautils.CodeRefsTo(0x68901012, False)) == set([])
