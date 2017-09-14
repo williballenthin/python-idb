@@ -625,7 +625,7 @@ def test_CodeRefsTo(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
     # this is the start of a function.
-    # calls are note code refs.
+    # calls are not code refs.
     assert set(api.idautils.CodeRefsTo(0x689AD974, True)) == set([])
 
     # this is the start of a basic block with one incoming edge, from a taken conditional jump.
@@ -634,3 +634,19 @@ def test_CodeRefsTo(kernel32_idb, version, bitness, expected):
     # this is an instruction at the middle of a basic block.
     assert set(api.idautils.CodeRefsTo(0x68901012, True)) == set([0x68901010])
     assert set(api.idautils.CodeRefsTo(0x68901012, False)) == set([])
+
+
+@kern32_test()
+def test_CodeRefsFrom(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+
+    # this is an instruction at the middle of a basic block.
+    assert set(api.idautils.CodeRefsFrom(0x68901010, True)) == set([0x68901012])
+    assert set(api.idautils.CodeRefsFrom(0x68901010, False)) == set([])
+
+    # this is the end of a function.
+    assert set(api.idautils.CodeRefsFrom(0x689011B2, True)) == set([])
+
+    # this is a conditional jump.
+    assert set(api.idautils.CodeRefsFrom(0x6890102B, True)) == set([0x6890113B, 0x68901031])
+    assert set(api.idautils.CodeRefsFrom(0x6890102B, False)) == set([0x6890113B])
