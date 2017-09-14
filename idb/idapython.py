@@ -4,6 +4,7 @@ import collections
 
 import six
 
+import idb.netnode
 import idb.analysis
 
 
@@ -617,6 +618,11 @@ class idc:
                 return 'sub_%08x' % (ea)
             else:
                 raise RuntimeError('unexpected wordsize')
+
+    def LocByName(self, name):
+        key = ("N" + name).encode('utf-8')
+        cursor = self.idb.id0.find(key)
+        return idb.netnode.as_uint(cursor.value)
 
     def GetInputMD5(self):
         return idb.analysis.Root(self.idb).md5

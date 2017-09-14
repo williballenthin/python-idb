@@ -599,3 +599,15 @@ def test_all_comments(kernel32_idb, version, bitness, expected):
             repcmts.append(repcmt)
 
     assert len(regcmts), len(repcmnts) == expected
+
+
+@kern32_test()
+def test_LocByName(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+
+    assert api.idc.LocByName('CancelIo') == 0x6892e70a
+    assert api.idc.GetFunctionName(api.idc.LocByName('CancelIo')) == 'CancelIo'
+
+    with pytest.raises(KeyError):
+        # this is issue #7.
+        _ = api.idc.LocByName('__does not exist__')
