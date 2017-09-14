@@ -611,3 +611,10 @@ def test_LocByName(kernel32_idb, version, bitness, expected):
     with pytest.raises(KeyError):
         # this is issue #7.
         _ = api.idc.LocByName('__does not exist__')
+
+@kern32_test()
+def test_MinMaxEA(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+
+    assert api.idc.MinEA() == 0x68901000
+    assert api.idc.MaxEA() == 0x689de230

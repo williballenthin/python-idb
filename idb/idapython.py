@@ -444,6 +444,16 @@ class idc:
             if seg.startEA <= ea < seg.endEA:
                 return segstrings[seg.name_index]
 
+    def MinEA(self):
+        segs = idb.analysis.Segments(self.idb).segments.values()
+        segs = list(sorted(segs, key=lambda s: s.startEA))
+        return segs[0].startEA
+
+    def MaxEA(self):
+        segs = idb.analysis.Segments(self.idb).segments.values()
+        segs = list(sorted(segs, key=lambda s: s.startEA))
+        return segs[-1].endEA
+
     def GetFlags(self, ea):
         return self.idb.id1.get_flags(ea)
 
