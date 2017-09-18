@@ -396,11 +396,13 @@ Loader = Analysis('$ loader name', [
 ])
 
 
+# see `scripts/dump_user.py` for intepretation.
 OriginalUser = Analysis('$ original user', [
     Field('data', 'S', 0, bytes),
 ])
 
 
+# see `scripts/dump_user.py` for intepretation.
 User = Analysis('$ user1', [
     Field('data', 'S', 0, bytes),
 ])
