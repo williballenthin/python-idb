@@ -396,6 +396,11 @@ Loader = Analysis('$ loader name', [
 ])
 
 
+OriginalUser = Analysis('$ original user', [
+    Field('data', 'S', 0, bytes),
+])
+
+
 User = Analysis('$ user1', [
     Field('data', 'S', 0, bytes),
 ])
