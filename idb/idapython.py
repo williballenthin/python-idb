@@ -630,9 +630,12 @@ class idc:
                 raise RuntimeError('unexpected wordsize')
 
     def LocByName(self, name):
-        key = ("N" + name).encode('utf-8')
-        cursor = self.idb.id0.find(key)
-        return idb.netnode.as_uint(cursor.value)
+        try:
+            key = ("N" + name).encode('utf-8')
+            cursor = self.idb.id0.find(key)
+            return idb.netnode.as_uint(cursor.value)
+        except KeyError:
+            return -1
 
     def GetInputMD5(self):
         return idb.analysis.Root(self.idb).md5
