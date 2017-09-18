@@ -20,6 +20,10 @@ import idb.netnode
 logger = logging.getLogger(__name__)
 
 
+def h(i):
+    return '%x' % (i)
+
+
 def render_key(key):
     if key[0] == 0x2E:
         k = idb.netnode.parse_key(key)
@@ -126,10 +130,10 @@ class BTreeExplorer(cmd.Cmd):
             ----  ------------------------------------------------------------------------------------------
             > cat 3
             00000000: 3B 20 46 69 6C 65 20 4E  61 6D 65 20 20 20 3A 20  ; File Name   :
-            00000010: 5A 3A 5C 68 6F 6D 65 5C  75 73 65 72 5C 44 6F 63  Z:\home\user\Doc
-            00000020: 75 6D 65 6E 74 73 5C 63  6F 64 65 5C 70 79 74 68  uments\code\pyth
-            00000030: 6F 6E 2D 69 64 62 5C 74  65 73 74 73 5C 64 61 74  on-idb\tests\dat
-            00000040: 61 5C 73 6D 61 6C 6C 5C  73 6D 61 6C 6C 2E 62 69  a\small\small.bi
+            00000010: 5A 3A 5C 68 6F 6D 65 5C  75 73 65 72 5C 44 6F 63  Z:\\home\\user\\Doc
+            00000020: 75 6D 65 6E 74 73 5C 63  6F 64 65 5C 70 79 74 68  uments\\code\\pyth
+            00000030: 6F 6E 2D 69 64 62 5C 74  65 73 74 73 5C 64 61 74  on-idb\\tests\dat
+            00000040: 61 5C 73 6D 61 6C 6C 5C  73 6D 61 6C 6C 2E 62 69  a\\small\\small.bi
             00000050: 6E 00
         '''
         if ' ' in line:
@@ -140,6 +144,15 @@ class BTreeExplorer(cmd.Cmd):
 
         entry = self.current_page.get_entry(target)
         hexdump.hexdump(entry.value)
+
+    def do_exit(self, line):
+        return True
+
+    def do_quit(self, line):
+        return True
+
+    def do_EOF(self, line):
+        return True
 
 
 def main(argv=None):
