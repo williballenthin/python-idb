@@ -284,7 +284,7 @@ class Page(vstruct.VStruct):
         #  the linear scan below is simpler to read, so we'll use that until it becomes an issue.
         if self.is_leaf():
             for i, entry in enumerate(self.get_entries()):
-                if key == entry.key:
+                if key == bytes(entry.key):
                     return i
         else:
             for i, entry in enumerate(self.get_entries()):
@@ -365,7 +365,7 @@ class ExactMatchStrategy(FindStrategy):
 
         entry = page.get_entry(entry_number)
 
-        if entry.key == key:
+        if bytes(entry.key) == key:
             cursor.entry = entry
             cursor.entry_number = entry_number
             return
@@ -373,10 +373,10 @@ class ExactMatchStrategy(FindStrategy):
             # no matches!
             raise KeyError(key)
         else:
-            if entry_number == 0:
-                next_page_number = page.ppointer
-            elif is_largest:
+            if is_largest:
                 next_page_number = page.get_entry(page.entry_count - 1).page
+            elif entry_number == 0:
+                next_page_number = page.ppointer
             else:
                 next_page_number = page.get_entry(entry_number - 1).page
             self._find(cursor, next_page_number, key)

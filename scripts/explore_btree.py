@@ -43,7 +43,7 @@ class BTreeExplorer(cmd.Cmd):
 
     @property
     def prompt(self):
-        return '/' + '/'.join(map(h, self.path)) + " > "
+        return '/'.join(map(h, self.path)) + "/ > "
 
     @property
     def current_page(self):

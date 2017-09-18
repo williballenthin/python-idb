@@ -49,3 +49,10 @@ def test_sups(kernel32_idb, version, bitness, expected):
 def test_alts(kernel32_idb, version, bitness, expected):
     root = idb.netnode.Netnode(kernel32_idb, ROOT_NODEID)
     assert list(root.alts()) == [-8, -6, -5, -4, -3, -2, -1]
+
+
+# the small netnode has a root btree node with a single child.
+# this is a little tricky to handle, so we ensure it works as expected.
+def test_small(small_idb):
+    root = idb.netnode.Netnode(small_idb, ROOT_NODEID)
+    assert list(root.alts()) == [-8, -5, -4, -3, -2, -1]
