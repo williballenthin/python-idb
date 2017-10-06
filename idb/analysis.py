@@ -1041,3 +1041,37 @@ Segments = Analysis('$ segs', [
     # note: all indexes in the `$ segs` netnode are addresses, so this assumption works ok.
     Field('segments', 'S', ALL, Seg),
 ])
+
+
+Imports = Analysis('$ imports', [
+    Field('lib_netnodes', 'A', NUMBERS, idb.netnode.as_uint),
+    Field('lib_names', 'S', NUMBERS, idb.netnode.as_string),
+])
+
+
+Import = namedtuple('Import', ['library', 'function_name', 'function_address'])
+
+
+def enumerate_imports(db):
+    '''
+    enumerate the functions imported by the module in the given database.
+
+    yields:
+      Tuple[str, str, int]: library name, function name, function address
+    '''
+    imps = Imports(db)
+    for index, libname in imps.lib_names.items():
+        if index == 0xFFFFFFFF:
+            continue
+
+        # dereference the node id stored in the A val
+        nnref = imps.lib_netnodes[index]
+        nn = idb.netnode.Netnode(db, nnref)
+
+        for funcaddr in nn.sups():
+            try:
+                funcname = nn.supstr(funcaddr)
+                yield Import(libname, funcname, funcaddr)
+            except KeyError:
+                logger.warning('failed to find import supval: %x', funcaddr)
+                continue

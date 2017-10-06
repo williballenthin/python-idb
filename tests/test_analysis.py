@@ -554,3 +554,19 @@ def test_segments2(elf_idb):
         expected_seg = EXPECTED[segname]
         for k, v in expected_seg.items():
             assert v == getattr(seg, k)
+
+
+@kern32_test()
+def test_imports(kernel32_idb, version, bitness, expected):
+    imports = list(idb.analysis.enumerate_imports(kernel32_idb))
+    assert len(imports) == 1116
+    assert ('api-ms-win-core-rtlsupport-l1-2-0',
+            'RtlCaptureContext',
+            0x689dd000) in imports
+
+    libs = set([])
+    for imp in imports:
+        libs.add(imp.library)
+
+    assert 'KERNELBASE' in libs
+    assert 'ntdll' in libs
