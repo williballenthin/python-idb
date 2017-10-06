@@ -223,8 +223,9 @@ class Page(vstruct.VStruct):
 
     '''
 
-    def __init__(self, page_size):
+    def __init__(self, page_size, page_number):
         vstruct.VStruct.__init__(self)
+        self.page_number = page_number
         self.ppointer = v_uint32()
         self.entry_count = v_uint16()
         self.contents = v_bytes(page_size)
@@ -758,7 +759,7 @@ class ID0(vstruct.VStruct):
             return page
 
         buf = self.get_page_buffer(page_number)
-        page = Page(self.page_size)
+        page = Page(self.page_size, page_number)
         page.vsParse(buf)
 
         self._page_cache[page_number] = page
