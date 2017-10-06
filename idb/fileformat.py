@@ -420,7 +420,12 @@ class PrefixMatchStrategy(FindStrategy):
                     # the sub-page pointed to by this entry contains larger entries.
                     # so we need to look at the sub-page pointed to by the last
                     # entry (or ppointer).
-                    return self._find(cursor, next_page, key)
+                    try:
+                        return self._find(cursor, next_page, key)
+                    except KeyError:
+                        cursor.entry = entry
+                        cursor.entry_number = i
+                        return
                 elif entry_key > key:
                     # as soon as we reach greater entries, we'll never match
                     break
