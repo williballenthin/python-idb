@@ -421,9 +421,9 @@ class PrefixMatchStrategy(FindStrategy):
                     cursor.entry_number = i
                     return
                 elif entry_key.startswith(key):
-                    # the sub-page pointed to by this entry contains larger entries.
-                    # so we need to look at the sub-page pointed to by the last
-                    # entry (or ppointer).
+                    # this is obviously a good match; however,
+                    # there may have been an exact match in the sub-page just prior,
+                    # so we need to first check that first.
                     try:
                         return self._find(cursor, next_page, key)
                     except KeyError:
@@ -431,14 +431,16 @@ class PrefixMatchStrategy(FindStrategy):
                         cursor.entry_number = i
                         return
                 elif entry_key > key:
-                    # as soon as we reach greater entries, we'll never match
-                    break
+                    # as soon as we reach greater entries, we'll never match.
+                    # so we need to check the sub-page just prior.
+                    return self._find(cursor, next_page, key)
                 else:
                     next_page = entry.page
 
-            # since we haven't found a matching entry, but we know our matches must be in the page,
+            # since we haven't found a matching entry, but we know our matches must be somewhere,
             # we need to search the final sub-page, which contains the greatest entries.
-            return self._find(cursor, next_page, key)
+            last_entry = page.get_entry(page.entry_count - 1)
+            return self._find(cursor, last_entry.page, key)
 
     def find(self, cursor, key):
         self._find(cursor, cursor.index.root_page, key)
