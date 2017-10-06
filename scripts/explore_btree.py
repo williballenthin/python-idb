@@ -24,9 +24,9 @@ def h(i):
     return '%x' % (i)
 
 
-def render_key(key):
+def render_key(key, wordsize):
     if key[0] == 0x2E:
-        k = idb.netnode.parse_key(key)
+        k = idb.netnode.parse_key(key, wordsize)
         return 'nodeid: %x tag: %s index: %s' % (
                 k.nodeid,
                 k.tag,
@@ -60,12 +60,12 @@ class BTreeExplorer(cmd.Cmd):
         if page.is_leaf():
             print('leaf: true')
             for i, entry in enumerate(page.get_entries()):
-                rows.append((hex(i), render_key(entry.key)))
+                rows.append((hex(i), render_key(entry.key, self.db.wordsize)))
         else:
             print('leaf: false')
             rows.append(('', 'ppointer', hex(page.ppointer)))
             for i, entry in enumerate(page.get_entries()):
-                rows.append((hex(i), render_key(entry.key), hex(entry.page)))
+                rows.append((hex(i), render_key(entry.key, self.db.wordsize), hex(entry.page)))
 
         print(tabulate.tabulate(rows, headers=['entry', 'key', 'page number']))
 
