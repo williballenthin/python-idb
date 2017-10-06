@@ -570,3 +570,13 @@ def test_imports(kernel32_idb, version, bitness, expected):
 
     assert 'KERNELBASE' in libs
     assert 'ntdll' in libs
+
+
+@kern32_test()
+def test_entrypoints(kernel32_idb, version, bitness, expected):
+    entrypoints = list(idb.analysis.enumerate_entrypoints(kernel32_idb))
+
+    assert len(entrypoints) == 1572
+    assert entrypoints[0] == ('BaseThreadInitThunk', 0x6890172d, 1, None)
+    assert entrypoints[-100] == ('WaitForThreadpoolWorkCallbacks', 0x689dab51, 1473, 'NTDLL.TpWaitForWork')
+    assert entrypoints[-1] == ('DllEntryPoint', 0x68901696, None, None)

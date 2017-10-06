@@ -1044,7 +1044,9 @@ Segments = Analysis('$ segs', [
 
 
 Imports = Analysis('$ imports', [
+    # index: entry number, value: node id
     Field('lib_netnodes', 'A', NUMBERS, idb.netnode.as_uint),
+    # index: entry number, value: dll name
     Field('lib_names', 'S', NUMBERS, idb.netnode.as_string),
 ])
 
@@ -1075,3 +1077,45 @@ def enumerate_imports(db):
             except KeyError:
                 logger.warning('failed to find import supval: %x', funcaddr)
                 continue
+
+
+EntryPoints = Analysis('$ entry points', [
+    # index: ordinal, value: address, terminated by index: -1
+    Field('functions', 'A', NUMBERS, idb.netnode.as_uint),
+    # index: address, value: address, should be only one?
+    Field('main_entry', 'A', ADDRESSES, idb.netnode.as_uint),
+    # index: ordinal, value: ordinal
+    Field('ordinals', 'I', NUMBERS, idb.netnode.as_uint),
+    # index: ordinal, value: string like (NTDLL!Rtl...)
+    Field('forwarded_symbols', 'F', NUMBERS, idb.netnode.as_string),
+    # index: ordinal, value: string like (Rtl...)
+    Field('function_names', 'S', NUMBERS, idb.netnode.as_string),
+    # index: address, value: string like (Rtl...), should be only one?
+    Field('main_entry_name', 'S', ADDRESSES, idb.netnode.as_string),
+])
+
+
+EntryPoint = namedtuple('EntryPoint', ['name', 'address', 'ordinal', 'forwarded_symbol'])
+
+
+def enumerate_entrypoints(db):
+    '''
+    enumerate the entry point functions in the given database.
+
+    yields:
+      int: function address
+    '''
+    ents = EntryPoints(db)
+
+    ordinals = ents.ordinals
+    forwarded_symbols = ents.forwarded_symbols
+    names = ents.function_names
+    names.update(ents.main_entry_name)
+
+    for index, addr in ents.functions.items():
+        if index == -1:
+            break
+        yield EntryPoint(names.get(index), addr, ordinals.get(index), forwarded_symbols.get(index))
+
+    for index, addr in ents.main_entry.items():
+        yield EntryPoint(names.get(index), addr, ordinals.get(index), forwarded_symbols.get(index))
