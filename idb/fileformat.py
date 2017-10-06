@@ -408,6 +408,9 @@ class PrefixMatchStrategy(FindStrategy):
                 elif entry_key > key:
                     # as soon as we reach greater entries, we'll never match
                     break
+
+            # pop the final path entry, cause we know its not here
+            cursor.path = cursor.path[:-1]
             raise KeyError(key)
         else:  # is branch node
             next_page = page.ppointer
