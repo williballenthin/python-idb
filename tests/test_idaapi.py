@@ -649,3 +649,20 @@ def test_CodeRefsFrom(kernel32_idb, version, bitness, expected):
     # this is a conditional jump.
     assert set(api.idautils.CodeRefsFrom(0x6890102B, True)) == set([0x6890113B, 0x68901031])
     assert set(api.idautils.CodeRefsFrom(0x6890102B, False)) == set([0x6890113B])
+
+
+@kern32_test()
+def test_imports(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+    assert api.ida_nalt.get_import_module_qty() == 47
+    assert api.ida_nalt.get_import_module_name(0) == 'api-ms-win-core-rtlsupport-l1-2-0'
+    assert api.ida_nalt.get_import_module_name(1) == 'ntdll'
+
+    names = []
+    def cb(addr, name, ordinal):
+        names.append((addr, name, ordinal))
+        return True
+
+    api.ida_nalt.enum_import_names(1, cb)
+    assert len(names) == 388
+    assert names[0] == (0x689dd014, 'NtMapUserPhysicalPagesScatter', None)

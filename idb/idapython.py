@@ -997,6 +997,26 @@ class ida_nalt:
     def is_notcode(self, ea):
         return is_flag_set(self.get_aflags(ea), AFLAGS.AFL_NOTCODE)
 
+    def get_import_module_qty(self):
+        return max(idb.analysis.Imports(self.idb).lib_names.keys())
+
+    def get_import_module_name(self, mod_index):
+        return idb.analysis.Imports(self.idb).lib_names[mod_index]
+
+    def enum_import_names(self, mod_index, py_cb):
+        imps = idb.analysis.Imports(self.idb)
+
+        # dereference the node id stored in the A val
+        nnref = imps.lib_netnodes[mod_index]
+        nn = idb.netnode.Netnode(self.idb, nnref)
+
+        for funcaddr in nn.sups():
+            funcname = nn.supstr(funcaddr)
+            if not py_cb(funcaddr, funcname, None):
+                return
+
+        # TODO: where to fetch ordinal?
+
 
 class ida_funcs:
     # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group___f_u_n_c__.html
