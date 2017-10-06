@@ -1103,7 +1103,7 @@ def enumerate_entrypoints(db):
     enumerate the entry point functions in the given database.
 
     yields:
-      int: function address
+      Tuple[str, int, int, str]: function name, address, ordinal (optional), and forwarded symbol (optional)
     '''
     ents = EntryPoints(db)
 
