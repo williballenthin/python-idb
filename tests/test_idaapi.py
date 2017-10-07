@@ -666,3 +666,16 @@ def test_imports(kernel32_idb, version, bitness, expected):
     api.ida_nalt.enum_import_names(1, cb)
     assert len(names) == 388
     assert names[0] == (0x689dd014, 'NtMapUserPhysicalPagesScatter', None)
+
+
+@kern32_test()
+def test_exports(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+    assert api.ida_entry.get_entry_qty() == 1572
+    assert api.ida_entry.get_entry_ordinal(0x0) == 1
+    assert api.ida_entry.get_entry(api.ida_entry.get_entry_ordinal(0x0)) == 0x6890172d
+    assert api.ida_entry.get_entry_name(api.ida_entry.get_entry_ordinal(0x0)) == 'BaseThreadInitThunk'
+    assert api.ida_entry.get_entry_forwarder(api.ida_entry.get_entry_ordinal(0x10)) is None
+
+    assert api.ida_entry.get_entry_ordinal(1572) == 0x68901695
+    assert api.ida_entry.get_entry_name(0x68901695) == 'DllEntryPoint'

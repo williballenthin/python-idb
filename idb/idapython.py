@@ -1435,6 +1435,43 @@ class idautils:
             yield xref.dst
 
 
+class ida_entry:
+    def __init__(self, db, api):
+        self.idb = db
+        self.api = api
+
+    def get_entry_qty(self):
+        ents = idb.analysis.EntryPoints(self.idb)
+        return len(ents.functions) + len(ents.main_entry)
+
+    def get_entry_ordinal(self, index):
+        ents = idb.analysis.EntryPoints(self.idb)
+        try:
+            return ents.ordinals[index + 1]
+        except KeyError:
+            # once we enumerate all the exports by ordinal,
+            # then wrap into the "main entry".
+            # not sure that there can be more than one, but we attempt to deal here.
+            return sorted(ents.main_entry)[index - len(ents.functions) - 1]
+
+    def get_entry(self, ordinal):
+        # for the "main entry", ordinal is actually an address.
+        ents = idb.analysis.EntryPoints(self.idb)
+        return ents.functions[ordinal]
+
+    def get_entry_name(self, ordinal):
+        ents = idb.analysis.EntryPoints(self.idb)
+        try:
+            return ents.function_names[ordinal]
+        except KeyError:
+            # for the "main entry", ordinal is actually an address.
+            return ents.main_entry_name[ordinal]
+
+    def get_entry_forwarder(self, ordinal):
+        ents = idb.analysis.EntryPoints(self.idb)
+        return ents.forwarded_symbols.get(ordinal)
+
+
 class IDAPython:
     def __init__(self, db, ScreenEA=None):
         self.idb = db
@@ -1447,3 +1484,5 @@ class IDAPython:
         self.ida_bytes = ida_bytes(db, self)
         self.ida_netnode = ida_netnode(db, self)
         self.ida_nalt = ida_nalt(db, self)
+        self.ida_entry = ida_entry(db, self)
+
