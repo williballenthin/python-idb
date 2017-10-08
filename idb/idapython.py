@@ -649,6 +649,31 @@ class idc:
     def GetCommentEx(self, ea, repeatable):
         return self.api.ida_bytes.get_cmt(ea, repeatable)
 
+    def GetType(self, ea):
+        try:
+            f = idb.analysis.Function(self.idb, ea)
+        except Exception as e:
+            logger.warning('failed to fetch function for GetType: %s', e)
+            return None
+
+        try:
+            name = f.get_name()
+            sig = f.get_signature()
+        except KeyError:
+            return None
+
+        params = []
+        for param in sig.parameters:
+            params.append('%s %s' % (param.type, param.name))
+
+        return '{rtype:s} {cc:s} {name:s}({params:s})'.format(
+            rtype=sig.rtype,
+            cc=sig.calling_convention,
+            name=name,
+            params=', '.join(params),
+        )
+
+
     @staticmethod
     def hasValue(flags):
         return flags & FLAGS.FF_IVL > 0

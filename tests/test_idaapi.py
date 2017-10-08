@@ -679,3 +679,16 @@ def test_exports(kernel32_idb, version, bitness, expected):
 
     assert api.ida_entry.get_entry_ordinal(1572) == 0x68901695
     assert api.ida_entry.get_entry_name(0x68901695) == 'DllEntryPoint'
+
+
+@kern32_test()
+def test_GetType(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+    assert api.idc.GetType(0x68901695) == 'BOOL __stdcall DllEntryPoint(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)'
+
+    # valid function, but no type data associated...
+
+    #     .text:6899AE01                         ; Attributes: bp-based frame
+    #     .text:6899AE01
+    #     .text:6899AE01                         sub_6899AE01 proc near
+    assert api.idc.GetType(0x6899AE01) == None
