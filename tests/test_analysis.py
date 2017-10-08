@@ -219,7 +219,7 @@ def test_function(kernel32_idb, version, bitness, expected):
     DllEntryPoint = idb.analysis.Function(kernel32_idb, 0x68901695)
 
     sig = DllEntryPoint.get_signature()
-    assert sig.calling_convention == 'stdcall'
+    assert sig.calling_convention == '__stdcall'
     assert sig.rtype == 'BOOL'
     assert len(sig.parameters) == 3
     assert list(map(lambda p: p.type, sig.parameters)) == [
