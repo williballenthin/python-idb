@@ -730,7 +730,7 @@ class Function:
 
         if six.indexbytes(typebuf, 0x1) == ord('S'):
             # this is just a guess...
-            conv = 'stdcall'
+            conv = '__stdcall'
         else:
             raise NotImplementedError()
 
