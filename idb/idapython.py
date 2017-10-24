@@ -934,6 +934,9 @@ class ida_bytes:
     def isCustom(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_CUSTOM
 
+    def get_bytes(self, ea, count):
+        return self.api.idc.GetManyBytes(ea, count)
+
 
 class ida_nalt:
     def __init__(self, db, api):
