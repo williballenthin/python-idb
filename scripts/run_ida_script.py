@@ -6,6 +6,7 @@ author: Willi Ballenthin
 email: willi.ballenthin@gmail.com
 '''
 import sys
+import os.path
 import logging
 import importlib.abc
 import importlib.util
@@ -23,6 +24,7 @@ class HookedImporter(importlib.abc.MetaPathFinder, importlib.abc.Loader):
         self.hooks = hooks
 
     def find_spec(self, name, path, target=None):
+        logger.info('find-spec: %s %s %s', name, path, target)
         if name not in self.hooks:
             return None
 
@@ -31,9 +33,11 @@ class HookedImporter(importlib.abc.MetaPathFinder, importlib.abc.Loader):
 
     def create_module(self, *args, **kwargs):
         # req'd in 3.6?
+        logger.info('create-module: %s %s', args, kwargs)
         return None
 
     def exec_module(self, module):
+        logger.info('exec-module: %s', module)
         mod = self.hooks[module.__spec__.name]
         for attr in dir(mod):
             if attr.startswith('__'):
@@ -42,7 +46,9 @@ class HookedImporter(importlib.abc.MetaPathFinder, importlib.abc.Loader):
         return
 
     def install(self):
+        logger.info('install')
         sys.meta_path.insert(0, self)
+        print(sys.meta_path)
 
 
 def main(argv=None):
@@ -101,6 +107,11 @@ def main(argv=None):
 
         importer = HookedImporter(hooks=hooks)
         importer.install()
+
+        # update sys.path to point to directory containing script.
+        # so scripts can import .py files in the same directory.
+        script_dir = os.path.dirname(args.script_path)
+        sys.path.insert(0, script_dir)
 
         with open(args.script_path, 'rb') as f:
             g = {
