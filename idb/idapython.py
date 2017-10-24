@@ -1411,6 +1411,12 @@ class idaapi:
             if seg.startEA <= ea < seg.endEA:
                 return seg
 
+    def get_segm_name(self, ea):
+        return self.api.idc.SegName(ea)
+
+    def get_segm_end(self, ea):
+        return self.api.idc.SegEnd(ea)
+
 
 class idautils:
     def __init__(self, db, api):
