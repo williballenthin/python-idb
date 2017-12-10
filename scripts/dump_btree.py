@@ -45,11 +45,15 @@ def main(argv=None):
         cursor = db.id0.get_min()
         while True:
             if cursor.key[0] == 0x2E:
-                k = idb.netnode.parse_key(cursor.key)
-                print('nodeid: %x tag: %s index: %s' % (
-                      k.nodeid,
-                      k.tag,
-                      hex(k.index) if k.index is not None else 'None'))
+                try:
+                    k = idb.netnode.parse_key(cursor.key)
+                except UnicodeDecodeError:
+                    hexdump.hexdump(cursor.key)
+                else:
+                    print('nodeid: %x tag: %s index: %s' % (
+                        k.nodeid,
+                        k.tag,
+                        hex(k.index) if k.index is not None else 'None'))
             else:
                 hexdump.hexdump(cursor.key)
 
