@@ -32,7 +32,7 @@ def render_key(key, wordsize):
                 k.tag,
                 hex(k.index) if k.index is not None else 'None')
     else:
-        return str(key)
+        return bytes(key).decode('ascii')
 
 
 class BTreeExplorer(cmd.Cmd):
