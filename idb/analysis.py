@@ -352,7 +352,7 @@ class _Analysis(object):
         get the index associated with the given field name.
         Example::
 
-            assert root.get_field_index('version') == -1
+            assert root.get_field_index('version') == root.db.uint(-1)
 
         Args:
           key (str): the name of the field to fetch.
@@ -1080,7 +1080,7 @@ def enumerate_imports(db):
 
 
 EntryPoints = Analysis('$ entry points', [
-    # index: ordinal, value: address, terminated by index: -1
+    # index: ordinal, value: address, terminated by index: uint(-1)
     Field('functions', 'A', NUMBERS, idb.netnode.as_uint),
     # index: address, value: address, should be only one?
     Field('main_entry', 'A', ADDRESSES, idb.netnode.as_uint),
@@ -1113,7 +1113,7 @@ def enumerate_entrypoints(db):
     names.update(ents.main_entry_name)
 
     for index, addr in ents.functions.items():
-        if index == -1:
+        if index == db.uint(-1):
             break
         yield EntryPoint(names.get(index), addr, ordinals.get(index), forwarded_symbols.get(index))
 

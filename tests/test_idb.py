@@ -317,14 +317,14 @@ def test_find_prefix2(kernel32_idb, version, bitness, expected):
     impnn = idb.netnode.Netnode(kernel32_idb, '$ imports')
 
     expected_alts = list(range(0x30))
-    expected_alts.append(-1)
+    expected_alts.append(kernel32_idb.uint(-1))
     assert list(impnn.alts()) == expected_alts
     assert list(impnn.sups()) == list(range(0x30))
 
     # capture the number of supvals in each netnode referenced from the import netnode
     dist = []
     for alt in impnn.alts():
-        if alt == -1:
+        if alt == kernel32_idb.uint(-1):
             break
 
         ref = idb.netnode.as_uint(impnn.get_val(alt, tag='A'))
