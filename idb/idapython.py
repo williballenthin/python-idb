@@ -359,8 +359,11 @@ class idc:
     def __init__(self, db, api):
         self.idb = db
         self.api = api
-        # this will be the capstone disassembler, lazily loaded.
-        self.dis = None
+        # these will be the capstone disassemblers, lazily loaded.
+        # map from bitness (numbers 16, 32, and 64) to capstone disassembler instance
+        self.bit_dis = None
+        # map from tuple (segment start, end address) to capstone disassembler instance
+        self.seg_dis = None
 
         # apparently this enum changes with bitness.
         # this is annoying.
@@ -521,23 +524,188 @@ class idc:
             return bytes(ret)
 
     def _load_dis(self):
-        if self.dis is not None:
+        if self.seg_dis is not None:
             return
+        self.bit_dis = {}
+        self.seg_dis = {}
 
         import capstone
-        # WARNING:
-        # TODO: this is hardcoded to 32bit x86! where is the arch stored in the idb?
-        self.dis = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
-        # required to fetch operand values
-        self.dis.detail = True
+
+        PROC_CS_MAP = {
+            # this is probably the only platform that is thoroughly tested in python-idb.
+            # at least, today.
+            'metapc':   capstone.CS_ARCH_X86,    # - Disassemble all IBMPC opcodes
+
+            # the rest of these are probably pretty much untested.
+            '8086':     capstone.CS_ARCH_X86,    # - Intel 8086
+            '80286r':   capstone.CS_ARCH_X86,    # - Intel 80286 real mode
+            '80286p':   capstone.CS_ARCH_X86,    # - Intel 80286 protected mode
+            '80386r':   capstone.CS_ARCH_X86,    # - Intel 80386 real mode
+            '80386p':   capstone.CS_ARCH_X86,    # - Intel 80386 protected mode
+            '80486r':   capstone.CS_ARCH_X86,    # - Intel 80486 real mode
+            '80486p':   capstone.CS_ARCH_X86,    # - Intel 80486 protected mode
+            '80586r':   capstone.CS_ARCH_X86,    # - Intel Pentium & MMX real mode
+            '80586p':   capstone.CS_ARCH_X86,    # - Intel Pentium & MMX prot mode
+            '80686p':   capstone.CS_ARCH_X86,    # - Intel Pentium Pro & MMX
+            'k62':      capstone.CS_ARCH_X86,    # - AMD K6-2 with 3DNow!
+            'p2':       capstone.CS_ARCH_X86,    # - Intel Pentium II
+            'p3':       capstone.CS_ARCH_X86,    # - Intel Pentium III
+            'athlon':   capstone.CS_ARCH_X86,    # - AMD K7
+            'p4':       capstone.CS_ARCH_X86,    # - Intel Pentium 4
+            '8085':     capstone.CS_ARCH_X86,    # - Intel 8085
+            'ppc':      capstone.CS_ARCH_PPC,    # - PowerPC big endian
+            'ppcl':     capstone.CS_ARCH_PPC,    # - PowerPC little endian
+            'arm':      capstone.CS_ARCH_ARM,    # - ARM little endian
+            'armb':     capstone.CS_ARCH_ARM,    # - ARM big endian
+            'mipsl':    capstone.CS_ARCH_MIPS,   # - MIPS little endian
+            'mipsb':    capstone.CS_ARCH_MIPS,   # - MIPS big endian
+            'mipsrl':   capstone.CS_ARCH_MIPS,   # - MIPS & RSP little
+            'mipsr':    capstone.CS_ARCH_MIPS,   # - MIPS & RSP big
+            'r5900l':   capstone.CS_ARCH_MIPS,   # - MIPS R5900 little
+            'r5900r':   capstone.CS_ARCH_MIPS,   # - MIPS R5900 big
+            'sparcb':   capstone.CS_ARCH_SPARC,  # - SPARC big endian
+            'sparcl':   capstone.CS_ARCH_SPARC,  # - SPARC little endian
+
+            # i don't think any of the rest of these are supported by capstone today
+            'z80':       None,  # - Zilog 80
+            'z180':      None,  # - Zilog 180
+            'z380':      None,  # - Zilog 380
+            '64180':     None,  # - Hitachi HD64180
+            'gb':        None,  # - Gameboy
+            'z8':        None,  # - Zilog 8
+            '860xr':     None,  # - Intel 860 XR
+            '860xp':     None,  # - Intel 860 XP
+            '8051':      None,  # - Intel 8051
+            '80196':     None,  # - Intel 80196
+            '80196NP':   None,  # - Intel 80196NP, NU
+            'm6502':     None,  # - MOS 6502
+            'm65c02':    None,  # - MOS 65c02
+            'pdp11':     None,  # - DEC PDP/11
+            '68000':     None,  # - Motorola MC68000
+            '68010':     None,  # - Motorola MC68010
+            '68020':     None,  # - Motorola MC68020
+            '68030':     None,  # - Motorola MC68030
+            '68040':     None,  # - Motorola MC68040
+            '68330':     None,  # - Motorola CPU32 (68330)
+            '68882':     None,  # - Motorola MC68020 with MC68882
+            '68851':     None,  # - Motorola MC68020 with MC68851
+            '68020EX':   None,  # - Motorola MC68020 with both
+            'colfire':   None,  # - Motorola ColdFire
+            '68K':       None,  # - Motorola MC680x0 all opcodes
+            '6800':      None,  # - Motorola MC68HC00
+            '6801':      None,  # - Motorola MC68HC01
+            '6803':      None,  # - Motorola MC68HC03
+            '6301':      None,  # - Hitachi HD 6301
+            '6303':      None,  # - Hitachi HD 6303
+            '6805':      None,  # - Motorola MC68HC05
+            '6808':      None,  # - Motorola MC68HC08
+            '6809':      None,  # - Motorola MC68HC09
+            '6811':      None,  # - Motorola MC68HC11
+            '6812':      None,  # - Motorola MC68HC12
+            'hcs12':     None,  # - Motorola MC68HCS12
+            '6816':      None,  # - Motorola MC68HC16
+            'java':      None,  # - java
+            'tms320c2':  None,  # - TMS320C2x series
+            'tms320c5':  None,  # - TMS320C5x series
+            'tms320c6':  None,  # - TMS320C6x series
+            'tms320c3':  None,  # - TMS320C3x series
+            'tms32054':  None,  # - TMS320C54xx series
+            'tms32055':  None,  # - TMS320C55xx series
+            'sh3':       None,  # - Renesas SH-3 (little endian)
+            'sh3b':      None,  # - Renesas SH-3 (big endian)
+            'sh4':       None,  # - Renesas SH-4 (little endian)
+            'sh4b':      None,  # - Renesas SH-4 (big endian)
+            'sh2a':      None,  # - Renesas SH-2A (big endian)
+            'avr':       None,  # - ATMEL AVR                      (ATMEL family)
+            'h8300':     None,  # - H8/300x in normal mode
+            'h8300a':    None,  # - H8/300x in advanced mode
+            'h8s300':    None,  # - H8S in normal mode
+            'h8s300a':   None,  # - H8S in advanced mode
+            'h8500':     None,  # - H8/500                         (Hitachi H8/500 family)
+            'pic12cxx':  None,  # - Microchip PIC 12-bit (12xxx)
+            'pic16cxx':  None,  # - Microchip PIC 14-bit (16xxx)
+            'pic18cxx':  None,  # - Microchip PIC 16-bit (18xxx)
+            'alphab':    None,  # - DEC Alpha big endian
+            'alphal':    None,  # - DEC Alpha little endian
+            'hppa':      None,  # - HP PA-RISC big endian
+            'dsp56k':    None,  # - Motorola DSP 5600x
+            'dsp561xx':  None,  # - Motorola DSP 561xx
+            'dsp563xx':  None,  # - Motorola DSP 563xx
+            'dsp566xx':  None,  # - Motorola DSP 566xx
+            'c166':      None,  # - Siemens C166
+            'c166v1':    None,  # - Siemens C166 v1 family
+            'c166v2':    None,  # - Siemens C166 v2 family
+            'st10':      None,  # - SGS-Thomson ST10
+            'super10':   None,  # - Super10
+            'st20':      None,  # - SGS-Thomson ST20/C1
+            'st20c4':    None,  # - SGS-Thomson ST20/C2-C4
+            'st7':       None,  # - SGS-Thomson ST7
+            'ia64l':     None,  # - Intel Itanium little endian
+            'ia64b':     None,  # - Intel Itanium big endian
+            'cli':       None,  # - Microsoft.Net platform
+            'net':       None,  # - Microsoft.Net platform (alias)
+            'i960l':     None,  # - Intel 960 little endian
+            'i960b':     None,  # - Intel 960 big endian
+            'f2mc16l':   None,  # - Fujitsu F2MC-16L
+            'f2mc16lx':  None,  # - Fujitsu F2MC-16LX
+            '78k0':      None,  # - NEC 78k/0
+            '78k0s':     None,  # - NEC 78k/0s
+            'm740':      None,  # - Mitsubishi 8-bit
+            'm7700':     None,  # - Mitsubishi 16-bit
+            'm7750':     None,  # - Mitsubishi 16-bit
+            'm32r':      None,  # - Mitsubishi 32-bit
+            'm32rx':     None,  # - Mitsubishi 32-bit extended
+            'st9':       None,  # - STMicroelectronics ST9+
+            'fr':        None,  # - Fujitsu FR family
+            'm7900':     None,  # - Mitsubishi M7900
+            'kr1878':    None,  # - Angstrem KR1878
+            'ad218x':    None,  # - Analog Devices ADSP
+            'oakdsp':    None,  # - Atmel OAK DSP
+            'tricore':   None,  # - Infineon Tricore
+            'ebc':       None,  # - EFI Bytecode
+            'msp430':    None,  # - Texas Instruments MSP430
+        }
+
+        procname = self.api.idaapi.get_inf_structure().procname
+        cs_arch = PROC_CS_MAP.get(procname)
+        if cs_arch is None:
+            raise NotImplementedError('disassembly not supported on arch: ' + procname)
+
+        for seg in idb.analysis.Segments(self.idb).segments.values():
+            seg_range = (seg.startEA, seg.endEA)
+            if seg.bitness == 0:
+                if 16 not in self.bit_dis:
+                    self.bit_dis[16] = capstone.Cs(cs_arch, capstone.CS_MODE_16)
+                    self.bit_dis[16].detail = True
+                self.seg_dis[seg_range] = self.bit_dis[16]
+            elif seg.bitness == 1:
+                if 32 not in self.bit_dis:
+                    self.bit_dis[32] = capstone.Cs(cs_arch, capstone.CS_MODE_32)
+                    self.bit_dis[32].detail = True
+                self.seg_dis[seg_range] = self.bit_dis[32]
+            elif seg.bitness == 2:
+                if 64 not in self.bit_dis:
+                    self.bit_dis[64] = capstone.Cs(cs_arch, capstone.CS_MODE_64)
+                    self.bit_dis[64].detail = True
+                self.seg_dis[seg_range] = self.bit_dis[64]
+            else:
+                raise NotImplementedError('unknown bitness: %d' % (seg.bitness))
 
     def _disassemble(self, ea):
         size = self.ItemSize(ea)
         buf = self.GetManyBytes(ea, size)
         self._load_dis()
 
+        dis = None
+        for (seg_start, seg_end), dis in self.seg_dis.items():
+            if seg_start <= ea < seg_end:
+                break
+
+        if dis is None:
+            raise ValueError('failed to find ea in valid segment: ' + hex(ea))
+
         try:
-            op = next(self.dis.disasm(buf, ea))
+            op = next(dis.disasm(buf, ea))
         except StopIteration:
             raise RuntimeError('failed to disassemble %s' % (hex(ea)))
         else:
@@ -546,6 +714,10 @@ class idc:
     def GetMnem(self, ea):
         op = self._disassemble(ea)
         return op.mnemonic
+
+    def GetDisasm(self, ea):
+        op = self._disassemble(ea)
+        return '%s\t%s' % (op.mnemonic, op.op_str)
 
     # one instruction or data
     CIC_ITEM = 1

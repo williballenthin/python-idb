@@ -699,4 +699,13 @@ def test_inf_structure(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     inf_structure = api.idaapi.get_inf_structure()
     assert inf_structure.procname == 'metapc'
- 
+
+
+def test_multi_bitness():
+    cd = os.path.dirname(__file__)
+    idbpath = os.path.join(cd, 'data', 'multibitness', 'multibitness.idb')
+
+    with idb.from_file(idbpath) as db:
+        api = idb.IDAPython(db)
+        assert api.idc.GetDisasm(0x0)    == 'xor\tdx, dx'    # 16-bit
+        assert api.idc.GetDisasm(0x1000) == 'xor\tedx, edx'  # 32-bit
