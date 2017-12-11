@@ -934,6 +934,9 @@ class ida_bytes:
     def isCustom(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_CUSTOM
 
+    def get_bytes(self, ea, count):
+        return self.api.idc.GetManyBytes(ea, count)
+
 
 class ida_nalt:
     def __init__(self, db, api):
@@ -1410,6 +1413,12 @@ class idaapi:
         for seg in segs.values():
             if seg.startEA <= ea < seg.endEA:
                 return seg
+
+    def get_segm_name(self, ea):
+        return self.api.idc.SegName(ea)
+
+    def get_segm_end(self, ea):
+        return self.api.idc.SegEnd(ea)
 
 
 class idautils:
