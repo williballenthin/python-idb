@@ -692,3 +692,11 @@ def test_GetType(kernel32_idb, version, bitness, expected):
     #     .text:6899AE01
     #     .text:6899AE01                         sub_6899AE01 proc near
     assert api.idc.GetType(0x6899AE01) == None
+
+
+@kern32_test()
+def test_inf_structure(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+    inf_structure = api.idaapi.get_inf_structure()
+    assert inf_structure.procname == 'metapc'
+ 

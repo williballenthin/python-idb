@@ -1420,6 +1420,9 @@ class idaapi:
     def get_segm_end(self, ea):
         return self.api.idc.SegEnd(ea)
 
+    def get_inf_structure(self):
+        return idb.analysis.Root(self.idb).idainfo
+
 
 class idautils:
     def __init__(self, db, api):
