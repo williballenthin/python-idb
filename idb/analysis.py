@@ -9,6 +9,7 @@ from collections import namedtuple
 import six
 import vstruct
 from vstruct.primitives import v_str
+from vstruct.primitives import v_bytes
 from vstruct.primitives import v_uint8
 from vstruct.primitives import v_uint16
 from vstruct.primitives import v_uint32
@@ -379,14 +380,111 @@ def Analysis(nodeid, fields):
     return inner
 
 
+class IdaInfo(vstruct.VStruct):
+    # ref: https://www.hex-rays.com/products/ida/support/sdkdoc/structidainfo.html
+
+    def __init__(self, wordsize):
+        vstruct.VStruct.__init__(self)
+
+        if wordsize == 4:
+            v_word = v_uint32
+        elif wordsize == 8:
+            v_word = v_uint64
+        else:
+            raise ValueError('unexpected wordsize')
+
+        """
+        v7.0:
+        nodeid: ff000002 tag: S index: 0x41b994
+        00000000: 69 64 61 00 BC 02 6D 65  74 61 70 63 00 00 00 00  ida...metapc....
+        00000010: 00 00 00 00 00 00 A3 00  0B 02 00 00 14 00 00 00  ................
+        00000020: 0B 00 00 00 00 00 00 00  F7 FF FF DF 03 00 00 00  ................
+        00000030: 00 00 00 00 FF FF FF FF  01 00 00 00 95 16 90 68  ...............h
+        00000040: 95 16 90 68 FF FF FF FF  FF FF FF FF 00 10 90 68  ...h...........h
+        00000050: 30 E2 9D 68 00 10 90 68  30 E2 9D 68 00 10 90 68  0..h...h0..h...h
+        00000060: 00 70 9E 68 10 00 00 00  00 00 00 FF 00 00 10 FF  .p.h............
+        00000070: 00 00 00 00 00 02 01 0F  0F 00 40 40 00 00 00 00  ..........@@....
+        00000080: 00 00 00 00 00 00 00 00  00 00 02 06 67 BE A3 0E  ............g...
+        00000090: 07 00 40 06 00 07 00 18  28 00 50 00 54 03 00 00  ..@.....(.P.T...
+        000000A0: 01 00 00 00 01 1B 0A 00  00 00 00 00 61 00 00 00  ............a...
+        000000B0: 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  ................
+        000000C0: 07 00 00 00 00 01 33 04  01 04 00 02 04 08 08 00  ......3.........
+        000000D0: 00 00 00 00 00 00 00 00                           ........
+
+        v6.95:
+        00000000: 49 44 41 B7 02 6D 65 74  61 70 63 00 00 23 00 0B  IDA..metapc..#..
+        00000010: 00 00 00 00 00 00 00 00  00 00 00 00 00 FF FF FF  ................
+        00000020: FF FF FF 95 16 90 68 95  16 90 68 00 10 90 68 30  ......h...h...h0
+        00000030: E2 9D 68 00 10 90 68 30  E2 9D 68 00 10 90 68 00  ..h...h0..h...h.
+        00000040: 70 9E 68 10 00 00 00 0A  00 00 18 00 01 00 00 02  p.h.............
+        00000050: 01 01 00 01 02 01 01 00  00 00 00 00 0F 08 00 09  ................
+        00000060: 06 00 01 01 1B 07 61 00  00 00 00 00 00 00 00 00  ......a.........
+        00000070: 00 00 00 00 00 00 00 00  00 00 00 01 00 00 00 01  ................
+        00000080: 01 01 FF FF FF FF 01 00  00 00 FF FF FF FF 67 BE  ..............g.
+        00000090: A3 0E 07 00 40 06 07 00  00 00 00 00 00 00 FD BF  ....@...........
+        000000A0: 0F 00 28 00 50 00 40 40  00 00 00 00 00 00 00 00  ..(.P.@@........
+        000000B0: 00 00 00 00 00 00 02 01  33 04 01 04 00 02 04 08  ........3.......
+        000000C0: 14 00 00 00 08 00 00 00  00 00 00 00 00 00 00 00  ................
+        000000D0: 00 00 00 00 00 00 00 00  00 00 00 00 00 01 00 00  ................
+        000000E0: 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  ................
+        000000F0: 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  ................
+        """
+
+        self.tag = v_str(size=0x3)  # 'IDA' below 7.0, 'ida' in 7.0
+        self.zero = v_bytes(size=0x0)
+        self.version = v_uint16()
+        self.procname = v_str(size=0x10)
+        # TODO: the exact layout, particularly across versions, of the below is unknown.
+        #self.s_genflags = v_uint16()
+        #self.lflags = v_uint32()
+        #self.database_change_count = v_uint32()
+        #self.filetype = v_uint16()
+        #self.ostype = v_uint16()
+        #self.apptype = v_uint16()
+        #self.asmtype = v_uint8()
+        #self.specsegs = v_uint8()
+        #self.af = v_uint32()
+        #self.af2 = v_uint32()
+        #self.baseaddr = v_word()
+        #self.start_ss = v_uint32()
+        #self.start_cs = v_uint32()
+        #self.start_ip = v_uint32()
+        #self.start_ea = v_uint32()
+        #self.start_sp = v_uint32()
+        #self.main = v_uint32()
+        #self.min_ea = v_uint32()
+        #self.max_ea = v_uint32()
+        #self.omin_ea = v_uint32()
+        #self.omax_ea = v_uint32()
+        #self.lowoff = v_uint32()
+        #self.highoff = v_uint32()
+        #self.maxref = v_word()
+        # ... and a bunch of other stuff
+
+    def pcb_tag(self):
+        if self.tag == 'IDA':
+            # under 7.0
+            pass
+        elif self.tag == 'ida':
+            # 7.0
+            self['zero'].vsSetLength(0x1)
+        else:
+            raise NotImplementedError('raise unknown database tag: ' + self.tag)
+
+    @property
+    def procName(self):
+        return self.procname
+
+
 Root = Analysis('Root Node', [
-    Field('crc',            'A', -5,    idb.netnode.as_int),
-    Field('open_count',     'A', -4,    idb.netnode.as_int),
-    Field('created',        'A', -2,    as_unix_timestamp),
-    Field('version',        'A', -1,    idb.netnode.as_int),
-    Field('md5',            'S', 1302,  as_md5),
-    Field('version_string', 'S', 1303,  idb.netnode.as_string),
-    Field('param',          'S', 0x41b94, bytes),
+    Field('crc',            'A', -5,       idb.netnode.as_int),
+    Field('open_count',     'A', -4,       idb.netnode.as_int),
+    Field('created',        'A', -2,       as_unix_timestamp),
+    Field('version',        'A', -1,       idb.netnode.as_int),
+    Field('md5',            'S', 1302,     as_md5),
+    Field('version_string', 'S', 1303,     idb.netnode.as_string),
+    Field('idainfo',        'S', 0x41b994, as_cast(IdaInfo)),
+    Field('input_file_path','V', None,     idb.netnode.as_string)
 ])
 
 

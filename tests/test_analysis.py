@@ -580,3 +580,15 @@ def test_entrypoints(kernel32_idb, version, bitness, expected):
     assert entrypoints[0] == ('BaseThreadInitThunk', 0x6890172d, 1, None)
     assert entrypoints[-100] == ('WaitForThreadpoolWorkCallbacks', 0x689dab51, 1473, 'NTDLL.TpWaitForWork')
     assert entrypoints[-1] == ('DllEntryPoint', 0x68901696, None, None)
+
+
+@kern32_test()
+def test_idainfo(kernel32_idb, version, bitness, expected):
+    idainfo = idb.analysis.Root(kernel32_idb).idainfo
+
+    if version == 695:
+        assert idainfo.tag == 'IDA'
+    elif version == 700:
+        assert idainfo.tag == 'ida'
+    assert idainfo.version == version
+    assert idainfo.procname == 'metapc'
