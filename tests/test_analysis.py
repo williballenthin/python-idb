@@ -592,3 +592,12 @@ def test_idainfo(kernel32_idb, version, bitness, expected):
         assert idainfo.tag == 'ida'
     assert idainfo.version == version
     assert idainfo.procname == 'metapc'
+
+    # this was a 6.95 file upgraded to 7.0b
+    cd = os.path.dirname(__file__)
+    idbpath = os.path.join(cd, 'data', 'multibitness', 'multibitness.idb')
+    with idb.from_file(idbpath) as db:
+        idainfo = idb.analysis.Root(db).idainfo
+        assert idainfo.tag == 'IDA'    # like from 6.95
+        assert idainfo.version == 700  # like from 7.00
+        assert idainfo.procname == 'metapc'  # actually stored as `| 0x06 m e t a p c |`

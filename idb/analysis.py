@@ -433,6 +433,7 @@ class IdaInfo(vstruct.VStruct):
         self.tag = v_str(size=0x3)  # 'IDA' below 7.0, 'ida' in 7.0
         self.zero = v_bytes(size=0x0)
         self.version = v_uint16()
+        self.procname_size = v_bytes(size=0x0)
         self.procname = v_str(size=0x10)
         # TODO: the exact layout, particularly across versions, of the below is unknown.
         #self.s_genflags = v_uint16()
@@ -470,6 +471,19 @@ class IdaInfo(vstruct.VStruct):
             self['zero'].vsSetLength(0x1)
         else:
             raise NotImplementedError('raise unknown database tag: ' + self.tag)
+
+    def pcb_version(self):
+        # 6.95 database upgraded to v7.0b
+        # we have a single byte that describes how long the procname is.
+        if self.tag == 'IDA' and self.version == 700:
+            self['procname_size'].vsSetLength(0x1)
+
+    def pcb_procname_size(self):
+        # 6.95 database upgraded to v7.0b
+        # we have a single byte that describes how long the procname is.
+        if self.procname_size:
+            size = six.indexbytes(self.procname_size, 0x0)
+            self['procname'].vsSetLength(size)
 
     @property
     def procName(self):
