@@ -1082,12 +1082,15 @@ class IDB(vstruct.VStruct):
 
         # updated once header is parsed.
         self.wordsize = 0
+        self.uint = ValueError
 
     def pcb_header(self):
         if self.header.signature == b'IDA1':
             self.wordsize = 4
+            self.uint = idb.netnode.uint32
         elif self.header.signature == b'IDA2':
             self.wordsize = 8
+            self.uint = idb.netnode.uint64
         else:
             raise RuntimeError('unexpected file signature: %s' % (self.header.signature))
 
