@@ -17,9 +17,9 @@ install:
     # capstone puts the .so in the wrong directory when installed via pip
     # ref: https://github.com/aquynh/capstone/issues/445
     - find /home/travis/virtualenv/ -name '*libcapstone.so'
-    - find /home/travis/virtualenv/ -name "capstone" -type d
-    - mv -f $(find /home/travis/virtualenv/ -name '*libcapstone.so' | head -n 1) $(find /home/travis/virtualenv/ -name "capstone" -type d | head -n 1)
-    - ls $(find /home/travis/virtualenv/ -name "capstone" -type d | head -n 1)
+    - find /home/travis/virtualenv/ -name "capstone" -type d | sort
+    - mv -f $(find /home/travis/virtualenv/ -name '*libcapstone.so' | head -n 1) $(find /home/travis/virtualenv/ -name "capstone" -type d | sort | head -n 1)
+    - ls $(find /home/travis/virtualenv/ -name "capstone" -type d | sort | head -n 1)
 
 
 before_script:
