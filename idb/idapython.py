@@ -356,6 +356,19 @@ class ida_netnode:
 
 
 class idc:
+
+    SEGPERM_EXEC   = 1  # Execute
+    SEGPERM_WRITE  = 2  # Write
+    SEGPERM_READ   = 4  # Read
+    SEGPERM_MAXVAL = 7  # (SEGPERM_EXEC + SEGPERM_WRITE + SEGPERM_READ)
+
+    SFL_COMORG   = 0x01  # IDP dependent field (IBM PC: if set, ORG directive is not commented out)
+    SFL_OBOK     = 0x02  # orgbase is present? (IDP dependent field)
+    SFL_HIDDEN   = 0x04  # is the segment hidden?
+    SFL_DEBUG    = 0x08  # is the segment created for the debugger?
+    SFL_LOADER   = 0x10  # is the segment created by the loader?
+    SFL_HIDETYPE = 0x20  # hide segment type (do not print it in the listing)
+
     def __init__(self, db, api):
         self.idb = db
         self.api = api
@@ -380,23 +393,58 @@ class idc:
         # https://github.com/zachriggle/idapython/blob/37d2fd13b31fec8e6e53fbb9704fa3cd0cbd5b07/python/idc.py#L4149
         if self.idb.wordsize == 4:
             # function start address
-            self.FUNCATTR_START = 0
+            self.FUNCATTR_START   = 0
             # function end address
-            self.FUNCATTR_END = 4
+            self.FUNCATTR_END     = 4
             # function flags
-            self.FUNCATTR_FLAGS = 8
+            self.FUNCATTR_FLAGS   = 8
             # function frame id
-            self.FUNCATTR_FRAME = 10
+            self.FUNCATTR_FRAME   = 10
             # size of local variables
-            self.FUNCATTR_FRSIZE = 14
+            self.FUNCATTR_FRSIZE  = 14
             # size of saved registers area
-            self.FUNCATTR_FRREGS = 18
+            self.FUNCATTR_FRREGS  = 18
             # number of bytes purged from the stack
             self.FUNCATTR_ARGSIZE = 20
             # frame pointer delta
-            self.FUNCATTR_FPD = 24
+            self.FUNCATTR_FPD     = 24
             # function color code
-            self.FUNCATTR_COLOR = 28
+            self.FUNCATTR_COLOR   = 28
+
+            # starting address
+            self.SEGATTR_START   =  0
+            # ending address
+            self.SEGATTR_END     =  4
+            self.SEGATTR_ORGBASE = 16
+            # alignment
+            self.SEGATTR_ALIGN   = 20
+            # combination
+            self.SEGATTR_COMB    = 21
+            # permissions
+            self.SEGATTR_PERM    = 22
+            # bitness (0: 16, 1: 32, 2: 64 bit segment)
+            self.SEGATTR_BITNESS = 23
+            # segment flags
+            self.SEGATTR_FLAGS   = 24
+            # segment selector
+            self.SEGATTR_SEL     = 28
+            # default ES value
+            self.SEGATTR_ES      = 32
+            # default CS value
+            self.SEGATTR_CS      = 36
+            # default SS value
+            self.SEGATTR_SS      = 40
+            # default DS value
+            self.SEGATTR_DS      = 44
+            # default FS value
+            self.SEGATTR_FS      = 48
+            # default GS value
+            self.SEGATTR_GS      = 52
+            # segment type
+            self.SEGATTR_TYPE    = 96
+            # segment color
+            self.SEGATTR_COLOR   = 100
+
         elif self.idb.wordsize == 8:
             self.FUNCATTR_START   = 0
             self.FUNCATTR_END     = 8
@@ -409,23 +457,41 @@ class idc:
             self.FUNCATTR_COLOR   = 52
             self.FUNCATTR_OWNER   = 18
             self.FUNCATTR_REFQTY  = 26
+
+            self.SEGATTR_START   =  0
+            self.SEGATTR_END     =  8
+            self.SEGATTR_ORGBASE = 32
+            self.SEGATTR_ALIGN   = 40
+            self.SEGATTR_COMB    = 41
+            self.SEGATTR_PERM    = 42
+            self.SEGATTR_BITNESS = 43
+            self.SEGATTR_FLAGS   = 44
+            self.SEGATTR_SEL     = 48
+            self.SEGATTR_ES      = 56
+            self.SEGATTR_CS      = 64
+            self.SEGATTR_SS      = 72
+            self.SEGATTR_DS      = 80
+            self.SEGATTR_FS      = 88
+            self.SEGATTR_GS      = 96
+            self.SEGATTR_TYPE    = 184
+            self.SEGATTR_COLOR   = 188
         else:
             raise RuntimeError('unexpected wordsize')
 
     def ScreenEA(self):
         return self.api.ScreenEA
 
-    def SegStart(self, ea):
+    def _get_segment(self, ea):
         segs = idb.analysis.Segments(self.idb).segments
         for seg in segs.values():
             if seg.startEA <= ea < seg.endEA:
-                return seg.startEA
+                return seg
+
+    def SegStart(self, ea):
+        return self.get_segment(ea).startEA
 
     def SegEnd(self, ea):
-        segs = idb.analysis.Segments(self.idb).segments
-        for seg in segs.values():
-            if seg.startEA <= ea < seg.endEA:
-                return seg.endEA
+        return self.get_segment(ea).endEA
 
     def FirstSeg(self):
         segs = idb.analysis.Segments(self.idb).segments
@@ -443,9 +509,31 @@ class idc:
     def SegName(self, ea):
         segstrings = idb.analysis.SegStrings(self.idb).strings
         segs = idb.analysis.Segments(self.idb).segments
-        for seg in segs.values():
-            if seg.startEA <= ea < seg.endEA:
-                return segstrings[seg.name_index]
+        return segstrings[self.get_segment(ea).name_index]
+
+    def GetSegmentAttr(self, ea, attr):
+        if attr == self.SEGATTR_START:
+            return self.SegStart(ea)
+        elif attr == self.SEGATTR_END:
+            return self.SegEnd(ea)
+        elif attr == self.SEGATTR_ORGBASE:
+            self._get_segment(ea).orgbase
+        elif attr == self.SEGATTR_ALIGN:
+            self._get_segment(ea).align
+        elif attr == self.SEGATTR_COMB:
+            self._get_segment(ea).comb
+        elif attr == self.SEGATTR_PERM:
+            self._get_segment(ea).perm
+        elif attr == self.SEGATTR_BITNESS:
+            self._get_segment(ea).bitness
+        elif attr == self.SEGATTR_FLAGS:
+            self._get_segment(ea).flags
+        elif attr == self.SEGATTR_TYPE:
+            self._get_segment(ea).type
+        elif attr == self.SEGATTR_COLOR:
+            self._get_segment(ea).color
+        else:
+            raise NotImplementedError('segment attribute %d not yet implemented' % (attr))
 
     def MinEA(self):
         segs = idb.analysis.Segments(self.idb).segments.values()
