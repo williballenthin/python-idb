@@ -488,10 +488,10 @@ class idc:
                 return seg
 
     def SegStart(self, ea):
-        return self.get_segment(ea).startEA
+        return self._get_segment(ea).startEA
 
     def SegEnd(self, ea):
-        return self.get_segment(ea).endEA
+        return self._get_segment(ea).endEA
 
     def FirstSeg(self):
         segs = idb.analysis.Segments(self.idb).segments
@@ -509,7 +509,7 @@ class idc:
     def SegName(self, ea):
         segstrings = idb.analysis.SegStrings(self.idb).strings
         segs = idb.analysis.Segments(self.idb).segments
-        return segstrings[self.get_segment(ea).name_index]
+        return segstrings[self._get_segment(ea).name_index]
 
     def GetSegmentAttr(self, ea, attr):
         if attr == self.SEGATTR_START:
@@ -517,21 +517,21 @@ class idc:
         elif attr == self.SEGATTR_END:
             return self.SegEnd(ea)
         elif attr == self.SEGATTR_ORGBASE:
-            self._get_segment(ea).orgbase
+            return self._get_segment(ea).orgbase
         elif attr == self.SEGATTR_ALIGN:
-            self._get_segment(ea).align
+            return self._get_segment(ea).align
         elif attr == self.SEGATTR_COMB:
-            self._get_segment(ea).comb
+            return self._get_segment(ea).comb
         elif attr == self.SEGATTR_PERM:
-            self._get_segment(ea).perm
+            return self._get_segment(ea).perm
         elif attr == self.SEGATTR_BITNESS:
-            self._get_segment(ea).bitness
+            return self._get_segment(ea).bitness
         elif attr == self.SEGATTR_FLAGS:
-            self._get_segment(ea).flags
+            return self._get_segment(ea).flags
         elif attr == self.SEGATTR_TYPE:
-            self._get_segment(ea).type
+            return self._get_segment(ea).type
         elif attr == self.SEGATTR_COLOR:
-            self._get_segment(ea).color
+            return self._get_segment(ea).color
         else:
             raise NotImplementedError('segment attribute %d not yet implemented' % (attr))
 
