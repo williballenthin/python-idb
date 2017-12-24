@@ -18,8 +18,8 @@ install:
     # ref: https://github.com/aquynh/capstone/issues/445
     #- cp -f /home/travis/virtualenv/python3.5.4/lib/python3.5/site-packages/env/lib/python3.5/site-packages/capstone/libcapstone.so /home/travis/virtualenv/python3.5.4/lib/python3.5/site-packages/capstone
     #- cp -f /home/travis/virtualenv/python2.7.13/lib/python2.7/site-packages/env/lib/python2.7/site-packages/capstone/libcapstone.so /home/travis/virtualenv/python2.7.13/lib/python2.7/site-packages/capstone
-    - find /home/travis/virtualenv/ -name 'capstone.so'
-    - find /home/travis/virtualenv/ -name 'capstone.so' | while read -r LINE; do mv ${LINE} /home/travis/virtualenv/*/lib/*/site-packages/capstone; done
+    - find /home/travis/virtualenv/ -name '*libcapstone.so'
+    - find /home/travis/virtualenv/ -name '*libcapstone.so' | while read -r LINE; do mv ${LINE} /home/travis/virtualenv/*/lib/*/site-packages/capstone; done
 
 
 before_script:
