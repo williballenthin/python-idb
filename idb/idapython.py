@@ -600,8 +600,13 @@ class idc:
         if use_dbg:
             raise NotImplementedError()
 
+        # can only read from one segment at a time
         if self.SegStart(ea) != self.SegStart(ea + size):
-            raise IndexError((ea, ea + size))
+            # edge case: when reading exactly to the end of the segment.
+            if ea + size == self.SegEnd(ea):
+                pass
+            else:
+                raise IndexError((ea, ea + size))
 
         ret = []
         for i in range(ea, ea + size):
