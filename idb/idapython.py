@@ -1048,13 +1048,16 @@ class ida_bytes:
     def get_cmt(self, ea, repeatable):
         flags = self.api.idc.GetFlags(ea)
         if not self.has_cmt(flags):
-            raise KeyError(ea)
+            return ''
 
-        nn = self.api.ida_netnode.netnode(ea)
-        if repeatable:
-            return nn.supstr(tag='S', index=1)
-        else:
-            return nn.supstr(tag='S', index=0)
+        try:
+            nn = self.api.ida_netnode.netnode(ea)
+            if repeatable:
+                return nn.supstr(tag='S', index=1)
+            else:
+                return nn.supstr(tag='S', index=0)
+        except KeyError:
+            return ''
 
     @staticmethod
     def isFunc(flags):
