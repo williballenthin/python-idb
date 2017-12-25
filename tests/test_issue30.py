@@ -3,7 +3,7 @@ import os.path
 import idb
 
 
-def test_issue32():
+def test_issue30():
     '''
     demonstrate get_func_cmt().
     see github issue #30 for the backstory.

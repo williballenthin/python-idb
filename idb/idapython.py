@@ -1391,6 +1391,33 @@ class ida_funcs:
             else:
                 return func
 
+    def get_func_cmt(self, ea, repeatable):
+        # function comments are stored on the `$ funcs` netnode
+        # tag is either `R` or `C`.
+        # index is effective address of the function.
+        # for example::
+        #
+        #     nodeid: ff00000000000027 tag: C index: 0x401598
+        #     00000000: 72 65 70 20 63 6D 74 00                           rep cmt.
+        #     --
+        #     nodeid: ff00000000000027 tag: N index: None
+        #     00000000: 24 20 66 75 6E 63 73                              $ funcs
+        #     --
+        #     nodeid: ff00000000000027 tag: R index: 0x401598
+        #     00000000: 72 65 70 20 63 6D 74 00                           rep cmt.
+        #
+        # i think its a bug that when you set a repeatable function via the IDA UI,
+        # it also sets a local function comment.
+        nn = self.api.ida_netnode.netnode('$ funcs')
+        try:
+            if repeatable:
+                tag = 'R'
+            else:
+                tag = 'C'
+            return nn.supstr(tag=tag, index=ea)
+        except KeyError:
+            return ''
+
 
 class BasicBlock(object):
     '''
