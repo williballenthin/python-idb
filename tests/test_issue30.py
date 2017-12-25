@@ -16,5 +16,5 @@ def test_issue30():
 
         assert api.idc.GetCommentEx(0x401598, 0) == 'local cmt'
         assert api.idc.GetCommentEx(0x401598, 1) == ''
-        assert api.idc.get_func_cmt(0x401598, 0) == 'rep cmt'
-        assert api.idc.get_func_cmt(0x401598, 1) == 'rep cmt'
+        assert api.ida_funcs.get_func_cmt(0x401598, 0) == 'rep cmt'
+        assert api.ida_funcs.get_func_cmt(0x401598, 1) == 'rep cmt'
