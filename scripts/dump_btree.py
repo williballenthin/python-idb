@@ -46,7 +46,7 @@ def main(argv=None):
         while True:
             if cursor.key[0] == 0x2E:
                 try:
-                    k = idb.netnode.parse_key(cursor.key)
+                    k = idb.netnode.parse_key(cursor.key, wordsize=db.wordsize)
                 except UnicodeDecodeError:
                     hexdump.hexdump(cursor.key)
                 else:
