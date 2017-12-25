@@ -117,6 +117,7 @@ def kern32_test(specs=None):
         expected = spec[2]
 
         sversion = {
+            500: 'v5.0',
             695: 'v6.95',
             700: 'v7.0b',
         }[version]

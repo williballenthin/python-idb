@@ -508,7 +508,6 @@ class idc:
 
     def SegName(self, ea):
         segstrings = idb.analysis.SegStrings(self.idb).strings
-        segs = idb.analysis.Segments(self.idb).segments
         return segstrings[self._get_segment(ea).name_index]
 
     def GetSegmentAttr(self, ea, attr):
@@ -937,7 +936,6 @@ class idc:
             name=name,
             params=', '.join(params),
         )
-
 
     @staticmethod
     def hasValue(flags):
@@ -1817,4 +1815,3 @@ class IDAPython:
         self.ida_netnode = ida_netnode(db, self)
         self.ida_nalt = ida_nalt(db, self)
         self.ida_entry = ida_entry(db, self)
-

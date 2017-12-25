@@ -8,7 +8,6 @@ import six
 logger = logging.getLogger(__name__)
 
 
-
 def uint32(i):
     '''
     Convert the given signed number into its 32-bit little endian unsigned number value.
