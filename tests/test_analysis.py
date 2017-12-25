@@ -573,7 +573,7 @@ def test_imports(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test()
-def test_entrypoints(kernel32_idb, version, bitness, expected):
+def test_entrypoints2(kernel32_idb, version, bitness, expected):
     entrypoints = list(idb.analysis.enumerate_entrypoints(kernel32_idb))
 
     assert len(entrypoints) == 1572
