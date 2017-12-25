@@ -554,12 +554,10 @@ def test_comments(kernel32_idb, version, bitness, expected):
     assert api.ida_bytes.get_cmt(0x689023b4, True) == 'jumptable 6892FF97 default case'
 
     assert api.idc.Comment(0x6890103c) == 'Flags'
-    with pytest.raises(KeyError):
-        _ = api.idc.RptCmt(0x6890103c)
+    assert api.idc.RptCmt(0x6890103c) == ''
 
     assert api.idc.RptCmt(0x689023b4) == 'jumptable 6892FF97 default case'
-    with pytest.raises(KeyError):
-        _ = api.idc.Comment(0x689023b4)
+    assert api.idc.Comment(0x689023b4) == ''
 
     assert api.idc.GetCommentEx(0x6890103c, False) == 'Flags'
     assert api.idc.GetCommentEx(0x689023b4, True) == 'jumptable 6892FF97 default case'
@@ -584,19 +582,8 @@ def test_all_comments(kernel32_idb, version, bitness, expected):
         if not api.ida_bytes.has_cmt(flags):
             continue
 
-        try:
-            regcmt = api.ida_bytes.get_cmt(ea, False)
-        except KeyError:
-            regcmt = ''
-        else:
-            regcmts.append(regcmt)
-
-        try:
-            repcmt = api.ida_bytes.get_cmt(ea, True)
-        except KeyError:
-            repcmt = ''
-        else:
-            repcmts.append(repcmt)
+        regcmts.append(api.ida_bytes.get_cmt(ea, False))
+        repcmts.append(api.ida_bytes.get_cmt(ea, True))
 
     assert len(regcmts), len(repcmnts) == expected
 
