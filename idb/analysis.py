@@ -295,7 +295,7 @@ class _Analysis(object):
           KeyError: if the field does not exist.
         '''
         if key not in self._fields_by_name:
-            return super(Analysis, self).__getattr__(key)
+            return super(_Analysis, self).__getattribute__(key)
 
         field = self._fields_by_name[key]
         if field.index in VARIABLE_INDEXES:
