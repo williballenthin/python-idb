@@ -520,22 +520,6 @@ User = Analysis('$ user1', [
 ])
 
 
-# '$ entry points' maps from ordinal/address to function name.
-#
-# supvals:
-#   format1
-#     index: export ordinal
-#     value: function name
-#   format2
-#     index: EA
-#     value: function name
-EntryPoints = Analysis('$ entry points', [
-    Field('ordinals',  'S', NUMBERS, idb.netnode.as_string),
-    Field('addresses', 'S', ADDRESSES, idb.netnode.as_string),
-    Field('all',       'S', ALL, idb.netnode.as_string),
-])
-
-
 # this works for v6.95.
 # for v7.0b, the data looks something like:
 #
