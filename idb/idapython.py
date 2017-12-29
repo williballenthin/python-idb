@@ -445,6 +445,8 @@ class idc:
             # segment color
             self.SEGATTR_COLOR   = 100
 
+            self.BADADDR = 0xFFFFFFFF
+
         elif self.idb.wordsize == 8:
             self.FUNCATTR_START   = 0
             self.FUNCATTR_END     = 8
@@ -475,6 +477,8 @@ class idc:
             self.SEGATTR_GS      = 96
             self.SEGATTR_TYPE    = 184
             self.SEGATTR_COLOR   = 188
+
+            self.BADADDR = 0xFFFFFFFFFFFFFFFF
         else:
             raise RuntimeError('unexpected wordsize')
 
