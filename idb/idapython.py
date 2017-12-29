@@ -508,7 +508,10 @@ class idc:
 
         for i, seg in enumerate(segs):
             if seg.startEA <= ea < seg.endEA:
-                return segs[i + 1].startEA
+                if i < len(segs) - 1:
+                    return segs[i + 1].startEA
+                else:
+                    return self.BADADDR
 
     def SegName(self, ea):
         segstrings = idb.analysis.SegStrings(self.idb).strings
