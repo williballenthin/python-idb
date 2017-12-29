@@ -609,8 +609,17 @@ class idc:
                 raise IndexError((ea, ea + size))
 
         ret = []
-        for i in range(ea, ea + size):
-            ret.append(self.IdbByte(i))
+        try:
+            for i in range(ea, ea + size):
+                ret.append(self.IdbByte(i))
+        except KeyError:
+            # we have already verified that that the requested range falls within a Segment.
+            # however, the underlying ID1 section may be smaller than the Segment.
+            # so, we pad the Segment with NULL bytes.
+            # this is consistent with the IDAPython behavior.
+            # see github issue #29.
+            ret.extend([0x0 for _ in  range(size - len(ret))])
+
         if six.PY2:
             return ''.join(map(chr, ret))
         else:
