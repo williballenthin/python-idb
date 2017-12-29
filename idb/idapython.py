@@ -445,6 +445,8 @@ class idc:
             # segment color
             self.SEGATTR_COLOR   = 100
 
+            self.BADADDR = 0xFFFFFFFF
+
         elif self.idb.wordsize == 8:
             self.FUNCATTR_START   = 0
             self.FUNCATTR_END     = 8
@@ -475,6 +477,8 @@ class idc:
             self.SEGATTR_GS      = 96
             self.SEGATTR_TYPE    = 184
             self.SEGATTR_COLOR   = 188
+
+            self.BADADDR = 0xFFFFFFFFFFFFFFFF
         else:
             raise RuntimeError('unexpected wordsize')
 
@@ -504,7 +508,10 @@ class idc:
 
         for i, seg in enumerate(segs):
             if seg.startEA <= ea < seg.endEA:
-                return segs[i + 1].startEA
+                if i < len(segs) - 1:
+                    return segs[i + 1].startEA
+                else:
+                    return self.BADADDR
 
     def SegName(self, ea):
         segstrings = idb.analysis.SegStrings(self.idb).strings
@@ -608,8 +615,17 @@ class idc:
                 raise IndexError((ea, ea + size))
 
         ret = []
-        for i in range(ea, ea + size):
-            ret.append(self.IdbByte(i))
+        try:
+            for i in range(ea, ea + size):
+                ret.append(self.IdbByte(i))
+        except KeyError:
+            # we have already verified that that the requested range falls within a Segment.
+            # however, the underlying ID1 section may be smaller than the Segment.
+            # so, we pad the Segment with NULL bytes.
+            # this is consistent with the IDAPython behavior.
+            # see github issue #29.
+            ret.extend([0x0 for _ in  range(size - len(ret))])
+
         if six.PY2:
             return ''.join(map(chr, ret))
         else:
