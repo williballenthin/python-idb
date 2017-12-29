@@ -15,7 +15,7 @@ def test_issue29():
         api = idb.IDAPython(db)
 
         seg = api.idc.FirstSeg()
-        while seg:
+        while seg != api.idc.BADADDR:
             name = api.idc.SegName(seg)
             start = api.idc.SegStart(seg)
             end = api.idc.SegEnd(seg)
