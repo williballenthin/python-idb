@@ -491,6 +491,7 @@ class IdaInfo(vstruct.VStruct):
 
 
 Root = Analysis('Root Node', [
+    Field('imagebase',      'A', -6,       idb.netnode.as_int),
     Field('crc',            'A', -5,       idb.netnode.as_int),
     Field('open_count',     'A', -4,       idb.netnode.as_int),
     Field('created',        'A', -2,       as_unix_timestamp),
