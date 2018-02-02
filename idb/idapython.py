@@ -1324,6 +1324,9 @@ class ida_nalt:
             funcname = nn.supstr(funcaddr)
             if not py_cb(funcaddr, funcname, None):
                 return
+    
+    def get_imagebase(self):
+        return idb.analysis.Root(self.idb).imagebase
 
         # TODO: where to fetch ordinal?
 
