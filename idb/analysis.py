@@ -918,14 +918,14 @@ Xref = namedtuple('Xref', ['src', 'dst', 'type'])
 
 
 def _get_xrefs(db, tag, src=None, dst=None, types=None):
-    if not src and not dst:
+    if src is None or dst is None:
         raise ValueError('one of src or dst must be provided')
 
-    nn = idb.netnode.Netnode(db, src or dst)
+    nn = idb.netnode.Netnode(db, src if dst is None else dst)
     try:
         for entry in nn.charentries(tag=tag):
             if (types and entry.value in types) or (not types):
-                if src:
+                if src is not None:
                     yield Xref(src, entry.parsed_key.index, entry.value)
                 else:  # have dst
                     yield Xref(entry.parsed_key.index, dst, entry.value)
