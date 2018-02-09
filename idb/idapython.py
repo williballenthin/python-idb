@@ -552,10 +552,16 @@ class idc:
         return segs[-1].endEA
 
     def GetFlags(self, ea):
-        return self.idb.id1.get_flags(ea)
+        try:
+            return self.idb.id1.get_flags(ea)
+        except KeyError:
+            return None
+            
 
     def IdbByte(self, ea):
         flags = self.GetFlags(ea)
+        if flags is None:
+            raise KeyError(ea)
         if self.hasValue(flags):
             return flags & FLAGS.MS_VAL
         else:
@@ -563,21 +569,25 @@ class idc:
 
     def Head(self, ea):
         flags = self.GetFlags(ea)
+        if flags is None:
+            raise KeyError(ea)
         while not self.api.ida_bytes.isHead(flags):
             ea -= 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
+            if flags is None:
+                raise KeyError(ea)
         return ea
 
     def ItemSize(self, ea):
         oea = ea
         flags = self.GetFlags(ea)
-        if not self.api.ida_bytes.isHead(flags):
+        if flags is None or not self.api.ida_bytes.isHead(flags):
             raise ValueError('ItemSize must only be called on a head address.')
 
         ea += 1
         flags = self.GetFlags(ea)
-        while not self.api.ida_bytes.isHead(flags):
+        while flags is not None and not self.api.ida_bytes.isHead(flags):
             ea += 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
@@ -586,7 +596,7 @@ class idc:
     def NextHead(self, ea):
         ea += 1
         flags = self.GetFlags(ea)
-        while not self.api.ida_bytes.isHead(flags):
+        while flags is not None and not self.api.ida_bytes.isHead(flags):
             ea += 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
@@ -774,7 +784,7 @@ class idc:
             'msp430':    None,  # - Texas Instruments MSP430
         }
 
-        procname = self.api.idaapi.get_inf_structure().procname
+        procname = self.api.idaapi.get_inf_structure().procname.lower()
         cs_arch = PROC_CS_MAP.get(procname)
         if cs_arch is None:
             raise NotImplementedError('disassembly not supported on arch: ' + procname)
@@ -1441,10 +1451,11 @@ class BasicBlock(object):
     interface extracted from: https://raw.githubusercontent.com/gabtremblay/idabearclean/master/idaapi.py
     '''
 
-    def __init__(self, flowchart, startEA, endEA):
+    def __init__(self, flowchart, startEA, lastInstEA, endEA):
         self.fc = flowchart
         self.id = startEA
         self.startEA = startEA
+        self.lastInstEA = lastInstEA
         self.endEA = endEA
         # types are declared here:
         #  https://www.hex-rays.com/products/ida/support/sdkdoc/gdl_8hpp.html#afa6fb2b53981d849d63273abbb1624bd
@@ -1527,6 +1538,9 @@ class idaapi:
             ea = self.api.idc.NextHead(ea)
 
             flags = self.api.idc.GetFlags(ea)
+            if flags is None:
+                return last_ea
+
             if self.api.ida_bytes.hasRef(flags):
                 return last_ea
 
@@ -1571,7 +1585,7 @@ class idaapi:
         # need to fixup the return types, though.
 
         flags = self.api.idc.GetFlags(ea)
-        if self.api.ida_bytes.isFlow(flags):
+        if flags is not None and self.api.ida_bytes.isFlow(flags):
             # prev instruction fell through to this insn
             yield idb.analysis.Xref(self.api.idc.PrevHead(ea), ea, idaapi.fl_F)
 
@@ -1587,7 +1601,7 @@ class idaapi:
 
         nextea = self.api.idc.NextHead(ea)
         nextflags = self.api.idc.GetFlags(nextea)
-        if self.api.ida_bytes.isFlow(nextflags):
+        if nextflags is not None and self.api.ida_bytes.isFlow(nextflags):
             # instruction falls through to next insn
             yield idb.analysis.Xref(ea, nextea, idaapi.fl_F)
 
@@ -1638,11 +1652,12 @@ class idaapi:
                 # map from startEA to set of startEA
                 succs = collections.defaultdict(lambda: set([]))
 
-                endEA = api.idaapi._find_bb_end(ea)
-                logger.debug('found end. %x -> %x', ea, endEA)
-                block = BasicBlock(self, ea, endEA)
+                lastInstEA = api.idaapi._find_bb_end(ea)
+                
+                logger.debug('found end. %x -> %x', ea, lastInstEA)
+                block = BasicBlock(self, ea, lastInstEA, api.idc.NextHead(lastInstEA))
                 bbs_by_start[ea] = block
-                bbs_by_end[endEA] = block
+                bbs_by_end[lastInstEA] = block
 
                 q = [block]
 
@@ -1664,9 +1679,9 @@ class idaapi:
                     for xref in api.idaapi._get_flow_preds(block.startEA):
                         if xref.src not in bbs_by_end:
                             pred_start = api.idaapi._find_bb_start(xref.src)
-                            pred = BasicBlock(self, pred_start, xref.src)
+                            pred = BasicBlock(self, pred_start, xref.src, api.idc.NextHead(xref.src))
                             bbs_by_start[pred.startEA] = pred
-                            bbs_by_end[pred.endEA] = pred
+                            bbs_by_end[pred.lastInstEA] = pred
                         else:
                             pred = bbs_by_end[xref.src]
 
@@ -1676,12 +1691,12 @@ class idaapi:
                         succs[pred.startEA].add(block.startEA)
                         q.append(pred)
 
-                    for xref in api.idaapi._get_flow_succs(block.endEA):
+                    for xref in api.idaapi._get_flow_succs(block.lastInstEA):
                         if xref.dst not in bbs_by_start:
                             succ_end = api.idaapi._find_bb_end(xref.dst)
-                            succ = BasicBlock(self, xref.dst, succ_end)
+                            succ = BasicBlock(self, xref.dst, succ_end, api.idc.NextHead(succ_end))
                             bbs_by_start[succ.startEA] = succ
-                            bbs_by_end[succ.endEA] = succ
+                            bbs_by_end[succ.lastInstEA] = succ
                         else:
                             succ = bbs_by_start[xref.dst]
 
@@ -1759,7 +1774,7 @@ class idautils:
     def CodeRefsTo(self, ea, flow):
         if flow:
             flags = self.api.idc.GetFlags(ea)
-            if self.api.ida_bytes.isFlow(flags):
+            if flags is not None and self.api.ida_bytes.isFlow(flags):
                 # prev instruction fell through to this insn
                 yield self.api.idc.PrevHead(ea)
 

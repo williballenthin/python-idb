@@ -246,8 +246,10 @@ class Netnode(object):
           Entry: an entry (with key and value) under the given tag in this netnode.
         '''
         key = make_key(self.nodeid, tag, wordsize=self.wordsize)
-
-        cursor = self.idb.id0.find_prefix(key)
+        try:
+            cursor = self.idb.id0.find_prefix(key)
+        except KeyError:
+            return
         while bytes(cursor.key).startswith(key):
             parsed_key = parse_key(cursor.key, wordsize=self.idb.wordsize)
             yield Entry(cursor.key, parsed_key, cursor.value)
