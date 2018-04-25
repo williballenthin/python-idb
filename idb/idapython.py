@@ -678,14 +678,14 @@ class idc:
                 dis = self._load_dis(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
         elif procname == "mips":
             if bitness == 32:
-                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS32 | CS_MODE_BIG_ENDIAN)
+                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS32 | capstone.CS_MODE_BIG_ENDIAN)
             elif bitness == 64:
-                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS64 | CS_MODE_BIG_ENDIAN)
+                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS64 | capstone.CS_MODE_BIG_ENDIAN)
         elif procname == "mipsel":
             if bitness == 32:
-                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS32 | CS_MODE_LITTLEN_ENDIAN)
+                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS32 | capstone.CS_MODE_LITTLEN_ENDIAN)
             elif bitness == 64:
-                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS64 | CS_MODE_LITTLEN_ENDIAN)
+                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS64 | capstone.CS_MODE_LITTLEN_ENDIAN)
 
         if dis is None:
             raise NotImplementedError("unknown arch %s bit:%s inst_len:%d" % (procname, bitness, len(inst_buf)))
