@@ -377,6 +377,7 @@ class idc:
         self.bit_dis = None
         # map from tuple (segment start, end address) to capstone disassembler instance
         self.seg_dis = None
+    
 
         # apparently this enum changes with bitness.
         # this is annoying.
@@ -552,10 +553,16 @@ class idc:
         return segs[-1].endEA
 
     def GetFlags(self, ea):
-        return self.idb.id1.get_flags(ea)
+        try:
+            return self.idb.id1.get_flags(ea)
+        except KeyError:
+            return None
+            
 
     def IdbByte(self, ea):
         flags = self.GetFlags(ea)
+        if flags is None:
+            raise KeyError(ea)
         if self.hasValue(flags):
             return flags & FLAGS.MS_VAL
         else:
@@ -563,21 +570,25 @@ class idc:
 
     def Head(self, ea):
         flags = self.GetFlags(ea)
+        if flags is None:
+            raise KeyError(ea)
         while not self.api.ida_bytes.isHead(flags):
             ea -= 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
+            if flags is None:
+                raise KeyError(ea)
         return ea
 
     def ItemSize(self, ea):
         oea = ea
         flags = self.GetFlags(ea)
-        if not self.api.ida_bytes.isHead(flags):
+        if flags is None or not self.api.ida_bytes.isHead(flags):
             raise ValueError('ItemSize must only be called on a head address.')
 
         ea += 1
         flags = self.GetFlags(ea)
-        while not self.api.ida_bytes.isHead(flags):
+        while flags is not None and not self.api.ida_bytes.isHead(flags):
             ea += 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
@@ -586,7 +597,7 @@ class idc:
     def NextHead(self, ea):
         ea += 1
         flags = self.GetFlags(ea)
-        while not self.api.ida_bytes.isHead(flags):
+        while flags is not None and not self.api.ida_bytes.isHead(flags):
             ea += 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
@@ -631,189 +642,57 @@ class idc:
         else:
             return bytes(ret)
 
-    def _load_dis(self):
-        if self.seg_dis is not None:
-            return
-        self.bit_dis = {}
-        self.seg_dis = {}
-
+    def _load_dis(self, arch, mode):
         import capstone
+        if self.bit_dis is None:
+            self.bit_dis = {}
+        if self.bit_dis.get((arch, mode)) is None:
+            r = capstone.Cs(arch, mode)
+            self.bit_dis[(arch, mode)] = r
+        return self.bit_dis[(arch, mode)]
 
-        PROC_CS_MAP = {
-            # this is probably the only platform that is thoroughly tested in python-idb.
-            # at least, today.
-            'metapc':   capstone.CS_ARCH_X86,    # - Disassemble all IBMPC opcodes
-
-            # the rest of these are probably pretty much untested.
-            '8086':     capstone.CS_ARCH_X86,    # - Intel 8086
-            '80286r':   capstone.CS_ARCH_X86,    # - Intel 80286 real mode
-            '80286p':   capstone.CS_ARCH_X86,    # - Intel 80286 protected mode
-            '80386r':   capstone.CS_ARCH_X86,    # - Intel 80386 real mode
-            '80386p':   capstone.CS_ARCH_X86,    # - Intel 80386 protected mode
-            '80486r':   capstone.CS_ARCH_X86,    # - Intel 80486 real mode
-            '80486p':   capstone.CS_ARCH_X86,    # - Intel 80486 protected mode
-            '80586r':   capstone.CS_ARCH_X86,    # - Intel Pentium & MMX real mode
-            '80586p':   capstone.CS_ARCH_X86,    # - Intel Pentium & MMX prot mode
-            '80686p':   capstone.CS_ARCH_X86,    # - Intel Pentium Pro & MMX
-            'k62':      capstone.CS_ARCH_X86,    # - AMD K6-2 with 3DNow!
-            'p2':       capstone.CS_ARCH_X86,    # - Intel Pentium II
-            'p3':       capstone.CS_ARCH_X86,    # - Intel Pentium III
-            'athlon':   capstone.CS_ARCH_X86,    # - AMD K7
-            'p4':       capstone.CS_ARCH_X86,    # - Intel Pentium 4
-            '8085':     capstone.CS_ARCH_X86,    # - Intel 8085
-            'ppc':      capstone.CS_ARCH_PPC,    # - PowerPC big endian
-            'ppcl':     capstone.CS_ARCH_PPC,    # - PowerPC little endian
-            'arm':      capstone.CS_ARCH_ARM,    # - ARM little endian
-            'armb':     capstone.CS_ARCH_ARM,    # - ARM big endian
-            'mipsl':    capstone.CS_ARCH_MIPS,   # - MIPS little endian
-            'mipsb':    capstone.CS_ARCH_MIPS,   # - MIPS big endian
-            'mipsrl':   capstone.CS_ARCH_MIPS,   # - MIPS & RSP little
-            'mipsr':    capstone.CS_ARCH_MIPS,   # - MIPS & RSP big
-            'r5900l':   capstone.CS_ARCH_MIPS,   # - MIPS R5900 little
-            'r5900r':   capstone.CS_ARCH_MIPS,   # - MIPS R5900 big
-            'sparcb':   capstone.CS_ARCH_SPARC,  # - SPARC big endian
-            'sparcl':   capstone.CS_ARCH_SPARC,  # - SPARC little endian
-
-            # i don't think any of the rest of these are supported by capstone today
-            'z80':       None,  # - Zilog 80
-            'z180':      None,  # - Zilog 180
-            'z380':      None,  # - Zilog 380
-            '64180':     None,  # - Hitachi HD64180
-            'gb':        None,  # - Gameboy
-            'z8':        None,  # - Zilog 8
-            '860xr':     None,  # - Intel 860 XR
-            '860xp':     None,  # - Intel 860 XP
-            '8051':      None,  # - Intel 8051
-            '80196':     None,  # - Intel 80196
-            '80196NP':   None,  # - Intel 80196NP, NU
-            'm6502':     None,  # - MOS 6502
-            'm65c02':    None,  # - MOS 65c02
-            'pdp11':     None,  # - DEC PDP/11
-            '68000':     None,  # - Motorola MC68000
-            '68010':     None,  # - Motorola MC68010
-            '68020':     None,  # - Motorola MC68020
-            '68030':     None,  # - Motorola MC68030
-            '68040':     None,  # - Motorola MC68040
-            '68330':     None,  # - Motorola CPU32 (68330)
-            '68882':     None,  # - Motorola MC68020 with MC68882
-            '68851':     None,  # - Motorola MC68020 with MC68851
-            '68020EX':   None,  # - Motorola MC68020 with both
-            'colfire':   None,  # - Motorola ColdFire
-            '68K':       None,  # - Motorola MC680x0 all opcodes
-            '6800':      None,  # - Motorola MC68HC00
-            '6801':      None,  # - Motorola MC68HC01
-            '6803':      None,  # - Motorola MC68HC03
-            '6301':      None,  # - Hitachi HD 6301
-            '6303':      None,  # - Hitachi HD 6303
-            '6805':      None,  # - Motorola MC68HC05
-            '6808':      None,  # - Motorola MC68HC08
-            '6809':      None,  # - Motorola MC68HC09
-            '6811':      None,  # - Motorola MC68HC11
-            '6812':      None,  # - Motorola MC68HC12
-            'hcs12':     None,  # - Motorola MC68HCS12
-            '6816':      None,  # - Motorola MC68HC16
-            'java':      None,  # - java
-            'tms320c2':  None,  # - TMS320C2x series
-            'tms320c5':  None,  # - TMS320C5x series
-            'tms320c6':  None,  # - TMS320C6x series
-            'tms320c3':  None,  # - TMS320C3x series
-            'tms32054':  None,  # - TMS320C54xx series
-            'tms32055':  None,  # - TMS320C55xx series
-            'sh3':       None,  # - Renesas SH-3 (little endian)
-            'sh3b':      None,  # - Renesas SH-3 (big endian)
-            'sh4':       None,  # - Renesas SH-4 (little endian)
-            'sh4b':      None,  # - Renesas SH-4 (big endian)
-            'sh2a':      None,  # - Renesas SH-2A (big endian)
-            'avr':       None,  # - ATMEL AVR                      (ATMEL family)
-            'h8300':     None,  # - H8/300x in normal mode
-            'h8300a':    None,  # - H8/300x in advanced mode
-            'h8s300':    None,  # - H8S in normal mode
-            'h8s300a':   None,  # - H8S in advanced mode
-            'h8500':     None,  # - H8/500                         (Hitachi H8/500 family)
-            'pic12cxx':  None,  # - Microchip PIC 12-bit (12xxx)
-            'pic16cxx':  None,  # - Microchip PIC 14-bit (16xxx)
-            'pic18cxx':  None,  # - Microchip PIC 16-bit (18xxx)
-            'alphab':    None,  # - DEC Alpha big endian
-            'alphal':    None,  # - DEC Alpha little endian
-            'hppa':      None,  # - HP PA-RISC big endian
-            'dsp56k':    None,  # - Motorola DSP 5600x
-            'dsp561xx':  None,  # - Motorola DSP 561xx
-            'dsp563xx':  None,  # - Motorola DSP 563xx
-            'dsp566xx':  None,  # - Motorola DSP 566xx
-            'c166':      None,  # - Siemens C166
-            'c166v1':    None,  # - Siemens C166 v1 family
-            'c166v2':    None,  # - Siemens C166 v2 family
-            'st10':      None,  # - SGS-Thomson ST10
-            'super10':   None,  # - Super10
-            'st20':      None,  # - SGS-Thomson ST20/C1
-            'st20c4':    None,  # - SGS-Thomson ST20/C2-C4
-            'st7':       None,  # - SGS-Thomson ST7
-            'ia64l':     None,  # - Intel Itanium little endian
-            'ia64b':     None,  # - Intel Itanium big endian
-            'cli':       None,  # - Microsoft.Net platform
-            'net':       None,  # - Microsoft.Net platform (alias)
-            'i960l':     None,  # - Intel 960 little endian
-            'i960b':     None,  # - Intel 960 big endian
-            'f2mc16l':   None,  # - Fujitsu F2MC-16L
-            'f2mc16lx':  None,  # - Fujitsu F2MC-16LX
-            '78k0':      None,  # - NEC 78k/0
-            '78k0s':     None,  # - NEC 78k/0s
-            'm740':      None,  # - Mitsubishi 8-bit
-            'm7700':     None,  # - Mitsubishi 16-bit
-            'm7750':     None,  # - Mitsubishi 16-bit
-            'm32r':      None,  # - Mitsubishi 32-bit
-            'm32rx':     None,  # - Mitsubishi 32-bit extended
-            'st9':       None,  # - STMicroelectronics ST9+
-            'fr':        None,  # - Fujitsu FR family
-            'm7900':     None,  # - Mitsubishi M7900
-            'kr1878':    None,  # - Angstrem KR1878
-            'ad218x':    None,  # - Analog Devices ADSP
-            'oakdsp':    None,  # - Atmel OAK DSP
-            'tricore':   None,  # - Infineon Tricore
-            'ebc':       None,  # - EFI Bytecode
-            'msp430':    None,  # - Texas Instruments MSP430
-        }
-
-        procname = self.api.idaapi.get_inf_structure().procname
-        cs_arch = PROC_CS_MAP.get(procname)
-        if cs_arch is None:
-            raise NotImplementedError('disassembly not supported on arch: ' + procname)
-
-        for seg in idb.analysis.Segments(self.idb).segments.values():
-            seg_range = (seg.startEA, seg.endEA)
-            if seg.bitness == 0:
-                if 16 not in self.bit_dis:
-                    self.bit_dis[16] = capstone.Cs(cs_arch, capstone.CS_MODE_16)
-                    self.bit_dis[16].detail = True
-                self.seg_dis[seg_range] = self.bit_dis[16]
-            elif seg.bitness == 1:
-                if 32 not in self.bit_dis:
-                    self.bit_dis[32] = capstone.Cs(cs_arch, capstone.CS_MODE_32)
-                    self.bit_dis[32].detail = True
-                self.seg_dis[seg_range] = self.bit_dis[32]
-            elif seg.bitness == 2:
-                if 64 not in self.bit_dis:
-                    self.bit_dis[64] = capstone.Cs(cs_arch, capstone.CS_MODE_64)
-                    self.bit_dis[64].detail = True
-                self.seg_dis[seg_range] = self.bit_dis[64]
-            else:
-                raise NotImplementedError('unknown bitness: %d' % (seg.bitness))
 
     def _disassemble(self, ea):
+        import capstone
+
         size = self.ItemSize(ea)
-        buf = self.GetManyBytes(ea, size)
-        self._load_dis()
+        inst_buf = self.GetManyBytes(ea, size)
+        segment = self._get_segment(ea)
+        bitness = 16 << segment.bitness# 16, 32, 64
+        procname = self.api.idaapi.get_inf_structure().procname.lower()
 
         dis = None
-        for (seg_start, seg_end), dis in self.seg_dis.items():
-            if seg_start <= ea < seg_end:
-                break
+        if procname == "arm" and bitness == 64:
+            dis = self._load_dis(capstone.CS_ARCH_ARM64, capstone.CS_MODE_ARM)
+        elif procname == "arm" and bitness == 32:
+            if size == 2:
+                dis = self._load_dis(capstone.CS_ARCH_ARM, capstone.CS_MODE_THUMB)
+            else:
+                dis = self._load_dis(capstone.CS_ARCH_ARM, capstone.CS_MODE_ARM)
+        elif procname in ['metapc', '8086', '80286r', '80286p', '80386r', '80386p','80486r', '80486p', '80586r', '80586p', '80686p', 'k62', 'p2', 'p3', 'athlon', 'p4', '8085']:
+            if bitness == 16:
+                dis = self._load_dis(capstone.CS_ARCH_X86, capstone.CS_MODE_16)
+            elif bitness == 32:
+                dis = self._load_dis(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
+            elif bitness == 64:
+                dis = self._load_dis(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
+        elif procname == "mipsb":
+            if bitness == 32:
+                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS32 | capstone.CS_MODE_BIG_ENDIAN)
+            elif bitness == 64:
+                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS64 | capstone.CS_MODE_BIG_ENDIAN)
+        elif procname == "mipsl":
+            if bitness == 32:
+                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS32 | capstone.CS_MODE_LITTLE_ENDIAN)
+            elif bitness == 64:
+                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS64 | capstone.CS_MODE_LITTLE_ENDIAN)
 
         if dis is None:
-            raise ValueError('failed to find ea in valid segment: ' + hex(ea))
-
+            raise NotImplementedError("unknown arch %s bit:%s inst_len:%d" % (procname, bitness, len(inst_buf)))
+        dis.detail = True
+                
         try:
-            op = next(dis.disasm(buf, ea))
+            op = next(dis.disasm(inst_buf, ea))
         except StopIteration:
             raise RuntimeError('failed to disassemble %s' % (hex(ea)))
         else:
@@ -1441,10 +1320,11 @@ class BasicBlock(object):
     interface extracted from: https://raw.githubusercontent.com/gabtremblay/idabearclean/master/idaapi.py
     '''
 
-    def __init__(self, flowchart, startEA, endEA):
+    def __init__(self, flowchart, startEA, lastInstEA, endEA):
         self.fc = flowchart
         self.id = startEA
         self.startEA = startEA
+        self.lastInstEA = lastInstEA
         self.endEA = endEA
         # types are declared here:
         #  https://www.hex-rays.com/products/ida/support/sdkdoc/gdl_8hpp.html#afa6fb2b53981d849d63273abbb1624bd
@@ -1527,6 +1407,9 @@ class idaapi:
             ea = self.api.idc.NextHead(ea)
 
             flags = self.api.idc.GetFlags(ea)
+            if flags is None:
+                return last_ea
+
             if self.api.ida_bytes.hasRef(flags):
                 return last_ea
 
@@ -1571,7 +1454,7 @@ class idaapi:
         # need to fixup the return types, though.
 
         flags = self.api.idc.GetFlags(ea)
-        if self.api.ida_bytes.isFlow(flags):
+        if flags is not None and self.api.ida_bytes.isFlow(flags):
             # prev instruction fell through to this insn
             yield idb.analysis.Xref(self.api.idc.PrevHead(ea), ea, idaapi.fl_F)
 
@@ -1587,7 +1470,7 @@ class idaapi:
 
         nextea = self.api.idc.NextHead(ea)
         nextflags = self.api.idc.GetFlags(nextea)
-        if self.api.ida_bytes.isFlow(nextflags):
+        if nextflags is not None and self.api.ida_bytes.isFlow(nextflags):
             # instruction falls through to next insn
             yield idb.analysis.Xref(ea, nextea, idaapi.fl_F)
 
@@ -1638,11 +1521,12 @@ class idaapi:
                 # map from startEA to set of startEA
                 succs = collections.defaultdict(lambda: set([]))
 
-                endEA = api.idaapi._find_bb_end(ea)
-                logger.debug('found end. %x -> %x', ea, endEA)
-                block = BasicBlock(self, ea, endEA)
+                lastInstEA = api.idaapi._find_bb_end(ea)
+                
+                logger.debug('found end. %x -> %x', ea, lastInstEA)
+                block = BasicBlock(self, ea, lastInstEA, api.idc.NextHead(lastInstEA))
                 bbs_by_start[ea] = block
-                bbs_by_end[endEA] = block
+                bbs_by_end[lastInstEA] = block
 
                 q = [block]
 
@@ -1664,9 +1548,9 @@ class idaapi:
                     for xref in api.idaapi._get_flow_preds(block.startEA):
                         if xref.src not in bbs_by_end:
                             pred_start = api.idaapi._find_bb_start(xref.src)
-                            pred = BasicBlock(self, pred_start, xref.src)
+                            pred = BasicBlock(self, pred_start, xref.src, api.idc.NextHead(xref.src))
                             bbs_by_start[pred.startEA] = pred
-                            bbs_by_end[pred.endEA] = pred
+                            bbs_by_end[pred.lastInstEA] = pred
                         else:
                             pred = bbs_by_end[xref.src]
 
@@ -1676,12 +1560,12 @@ class idaapi:
                         succs[pred.startEA].add(block.startEA)
                         q.append(pred)
 
-                    for xref in api.idaapi._get_flow_succs(block.endEA):
+                    for xref in api.idaapi._get_flow_succs(block.lastInstEA):
                         if xref.dst not in bbs_by_start:
                             succ_end = api.idaapi._find_bb_end(xref.dst)
-                            succ = BasicBlock(self, xref.dst, succ_end)
+                            succ = BasicBlock(self, xref.dst, succ_end, api.idc.NextHead(succ_end))
                             bbs_by_start[succ.startEA] = succ
-                            bbs_by_end[succ.endEA] = succ
+                            bbs_by_end[succ.lastInstEA] = succ
                         else:
                             succ = bbs_by_start[xref.dst]
 
@@ -1759,7 +1643,7 @@ class idautils:
     def CodeRefsTo(self, ea, flow):
         if flow:
             flags = self.api.idc.GetFlags(ea)
-            if self.api.ida_bytes.isFlow(flags):
+            if flags is not None and self.api.ida_bytes.isFlow(flags):
                 # prev instruction fell through to this insn
                 yield self.api.idc.PrevHead(ea)
 

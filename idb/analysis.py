@@ -894,7 +894,10 @@ class Function:
 
     def get_stack_change_points(self):
         # ref: ida.wll@0x100793d0
-        v = self.netnode.supval(tag='S', index=0x1000)
+        try:
+            v = self.netnode.supval(tag='S', index=0x1000)
+        except KeyError:
+            return
         offset = self.nodeid
 
         if self.idb.wordsize == 4:
@@ -903,7 +906,6 @@ class Function:
             unpacker = unpack_dqs
         else:
             raise RuntimeError('unexpected wordsize')
-
         for (delta, change) in pairs(unpacker(v)):
             offset += delta
             if change & 1:
@@ -918,14 +920,14 @@ Xref = namedtuple('Xref', ['src', 'dst', 'type'])
 
 
 def _get_xrefs(db, tag, src=None, dst=None, types=None):
-    if not src and not dst:
+    if src is None and dst is None:
         raise ValueError('one of src or dst must be provided')
 
-    nn = idb.netnode.Netnode(db, src or dst)
+    nn = idb.netnode.Netnode(db, src if dst is None else dst)
     try:
         for entry in nn.charentries(tag=tag):
             if (types and entry.value in types) or (not types):
-                if src:
+                if src is not None:
                     yield Xref(src, entry.parsed_key.index, entry.value)
                 else:  # have dst
                     yield Xref(entry.parsed_key.index, dst, entry.value)

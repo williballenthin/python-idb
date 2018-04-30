@@ -258,9 +258,8 @@ def test_stack_change_points(kernel32_idb, version, bitness, expected):
     # .text:68901496 C3                                      retn
     # .text:68901496                         GetCurrentProcess endp
     GetCurrentProcess = idb.analysis.Function(kernel32_idb, 0x68901493)
-    with pytest.raises(KeyError):
-        # there are no stack change points in this function
-        assert list(GetCurrentProcess.get_stack_change_points()) == []
+    # there are no stack change points in this function
+    assert list(GetCurrentProcess.get_stack_change_points()) == []
 
 
 @kern32_test()
