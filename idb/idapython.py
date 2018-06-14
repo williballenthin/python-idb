@@ -930,6 +930,22 @@ class idc:
     def get_optype_flags1(flags):
         return flags & FLAGS.MS_1TYPE
 
+    def LineA(self, ea, num):
+        nn = self.api.ida_netnode.netnode(ea)
+        # 1000 looks like a magic number, and it sorta is.
+        # S-1000, 1001, 1002, ... are where anterior lines are
+        try:
+            return nn.supstr(tag='S', index=1000 + num)
+        except KeyError:
+            return ''
+
+    def LineB(self, ea, num):
+        nn = self.api.ida_netnode.netnode(ea)
+        try:
+            return nn.supstr(tag='S', index=2000 + num)
+        except KeyError:
+            return ''
+
 
 class ida_bytes:
     def __init__(self, db, api):

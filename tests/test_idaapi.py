@@ -703,3 +703,26 @@ def test_name(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     assert api.ida_bytes.has_name(api.ida_bytes.get_flags(0x689DB190)) == True
     assert api.ida_name.get_name(0x689DB190) == 'FinestResolution'
+
+
+def test_anterior_lines():
+    cd = os.path.dirname(__file__)
+    idbpath = os.path.join(cd, 'data', 'ant-post-comments', 'small.idb')
+
+    with idb.from_file(idbpath) as db:
+        api = idb.IDAPython(db)
+        assert api.idc.LineA(1, 0) == 'anterior line 1'
+        assert api.idc.LineA(1, 1) == 'anterior line 2'
+        assert api.idc.LineA(1, 2) == ''
+
+
+def test_posterior_lines():
+    cd = os.path.dirname(__file__)
+    idbpath = os.path.join(cd, 'data', 'ant-post-comments', 'small.idb')
+
+    with idb.from_file(idbpath) as db:
+        api = idb.IDAPython(db)
+        assert api.idc.LineB(1, 0) == 'posterior line 1'
+        assert api.idc.LineB(1, 1) == 'posterior line 2'
+        assert api.idc.LineB(1, 2) == ''
+
