@@ -42,10 +42,11 @@ def main(argv=None):
         logging.getLogger().setLevel(logging.INFO)
 
     with idb.from_file(args.idbpath) as db:
+        root = idb.analysis.Root(db)
         api = idb.IDAPython(db)
 
         for fva in api.idautils.Functions():
-            print('0x%x:%s' % (fva, api.idc.GetFunctionName(fva)))
+            print('%s:0x%x:%s' % (root.md5, fva, api.idc.GetFunctionName(fva)))
 
     return 0
 

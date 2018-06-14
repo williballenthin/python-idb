@@ -1735,6 +1735,9 @@ class idaapi:
     def get_inf_structure(self):
         return idb.analysis.Root(self.idb).idainfo
 
+    def get_imagebase(self):
+        return idb.analysis.Root(self.idb).imagebase
+
 
 class idautils:
     def __init__(self, db, api):
