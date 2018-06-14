@@ -377,7 +377,6 @@ class idc:
         self.bit_dis = None
         # map from tuple (segment start, end address) to capstone disassembler instance
         self.seg_dis = None
-    
 
         # apparently this enum changes with bitness.
         # this is annoying.
@@ -557,7 +556,6 @@ class idc:
             return self.idb.id1.get_flags(ea)
         except KeyError:
             return None
-            
 
     def IdbByte(self, ea):
         flags = self.GetFlags(ea)
@@ -690,7 +688,7 @@ class idc:
         if dis is None:
             raise NotImplementedError("unknown arch %s bit:%s inst_len:%d" % (procname, bitness, len(inst_buf)))
         dis.detail = True
-                
+
         try:
             op = next(dis.disasm(inst_buf, ea))
         except StopIteration:
