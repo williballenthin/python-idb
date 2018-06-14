@@ -1118,6 +1118,9 @@ class ida_bytes:
                 break
         return ea
 
+    def next_inited(self, ea, maxea):
+        return self.next_that(ea, maxea, lambda flags: ida_bytes.has_value(flags))
+
 
 class ida_nalt:
     def __init__(self, db, api):
