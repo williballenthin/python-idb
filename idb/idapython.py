@@ -1110,6 +1110,14 @@ class ida_bytes:
                 return i
         return self.api.idc.BADADDR
 
+    def next_not_tail(self, ea):
+        while True:
+            ea += 1
+            flags = self.get_flags(ea)
+            if not self.isTail(flags):
+                break
+        return ea
+
 
 class ida_nalt:
     def __init__(self, db, api):
