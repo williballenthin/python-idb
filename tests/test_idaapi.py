@@ -696,3 +696,10 @@ def test_multi_bitness():
         api = idb.IDAPython(db)
         assert api.idc.GetDisasm(0x0)    == 'xor\tdx, dx'    # 16-bit
         assert api.idc.GetDisasm(0x1000) == 'xor\tedx, edx'  # 32-bit
+
+
+@kern32_test()
+def test_name(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+    assert api.ida_bytes.has_name(api.ida_bytes.get_flags(0x689DB190)) == True
+    assert api.ida_name.get_name(0x689DB190) == 'FinestResolution'
