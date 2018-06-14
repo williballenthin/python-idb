@@ -950,6 +950,9 @@ class ida_bytes:
         except KeyError:
             return ''
 
+    def get_flags(self, ea):
+        return self.api.idc.GetFlags(ea)
+
     @staticmethod
     def isFunc(flags):
         return flags & FLAGS.MS_CODE == FLAGS.FF_FUNC
