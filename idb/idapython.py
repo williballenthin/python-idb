@@ -555,7 +555,7 @@ class idc:
         try:
             return self.idb.id1.get_flags(ea)
         except KeyError:
-            return None
+            return 0
 
     def IdbByte(self, ea):
         flags = self.GetFlags(ea)
