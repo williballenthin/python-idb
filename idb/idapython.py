@@ -970,7 +970,7 @@ class ida_bytes:
         return self.api.idc.GetFlags(ea)
 
     @staticmethod
-    def isFunc(flags):
+    def is_func(flags):
         return flags & FLAGS.MS_CODE == FLAGS.FF_FUNC
 
     @staticmethod
@@ -978,39 +978,39 @@ class ida_bytes:
         return flags & FLAGS.MS_CODE == FLAGS.FF_IMMD
 
     @staticmethod
-    def isCode(flags):
+    def is_code(flags):
         return flags & FLAGS.MS_CLS == FLAGS.FF_CODE
 
     @staticmethod
-    def isData(flags):
+    def is_data(flags):
         return flags & FLAGS.MS_CLS == FLAGS.FF_DATA
 
     @staticmethod
-    def isTail(flags):
+    def is_tail(flags):
         return flags & FLAGS.MS_CLS == FLAGS.FF_TAIL
 
     @staticmethod
-    def isNotTail(flags):
-        return not ida_bytes.isTail(flags)
+    def is_not_tail(flags):
+        return not ida_bytes.is_tail(flags)
 
     @staticmethod
-    def isUnknown(flags):
+    def is_unknown(flags):
         return flags & FLAGS.MS_CLS == FLAGS.FF_UNK
 
     @staticmethod
-    def isHead(flags):
+    def is_head(flags):
         return ida_bytes.isCode(flags) or ida_bytes.isData(flags)
 
     @staticmethod
-    def isFlow(flags):
+    def is_flow(flags):
         return flags & FLAGS.MS_COMM & FLAGS.FF_FLOW > 0
 
     @staticmethod
-    def isVar(flags):
+    def is_var(flags):
         return flags & FLAGS.MS_COMM & FLAGS.FF_VAR > 0
 
     @staticmethod
-    def hasExtra(flags):
+    def has_extra_cmts(flags):
         return flags & FLAGS.MS_COMM & FLAGS.FF_LINE > 0
 
     @staticmethod
@@ -1018,7 +1018,7 @@ class ida_bytes:
         return flags & FLAGS.MS_COMM & FLAGS.FF_COMM > 0
 
     @staticmethod
-    def hasRef(flags):
+    def has_ref(flags):
         return flags & FLAGS.MS_COMM & FLAGS.FF_REF > 0
 
     @staticmethod
@@ -1057,39 +1057,39 @@ class ida_bytes:
         return (flags & FLAGS.FF_IVL) > 0
 
     @staticmethod
-    def isByte(flags):
+    def is_byte(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_BYTE
 
     @staticmethod
-    def isWord(flags):
+    def is_word(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_WORD
 
     @staticmethod
-    def isDwrd(flags):
+    def is_dword(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_DWRD
 
     @staticmethod
-    def isQwrd(flags):
+    def is_qword(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_QWRD
 
     @staticmethod
-    def isOwrd(flags):
+    def is_oword(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_OWRD
 
     @staticmethod
-    def isYwrd(flags):
+    def is_yword(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_YWRD
 
     @staticmethod
-    def isTbyt(flags):
+    def is_tbyte(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_TBYT
 
     @staticmethod
-    def isFloat(flags):
+    def is_float(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_FLOAT
 
     @staticmethod
-    def isDouble(flags):
+    def is_double(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_DOUBLE
 
     @staticmethod
@@ -1101,19 +1101,19 @@ class ida_bytes:
         return flags & FLAGS.DT_TYPE == FLAGS.FF_ASCI
 
     @staticmethod
-    def isStruct(flags):
+    def is_struct(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_STRU
 
     @staticmethod
-    def isAlign(flags):
+    def is_align(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_ALIGN
 
     @staticmethod
-    def is3byte(flags):
+    def is_3_byte(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_3BYTE
 
     @staticmethod
-    def isCustom(flags):
+    def is_custom(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_CUSTOM
 
     def get_bytes(self, ea, count):
@@ -1130,7 +1130,7 @@ class ida_bytes:
         while True:
             ea += 1
             flags = self.get_flags(ea)
-            if not self.isTail(flags):
+            if not self.is_tail(flags):
                 break
         return ea
 
