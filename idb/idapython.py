@@ -1103,6 +1103,13 @@ class ida_bytes:
     def get_bytes(self, ea, count):
         return self.api.idc.GetManyBytes(ea, count)
 
+    def next_that(self, ea, maxea, testf):
+        for i in range(ea+1, maxea):
+            flags = self.get_flags(i)
+            if testf(flags):
+                return i
+        return self.api.idc.BADADDR
+
 
 class ida_nalt:
     def __init__(self, db, api):
