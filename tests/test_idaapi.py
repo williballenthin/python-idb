@@ -59,10 +59,9 @@ def test_bytes(kernel32_idb, version, bitness, expected):
     byte = idc.IdbByte(0x68901010)
     assert byte == 0x8B
 
-    with pytest.raises(KeyError):
-        # this effective address does not exist
-        idc.GetFlags(0x88888888)
-        assert idc.hasValue(idc.GetFlags(0x88888888)) is True
+    # this effective address does not exist
+    assert not idc.GetFlags(0x88888888) # FIXME:our idc.GetFlags return None, but it should return 0 when running in ida.
+    # assert idc.hasValue(idc.GetFlags(0x88888888)) is False
 
     assert idc.ItemSize(0x68901010) == 2
     with pytest.raises(ValueError):
