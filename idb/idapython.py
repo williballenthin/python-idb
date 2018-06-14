@@ -1720,6 +1720,23 @@ class ida_entry:
         return ents.forwarded_symbols.get(ordinal)
 
 
+class ida_name:
+    def __init__(self, db, api):
+        self.idb = db
+        self.api = api
+
+    def get_name(self, ea):
+        flags = self.api.ida_bytes.get_flags(ea)
+        if not self.api.ida_bytes.has_name(flags):
+            return ''
+
+        try:
+            nn = self.api.ida_netnode.netnode(ea)
+            return nn.name()
+        except KeyError:
+            return ''
+
+
 class IDAPython:
     def __init__(self, db, ScreenEA=None):
         self.idb = db
@@ -1733,3 +1750,4 @@ class IDAPython:
         self.ida_netnode = ida_netnode(db, self)
         self.ida_nalt = ida_nalt(db, self)
         self.ida_entry = ida_entry(db, self)
+        self.ida_name = ida_name(db, self)
