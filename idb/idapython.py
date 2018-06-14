@@ -1037,6 +1037,10 @@ class ida_bytes:
         return flags & FLAGS.MS_COMM & FLAGS.FF_BNOT > 0
 
     @staticmethod
+    def has_value(flags):
+        return (flags & FLAGS.FF_IVL) > 0
+
+    @staticmethod
     def isByte(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_BYTE
 
