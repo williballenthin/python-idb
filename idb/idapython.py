@@ -559,8 +559,6 @@ class idc:
 
     def IdbByte(self, ea):
         flags = self.GetFlags(ea)
-        if flags is None:
-            raise KeyError(ea)
         if self.hasValue(flags):
             return flags & FLAGS.MS_VAL
         else:
@@ -568,20 +566,16 @@ class idc:
 
     def Head(self, ea):
         flags = self.GetFlags(ea)
-        if flags is None:
-            raise KeyError(ea)
         while not self.api.ida_bytes.isHead(flags):
             ea -= 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
-            if flags is None:
-                raise KeyError(ea)
         return ea
 
     def ItemSize(self, ea):
         oea = ea
         flags = self.GetFlags(ea)
-        if flags is None or not self.api.ida_bytes.isHead(flags):
+        if not self.api.ida_bytes.isHead(flags):
             raise ValueError('ItemSize must only be called on a head address.')
 
         ea += 1
@@ -1454,7 +1448,7 @@ class idaapi:
             ea = self.api.idc.NextHead(ea)
 
             flags = self.api.idc.GetFlags(ea)
-            if flags is None:
+            if flags == 0:
                 return last_ea
 
             if self.api.ida_bytes.hasRef(flags):
