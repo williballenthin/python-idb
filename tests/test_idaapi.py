@@ -726,3 +726,13 @@ def test_posterior_lines():
         assert api.idc.LineB(1, 1) == 'posterior line 2'
         assert api.idc.LineB(1, 2) == ''
 
+
+def test_function_comment():
+    cd = os.path.dirname(__file__)
+    idbpath = os.path.join(cd, 'data', 'func-comment', 'small.idb')
+
+    with idb.from_file(idbpath) as db:
+        api = idb.IDAPython(db)
+        assert api.ida_funcs.get_func_cmt(3, False) == 'function comment'
+        assert api.ida_funcs.get_func_cmt(3, True) == 'repeatable function comment'
+
