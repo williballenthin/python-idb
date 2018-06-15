@@ -95,7 +95,7 @@ def main(argv=None):
             else:
                 screenea = int(args.ScreenEA)
         else:
-            screenea = list(sorted(idb.analysis.Functions(db).functions.keys()))[0]
+            screenea = list(sorted(idb.analysis.Segments(db).segments.keys()))[0]
 
         api = idb.IDAPython(db, ScreenEA=screenea)
 
