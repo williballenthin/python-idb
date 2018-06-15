@@ -1244,7 +1244,12 @@ class ida_nalt:
                 return
 
     def get_imagebase(self):
-        return idb.analysis.Root(self.idb).imagebase
+        try:
+            return idb.analysis.Root(self.idb).imagebase
+        except KeyError:
+            # seems that the key is not present in all databases,
+            # particularly those with an imagebase of 0x0.
+            return 0x0
 
         # TODO: where to fetch ordinal?
 
@@ -1659,7 +1664,7 @@ class idaapi:
         return idb.analysis.Root(self.idb).idainfo
 
     def get_imagebase(self):
-        return idb.analysis.Root(self.idb).imagebase
+        return self.api.ida_nalt.get_imagebase()
 
 
 class idautils:
