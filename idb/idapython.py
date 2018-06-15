@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import re
 import logging
 import weakref
 import functools
@@ -1584,7 +1585,7 @@ class idaapi:
                 succs = collections.defaultdict(lambda: set([]))
 
                 lastInstEA = api.idaapi._find_bb_end(ea)
-                
+
                 logger.debug('found end. %x -> %x', ea, lastInstEA)
                 block = BasicBlock(self, ea, lastInstEA, api.idc.NextHead(lastInstEA))
                 bbs_by_start[ea] = block
@@ -1685,10 +1686,166 @@ class idaapi:
         return self.api.ida_nalt.get_imagebase()
 
 
+class StringItem:
+    def __init__(self, ea, length, strtype, s):
+        self.ea = ea
+        self.length = length
+        self.strtype = strtype
+        self.s = s
+
+    def __str__(self):
+        return s
+
+
+class _Strings:
+    C = 0x0
+    C_16 = 0x1
+    C_32 = 0x2
+    PASCAL = 0x4
+    PASCAL_16 = 0x5
+    LEN2 = 0x8
+    LEN2_16 = 0x9
+    LEN4 =  0xC
+    LEN4_16 = 0xD
+
+    ASCII_BYTE = b" !\"#\$%&\'\(\)\*\+,-\./0123456789:;<=>\?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\[\]\^_`abcdefghijklmnopqrstuvwxyz\{\|\}\\\~\t"
+
+    def __init__(self, db, api):
+        self.db = db
+        self.api = api
+
+        self.cache = None
+
+        self.strtypes = [0]
+        self.minlen = 5
+        self.only_7bit = True
+        self.ignore_instructions = False
+        self.display_only_existing_strings = False
+
+    def clear_cache(self):
+        self.cache = None
+
+    @memoized_method()
+    def get_seg_data(self, seg):
+        start = self.api.idc.SegStart(seg)
+        end = self.api.idc.SegEnd(start)
+
+        IdbByte = self.api.idc.IdbByte
+        get_flags = self.api.ida_bytes.get_flags
+        has_value = self.api.ida_bytes.has_value
+
+        data = []
+        for i in range(start, end):
+            b = IdbByte(i)
+            if b == 0:
+                flags = get_flags(i)
+                if not has_value(flags):
+                    break
+            data.append(b)
+
+        if six.PY2:
+            return ''.join(map(chr, data))
+        else:
+            return bytes(data)
+
+    def parse_C_strings(self, va, buf):
+        reg = b"([%s]{%d,})" % (_Strings.ASCII_BYTE, self.minlen)
+        ascii_re = re.compile(reg)
+        for match in ascii_re.finditer(buf):
+            s = match.group().decode('ascii')
+            yield StringItem(va + match.start(), len(s), _Strings.C, s)
+
+    def parse_C_16_strings(self, va, buf):
+        reg = b"((?:[%s]\x00){%d,})" % (_Strings.ASCII_BYTE, self.minlen)
+        uni_re = re.compile(reg)
+        for match in uni_re.finditer(buf):
+            try:
+                s = match.group().decode('utf-16')
+            except UnicodeDecodeError:
+                continue
+            else:
+                yield StringItem(va + match.start(), len(s), _Strings.C_16, s)
+
+    def parse_C_32_strings(self, va, buf):
+        reg = b"((?:[%s]\x00\x00\x00){%d,})" % (_Strings.ASCII_BYTE, self.minlen)
+        uni_re = re.compile(reg)
+        for match in uni_re.finditer(buf):
+            try:
+                s = match.group().decode('utf-32')
+            except UnicodeDecodeError:
+                continue
+            else:
+                yield StringItem(va + match.start(), len(s), _Strings.C_32, s)
+
+    def parse_PASCAL_strings(self, va, buf):
+        raise NotImplementedError('parse PASCAL strings')
+
+    def parse_PASCAL_16_strings(self, va, buf):
+        raise NotImplementedError('parse PASCAL_16 strings')
+
+    def parse_LEN2_strings(self, va, buf):
+        raise NotImplementedError('parse LEN2 strings')
+
+    def parse_LEN2_16_strings(self, va, buf):
+        raise NotImplementedError('parse LEN2_16 strings')
+
+    def parse_LEN4_strings(self, va, buf):
+        raise NotImplementedError('parse LEN4 strings')
+
+    def parse_LEN4_16_strings(self, va, buf):
+        raise NotImplementedError('parse LEN4_16 strings')
+
+    def refresh(self):
+        ret = []
+        for seg in self.api.idautils.Segments():
+            buf = self.get_seg_data(seg)
+
+            for parser in (self.parse_C_strings,
+                           self.parse_C_16_strings,
+                           self.parse_C_32_strings,
+                           self.parse_PASCAL_strings,
+                           self.parse_PASCAL_16_strings,
+                           self.parse_LEN2_strings,
+                           self.parse_LEN2_16_strings,
+                           self.parse_LEN4_strings,
+                           self.parse_LEN4_16_strings):
+                try:
+                    ret.extend(list(parser(seg, buf)))
+                except NotImplementedError as e:
+                    logger.warning('warning: %s', e)
+        self.cache = ret[:]
+        return ret
+
+    def setup(self,
+              strtypes=[0],
+              minlen=5,
+              only_7bit=True,
+              ignore_instructions=False,
+              display_only_existing_strings=False):
+        self.strtypes = strtypes
+        self.minlen = minlen
+        self.only_7bit = only_7bit
+        self.ignore_instructions = ignore_instructions
+        self.display_only_existing_strings = display_only_existing_strings
+
+    def __iter__(self):
+        if self.cache is None:
+            self.refresh()
+
+        for s in self.cache:
+            yield s
+
+    def __getitem__(self, index):
+        if self.cache is None:
+            self.refresh()
+        return self.cache[index]
+
+
 class idautils:
     def __init__(self, db, api):
         self.idb = db
         self.api = api
+        self.strings = _Strings(db, api)
 
     def GetInputFileMD5(self):
         return self.api.idc.GetInputMD5()
@@ -1731,6 +1888,9 @@ class idautils:
         for xref in idb.analysis.get_crefs_from(self.idb, ea,
                                                 types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]):
             yield xref.dst
+
+    def Strings(self, default_setup=False):
+        return self.strings
 
 
 class ida_entry:
