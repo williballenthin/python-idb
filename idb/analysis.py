@@ -615,6 +615,8 @@ class func_t:
 #     value: func_t
 Functions = Analysis('$ funcs', [
     Field('functions', 'S', ADDRESSES, func_t),
+    Field('comments', 'C', ADDRESSES, idb.netnode.as_string),
+    Field('repeatable_comments', 'R', ADDRESSES, idb.netnode.as_string),
 ])
 
 
