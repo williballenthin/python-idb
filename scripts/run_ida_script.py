@@ -108,6 +108,7 @@ def main(argv=None):
             'ida_netnode': api.ida_netnode,
             'ida_nalt': api.ida_nalt,
             'ida_name': api.ida_name,
+            'ida_entry': api.ida_entry,
         }
 
         importer = HookedImporter(hooks=hooks)
