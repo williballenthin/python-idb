@@ -766,25 +766,7 @@ class idc:
             raise ValueError('unknown attr: %x' % (attr))
 
     def GetFunctionName(self, ea):
-        func = self.api.ida_funcs.get_func(ea)
-        # ensure this is a function
-        if func.startEA != ea:
-            raise KeyError(ea)
-
-        # shouldn't be a chunk
-        if is_flag_set(func.flags, func.FUNC_TAIL):
-            raise KeyError(ea)
-
-        nn = self.api.ida_netnode.netnode(ea)
-        try:
-            return nn.name()
-        except:
-            if self.idb.wordsize == 4:
-                return 'sub_%04x' % (ea)
-            elif self.idb.wordsize == 8:
-                return 'sub_%08x' % (ea)
-            else:
-                raise RuntimeError('unexpected wordsize')
+        return self.api.ida_funcs.get_func_name(ea)
 
     def LocByName(self, name):
         try:
@@ -1357,6 +1339,27 @@ class ida_funcs:
             return nn.supstr(tag=tag, index=ea)
         except KeyError:
             return ''
+
+    def get_func_name(self, ea):
+        func = self.get_func(ea)
+        # ensure this is a function
+        if func.startEA != ea:
+            raise KeyError(ea)
+
+        # shouldn't be a chunk
+        if is_flag_set(func.flags, func.FUNC_TAIL):
+            raise KeyError(ea)
+
+        nn = self.api.ida_netnode.netnode(ea)
+        try:
+            return nn.name()
+        except:
+            if self.idb.wordsize == 4:
+                return 'sub_%04x' % (ea)
+            elif self.idb.wordsize == 8:
+                return 'sub_%08x' % (ea)
+            else:
+                raise RuntimeError('unexpected wordsize')
 
 
 class BasicBlock(object):
