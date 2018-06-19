@@ -536,6 +536,9 @@ class idc:
                     return self.BADADDR
 
     def SegName(self, ea):
+        # if segment doesn't have explicit name, then...
+        # its unclear what this data will be.
+        # we *want* something like `seg000`.
         segstrings = idb.analysis.SegStrings(self.idb).strings
         return segstrings[self._get_segment(ea).name_index]
 
