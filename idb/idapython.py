@@ -1321,7 +1321,7 @@ class ida_funcs:
                 else:
                     return func
 
-            raise KeyError(ea)
+            return None
         else:
             func = idb.analysis.func_t(v, wordsize=self.idb.wordsize)
             if is_flag_set(func.flags, self.FUNC_TAIL):
@@ -1329,7 +1329,7 @@ class ida_funcs:
             else:
                 return func
 
-    def get_func_cmt(self, ea, repeatable):
+    def get_func_cmt(self, func, repeatable):
         # function comments are stored on the `$ funcs` netnode
         # tag is either `R` or `C`.
         # index is effective address of the function.
@@ -1346,13 +1346,16 @@ class ida_funcs:
         #
         # i think its a bug that when you set a repeatable function via the IDA UI,
         # it also sets a local function comment.
+        if func is None:
+            return ''
+
         nn = self.api.ida_netnode.netnode('$ funcs')
         try:
             if repeatable:
                 tag = 'R'
             else:
                 tag = 'C'
-            return nn.supstr(tag=tag, index=ea)
+            return nn.supstr(tag=tag, index=func.startEA)
         except KeyError:
             return ''
 
