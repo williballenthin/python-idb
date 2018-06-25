@@ -15,7 +15,6 @@ class HookedImporter(importlib.abc.MetaPathFinder, importlib.abc.Loader):
         self.hooks = hooks
 
     def find_spec(self, name, path, target=None):
-        logger.info('hooked importer: find-spec: %s', name)
         if name not in self.hooks:
             return None
 
@@ -24,7 +23,7 @@ class HookedImporter(importlib.abc.MetaPathFinder, importlib.abc.Loader):
 
     def create_module(self, spec):
         # req'd in 3.6
-        logger.info('hooked importer: create-module: %s', spec.name)
+        logger.info('hooking import: %s', spec.name)
         module = importlib.util._Module(spec.name)
         mod = self.hooks[spec.name]
         for attr in dir(mod):
