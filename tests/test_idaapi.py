@@ -90,20 +90,20 @@ def test_state(kernel32_idb, version, bitness, expected):
     # .text:68901010 8B FF                                   mov     edi, edi
     # .text:68901012 55                                      push    ebp
     flags = idc.GetFlags(0x68901010)
-    assert ida_bytes.isCode(flags) is True
-    assert ida_bytes.isData(flags) is False
-    assert ida_bytes.isTail(flags) is False
-    assert ida_bytes.isNotTail(flags) is True
-    assert ida_bytes.isUnknown(flags) is False
-    assert ida_bytes.isHead(flags) is True
+    assert ida_bytes.is_code(flags) is True
+    assert ida_bytes.is_data(flags) is False
+    assert ida_bytes.is_tail(flags) is False
+    assert ida_bytes.is_not_tail(flags) is True
+    assert ida_bytes.is_unknown(flags) is False
+    assert ida_bytes.is_head(flags) is True
 
     flags = idc.GetFlags(0x68901011)
-    assert ida_bytes.isCode(flags) is False
-    assert ida_bytes.isData(flags) is False
-    assert ida_bytes.isTail(flags) is True
-    assert ida_bytes.isNotTail(flags) is False
-    assert ida_bytes.isUnknown(flags) is False
-    assert ida_bytes.isHead(flags) is False
+    assert ida_bytes.is_code(flags) is False
+    assert ida_bytes.is_data(flags) is False
+    assert ida_bytes.is_tail(flags) is True
+    assert ida_bytes.is_not_tail(flags) is False
+    assert ida_bytes.is_unknown(flags) is False
+    assert ida_bytes.is_head(flags) is False
 
 
 @kern32_test()
@@ -114,17 +114,17 @@ def test_specific_state(kernel32_idb, version, bitness, expected):
     # .text:68901010 8B FF                                   mov     edi, edi
     # .text:68901012 55                                      push    ebp
     flags = idc.GetFlags(0x68901010)
-    assert ida_bytes.isFlow(flags) is False
-    assert ida_bytes.isVar(flags) is False
-    assert ida_bytes.hasExtra(flags) is True
+    assert ida_bytes.is_flow(flags) is False
+    assert ida_bytes.is_var(flags) is False
+    assert ida_bytes.has_extra_cmts(flags) is True
     assert ida_bytes.has_cmt(flags) is False
-    assert ida_bytes.hasRef(flags) is True
+    assert ida_bytes.has_ref(flags) is True
     assert ida_bytes.has_name(flags) is True
     assert ida_bytes.has_dummy_name(flags) is False
 
     # .text:68901044 FF 70 18                                push    dword ptr [eax+18h] ; HeapHandle
     flags = idc.GetFlags(0x68901044)
-    assert ida_bytes.isFlow(flags) is True
+    assert ida_bytes.is_flow(flags) is True
     assert ida_bytes.has_cmt(flags) is True
 
 
@@ -136,12 +136,12 @@ def test_code(kernel32_idb, version, bitness, expected):
     # .text:68901010 8B FF                                   mov     edi, edi
     # .text:68901012 55                                      push    ebp
     flags = idc.GetFlags(0x68901010)
-    assert ida_bytes.isFunc(flags) is True
-    assert ida_bytes.isImmd(flags) is False
+    assert ida_bytes.is_func(flags) is True
+    assert ida_bytes.has_immd(flags) is False
 
     flags = idc.GetFlags(0x68901012)
-    assert ida_bytes.isFunc(flags) is False
-    assert ida_bytes.isImmd(flags) is False
+    assert ida_bytes.is_func(flags) is False
+    assert ida_bytes.has_immd(flags) is False
 
 
 @kern32_test()
@@ -151,75 +151,71 @@ def test_data(kernel32_idb, version, bitness, expected):
 
     # text:689011EB 90 90 90 90 90 90 90 90+                align 20h
     flags = idc.GetFlags(0x689011eb)
-    assert ida_bytes.isByte(flags) is False
-    assert ida_bytes.isWord(flags) is False
-    assert ida_bytes.isDwrd(flags) is False
-    assert ida_bytes.isQwrd(flags) is False
-    assert ida_bytes.isOwrd(flags) is False
-    assert ida_bytes.isYwrd(flags) is False
-    assert ida_bytes.isTbyt(flags) is False
-    assert ida_bytes.isFloat(flags) is False
-    assert ida_bytes.isDouble(flags) is False
-    assert ida_bytes.isPackReal(flags) is False
-    assert ida_bytes.isASCII(flags) is False
-    assert ida_bytes.isStruct(flags) is False
-    assert ida_bytes.isAlign(flags) is True
-    assert ida_bytes.is3byte(flags) is False
-    assert ida_bytes.isCustom(flags) is False
+    assert ida_bytes.is_byte(flags) is False
+    assert ida_bytes.is_word(flags) is False
+    assert ida_bytes.is_dword(flags) is False
+    assert ida_bytes.is_qword(flags) is False
+    assert ida_bytes.is_oword(flags) is False
+    assert ida_bytes.is_yword(flags) is False
+    assert ida_bytes.is_tbyte(flags) is False
+    assert ida_bytes.is_float(flags) is False
+    assert ida_bytes.is_double(flags) is False
+    assert ida_bytes.is_pack_real(flags) is False
+    assert ida_bytes.is_strlit(flags) is False
+    assert ida_bytes.is_struct(flags) is False
+    assert ida_bytes.is_align(flags) is True
+    assert ida_bytes.is_custom(flags) is False
 
     # .text:68901497 90 90 90 90 90                          db 5 dup(90h)
     flags = idc.GetFlags(0x68901497)
-    assert ida_bytes.isByte(flags) is True
-    assert ida_bytes.isWord(flags) is False
-    assert ida_bytes.isDwrd(flags) is False
-    assert ida_bytes.isQwrd(flags) is False
-    assert ida_bytes.isOwrd(flags) is False
-    assert ida_bytes.isYwrd(flags) is False
-    assert ida_bytes.isTbyt(flags) is False
-    assert ida_bytes.isFloat(flags) is False
-    assert ida_bytes.isDouble(flags) is False
-    assert ida_bytes.isPackReal(flags) is False
-    assert ida_bytes.isASCII(flags) is False
-    assert ida_bytes.isStruct(flags) is False
-    assert ida_bytes.isAlign(flags) is False
-    assert ida_bytes.is3byte(flags) is False
-    assert ida_bytes.isCustom(flags) is False
+    assert ida_bytes.is_byte(flags) is True
+    assert ida_bytes.is_word(flags) is False
+    assert ida_bytes.is_dword(flags) is False
+    assert ida_bytes.is_qword(flags) is False
+    assert ida_bytes.is_oword(flags) is False
+    assert ida_bytes.is_yword(flags) is False
+    assert ida_bytes.is_tbyte(flags) is False
+    assert ida_bytes.is_float(flags) is False
+    assert ida_bytes.is_double(flags) is False
+    assert ida_bytes.is_pack_real(flags) is False
+    assert ida_bytes.is_strlit(flags) is False
+    assert ida_bytes.is_struct(flags) is False
+    assert ida_bytes.is_align(flags) is False
+    assert ida_bytes.is_custom(flags) is False
 
     # .text:6893A7BC 24 83 98 68                             dd offset sub_68988324
     flags = idc.GetFlags(0x6893a7bc)
-    assert ida_bytes.isByte(flags) is False
-    assert ida_bytes.isWord(flags) is False
-    assert ida_bytes.isDwrd(flags) is True
-    assert ida_bytes.isQwrd(flags) is False
-    assert ida_bytes.isOwrd(flags) is False
-    assert ida_bytes.isYwrd(flags) is False
-    assert ida_bytes.isTbyt(flags) is False
-    assert ida_bytes.isFloat(flags) is False
-    assert ida_bytes.isDouble(flags) is False
-    assert ida_bytes.isPackReal(flags) is False
-    assert ida_bytes.isASCII(flags) is False
-    assert ida_bytes.isStruct(flags) is False
-    assert ida_bytes.isAlign(flags) is False
-    assert ida_bytes.is3byte(flags) is False
-    assert ida_bytes.isCustom(flags) is False
+    assert ida_bytes.is_byte(flags) is False
+    assert ida_bytes.is_word(flags) is False
+    assert ida_bytes.is_dword(flags) is True
+    assert ida_bytes.is_qword(flags) is False
+    assert ida_bytes.is_oword(flags) is False
+    assert ida_bytes.is_yword(flags) is False
+    assert ida_bytes.is_tbyte(flags) is False
+    assert ida_bytes.is_float(flags) is False
+    assert ida_bytes.is_double(flags) is False
+    assert ida_bytes.is_pack_real(flags) is False
+    assert ida_bytes.is_strlit(flags) is False
+    assert ida_bytes.is_struct(flags) is False
+    assert ida_bytes.is_align(flags) is False
+    assert ida_bytes.is_custom(flags) is False
 
     # .text:6893A840 42 69 41 63 74 69 76 61+aBiactivatework db 'BiActivateWorkItem',0
     flags = idc.GetFlags(0x6893a840)
-    assert ida_bytes.isByte(flags) is False
-    assert ida_bytes.isWord(flags) is False
-    assert ida_bytes.isDwrd(flags) is False
-    assert ida_bytes.isQwrd(flags) is False
-    assert ida_bytes.isOwrd(flags) is False
-    assert ida_bytes.isYwrd(flags) is False
-    assert ida_bytes.isTbyt(flags) is False
-    assert ida_bytes.isFloat(flags) is False
-    assert ida_bytes.isDouble(flags) is False
-    assert ida_bytes.isPackReal(flags) is False
-    assert ida_bytes.isASCII(flags) is True
-    assert ida_bytes.isStruct(flags) is False
-    assert ida_bytes.isAlign(flags) is False
-    assert ida_bytes.is3byte(flags) is False
-    assert ida_bytes.isCustom(flags) is False
+    assert ida_bytes.is_byte(flags) is False
+    assert ida_bytes.is_word(flags) is False
+    assert ida_bytes.is_dword(flags) is False
+    assert ida_bytes.is_qword(flags) is False
+    assert ida_bytes.is_oword(flags) is False
+    assert ida_bytes.is_yword(flags) is False
+    assert ida_bytes.is_tbyte(flags) is False
+    assert ida_bytes.is_float(flags) is False
+    assert ida_bytes.is_double(flags) is False
+    assert ida_bytes.is_pack_real(flags) is False
+    assert ida_bytes.is_strlit(flags) is True
+    assert ida_bytes.is_struct(flags) is False
+    assert ida_bytes.is_align(flags) is False
+    assert ida_bytes.is_custom(flags) is False
 
 
 @kern32_test()

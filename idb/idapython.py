@@ -591,7 +591,7 @@ class idc:
 
     def Head(self, ea):
         flags = self.GetFlags(ea)
-        while not self.api.ida_bytes.isHead(flags):
+        while not self.api.ida_bytes.is_head(flags):
             ea -= 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
@@ -600,12 +600,12 @@ class idc:
     def ItemSize(self, ea):
         oea = ea
         flags = self.GetFlags(ea)
-        if not self.api.ida_bytes.isHead(flags):
+        if not self.api.ida_bytes.is_head(flags):
             raise ValueError('ItemSize must only be called on a head address.')
 
         ea += 1
         flags = self.GetFlags(ea)
-        while flags is not None and not self.api.ida_bytes.isHead(flags):
+        while flags is not None and not self.api.ida_bytes.is_head(flags):
             ea += 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
@@ -614,7 +614,7 @@ class idc:
     def NextHead(self, ea):
         ea += 1
         flags = self.GetFlags(ea)
-        while flags is not None and not self.api.ida_bytes.isHead(flags):
+        while flags is not None and not self.api.ida_bytes.is_head(flags):
             ea += 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
@@ -975,7 +975,7 @@ class ida_bytes:
         return flags & FLAGS.MS_CODE == FLAGS.FF_FUNC
 
     @staticmethod
-    def isImmd(flags):
+    def has_immd(flags):
         return flags & FLAGS.MS_CODE == FLAGS.FF_IMMD
 
     @staticmethod
@@ -1000,7 +1000,7 @@ class ida_bytes:
 
     @staticmethod
     def is_head(flags):
-        return ida_bytes.isCode(flags) or ida_bytes.isData(flags)
+        return ida_bytes.is_code(flags) or ida_bytes.is_data(flags)
 
     @staticmethod
     def is_flow(flags):
@@ -1094,11 +1094,11 @@ class ida_bytes:
         return flags & FLAGS.DT_TYPE == FLAGS.FF_DOUBLE
 
     @staticmethod
-    def isPackReal(flags):
+    def is_pack_real(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_PACKREAL
 
     @staticmethod
-    def isASCII(flags):
+    def is_strlit(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_ASCI
 
     @staticmethod
@@ -1108,10 +1108,6 @@ class ida_bytes:
     @staticmethod
     def is_align(flags):
         return flags & FLAGS.DT_TYPE == FLAGS.FF_ALIGN
-
-    @staticmethod
-    def is_3_byte(flags):
-        return flags & FLAGS.DT_TYPE == FLAGS.FF_3BYTE
 
     @staticmethod
     def is_custom(flags):
@@ -1479,13 +1475,13 @@ class idaapi:
             if flags == 0:
                 return last_ea
 
-            if self.api.ida_bytes.hasRef(flags):
+            if self.api.ida_bytes.has_ref(flags):
                 return last_ea
 
-            if self.api.ida_bytes.isFunc(flags):
+            if self.api.ida_bytes.is_func(flags):
                 return last_ea
 
-            if not self.api.ida_bytes.isFlow(flags):
+            if not self.api.ida_bytes.is_flow(flags):
                 return last_ea
 
             if not is_empty(idb.analysis.get_crefs_from(self.idb, ea,
@@ -1502,10 +1498,10 @@ class idaapi:
         '''
         while True:
             flags = self.api.idc.GetFlags(ea)
-            if self.api.ida_bytes.hasRef(flags):
+            if self.api.ida_bytes.has_ref(flags):
                 return ea
 
-            if self.api.ida_bytes.isFunc(flags):
+            if self.api.ida_bytes.is_func(flags):
                 return ea
 
             last_ea = ea
@@ -1515,7 +1511,7 @@ class idaapi:
                                                         types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F])):
                 return last_ea
 
-            if not self.api.ida_bytes.isFlow(flags):
+            if not self.api.ida_bytes.is_flow(flags):
                 return last_ea
 
     def _get_flow_preds(self, ea):
@@ -1523,7 +1519,7 @@ class idaapi:
         # need to fixup the return types, though.
 
         flags = self.api.idc.GetFlags(ea)
-        if flags is not None and self.api.ida_bytes.isFlow(flags):
+        if flags is not None and self.api.ida_bytes.is_flow(flags):
             # prev instruction fell through to this insn
             yield idb.analysis.Xref(self.api.idc.PrevHead(ea), ea, idaapi.fl_F)
 
@@ -1539,7 +1535,7 @@ class idaapi:
 
         nextea = self.api.idc.NextHead(ea)
         nextflags = self.api.idc.GetFlags(nextea)
-        if nextflags is not None and self.api.ida_bytes.isFlow(nextflags):
+        if nextflags is not None and self.api.ida_bytes.is_flow(nextflags):
             # instruction falls through to next insn
             yield idb.analysis.Xref(ea, nextea, idaapi.fl_F)
 
@@ -1871,7 +1867,7 @@ class idautils:
     def CodeRefsTo(self, ea, flow):
         if flow:
             flags = self.api.idc.GetFlags(ea)
-            if flags is not None and self.api.ida_bytes.isFlow(flags):
+            if flags is not None and self.api.ida_bytes.is_flow(flags):
                 # prev instruction fell through to this insn
                 yield self.api.idc.PrevHead(ea)
 
@@ -1885,7 +1881,7 @@ class idautils:
         if flow:
             nextea = self.api.idc.NextHead(ea)
             nextflags = self.api.idc.GetFlags(nextea)
-            if self.api.ida_bytes.isFlow(nextflags):
+            if self.api.ida_bytes.is_flow(nextflags):
                 # instruction falls through to next insn
                 yield nextea
 
