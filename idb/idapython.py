@@ -1328,7 +1328,7 @@ class ida_funcs:
             else:
                 return func
 
-    def get_func_cmt(self, func, repeatable):
+    def get_func_cmt(self, ea, repeatable):
         # function comments are stored on the `$ funcs` netnode
         # tag is either `R` or `C`.
         # index is effective address of the function.
@@ -1345,6 +1345,8 @@ class ida_funcs:
         #
         # i think its a bug that when you set a repeatable function via the IDA UI,
         # it also sets a local function comment.
+
+        func = self.get_func(ea)
         if func is None:
             return ''
 
