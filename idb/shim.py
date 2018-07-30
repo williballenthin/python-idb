@@ -1,4 +1,5 @@
 import sys
+import types
 import logging
 import importlib.abc
 import importlib.util
@@ -24,7 +25,11 @@ class HookedImporter(importlib.abc.MetaPathFinder, importlib.abc.Loader):
     def create_module(self, spec):
         # req'd in 3.6
         logger.info('hooking import: %s', spec.name)
-        module = importlib.util._Module(spec.name)
+
+        module = types.ModuleType(spec.name)
+        module.__loader__ = self
+        module.__package__ = ''
+
         mod = self.hooks[spec.name]
         for attr in dir(mod):
             if attr.startswith('__'):
