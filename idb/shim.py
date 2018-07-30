@@ -1,4 +1,7 @@
 import sys
+if sys.version_info[0] < 3:
+    raise NotImplementedError('Python 3+ only for shimming the import system to work like IDA Pro.')
+
 import types
 import logging
 import importlib.abc
