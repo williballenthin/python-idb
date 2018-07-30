@@ -15,7 +15,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='python-idb',
-    version='0.4.0',
+    version='0.5.0',
     description='Pure Python parser for IDA Pro databases (.idb files)',
     author='Willi Ballenthin',
     author_email='willi.ballenthin@gmail.com',
