@@ -993,12 +993,20 @@ class NAM(vstruct.VStruct):
         self.unk14 = self.v_word()   # 0x0
         # this appears to actually be the number of dwords used by the names.
         # so for an .i64, this is 2x the name count.
-        self.name_count = v_uint32()
+        self.dword_count = v_uint32()
+        # set in `.pcb_dword_count` below.
+        self.name_count = 0
         self.padding = v_bytes(size=NAM.PAGE_SIZE - (6 * 4 + wordsize))
         self.buffer = v_bytes()
 
     def pcb_page_count(self):
         self['buffer'].vsSetLength(self.page_count * NAM.PAGE_SIZE)
+
+    def pcb_dword_count(self):
+        count = self.dword_count
+        if self.wordsize == 8:
+            count //= 2
+        self.name_count = count
 
     def validate(self):
         if self.signature != b'VA*\x00':
@@ -1014,7 +1022,7 @@ class NAM(vstruct.VStruct):
         return True
 
     def names(self):
-        count = self.name_count
+        count = self.dword_count
         if self.wordsize == 8:
             count //= 2
 
