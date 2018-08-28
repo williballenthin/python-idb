@@ -701,6 +701,17 @@ def test_name(kernel32_idb, version, bitness, expected):
     assert api.ida_name.get_name(0x689DB190) == 'FinestResolution'
 
 
+@kern32_test()
+def test_names(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+    if version == 700:
+        assert len(list(api.idautils.Names())) == 14247
+    elif version == 695:
+        assert len(list(api.idautils.Names())) == 14252
+    else:
+        raise ValueError('unexpected version')
+
+
 def test_anterior_lines():
     cd = os.path.dirname(__file__)
     idbpath = os.path.join(cd, 'data', 'ant-post-comments', 'small.idb')

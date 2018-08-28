@@ -1896,6 +1896,12 @@ class idautils:
     def Strings(self, default_setup=False):
         return self.strings
 
+    def Names(self):
+        for i in range(self.api.ida_name.get_nlist_size()):
+            ea = self.api.ida_name.get_nlist_ea(i)
+            name = self.api.ida_name.get_nlist_name(i)
+            yield (ea, name)
+
 
 class ida_entry:
     def __init__(self, db, api):
@@ -1949,6 +1955,23 @@ class ida_name:
             return nn.name()
         except KeyError:
             return ''
+
+    @memoized_method()
+    def _get_name_ptrs(self):
+        '''
+        a wrapper for the NAM section parser that caches the results on first access.
+        '''
+        return self.idb.nam.names()
+
+    def get_nlist_size(self):
+        return self.idb.nam.name_count
+
+    def get_nlist_ea(self, i):
+        return self._get_name_ptrs()[i]
+
+    def get_nlist_name(self, i):
+        ea = self.get_nlist_ea(i)
+        return self.get_name(ea)
 
 
 class IDAPython:
