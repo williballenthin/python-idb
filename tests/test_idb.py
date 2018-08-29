@@ -514,10 +514,9 @@ def test_nam_page_count(kernel32_idb, version, bitness, expected):
 
     nam = kernel32_idb.nam
     if bitness == 32:
-        assert nam.name_count * nam.wordsize < len(nam.buffer)
+        assert nam.name_count < len(nam.buffer)
     elif bitness == 64:
-        assert nam.name_count * nam.wordsize > len(nam.buffer)
-        assert nam.name_count * nam.wordsize < len(nam.buffer) * 2
+        assert nam.name_count < len(nam.buffer)
 
 
 @kern32_test([
