@@ -26,6 +26,7 @@ setup(
         'hexdump',
         'capstone',
         'vivisect-vstruct-wb>=1.0.3',
+        'functools32'
     ],
     packages=find_packages(exclude=['*.tests', '*.tests.*']),
     entry_points={
