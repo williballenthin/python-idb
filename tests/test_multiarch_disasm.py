@@ -2,6 +2,8 @@ import os.path
 
 import idb
 
+from fixtures import *
+
 
 @requires_capstone
 def test_armel_disasm():
