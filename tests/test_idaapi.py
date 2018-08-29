@@ -684,6 +684,7 @@ def test_inf_structure(kernel32_idb, version, bitness, expected):
     assert inf_structure.procname == 'metapc'
 
 
+@requires_capstone
 def test_multi_bitness():
     cd = os.path.dirname(__file__)
     idbpath = os.path.join(cd, 'data', 'multibitness', 'multibitness.idb')

@@ -1,6 +1,9 @@
 import os.path
+
 import idb
 
+
+@requires_capstone
 def test_armel_disasm():
     cd = os.path.dirname(__file__)
     idbpath = os.path.join(cd, 'data', 'armel', 'ls.idb')
@@ -10,6 +13,8 @@ def test_armel_disasm():
         assert api.idc.GetDisasm(0x00002598) == 'push\t{r4, r5, r6, r7, r8, sb, sl, fp, lr}'
         assert api.idc.GetDisasm(0x00012010) == 'b\t#0x12014'
 
+
+@requires_capstone
 def test_thumb_disasm():
     cd = os.path.dirname(__file__)
     idbpath = os.path.join(cd, 'data', 'thumb', 'ls.idb')
@@ -19,6 +24,8 @@ def test_thumb_disasm():
         assert api.idc.GetDisasm(0x00011eac) == 'strb\tr4, [r3, r5]'
         assert api.idc.GetDisasm(0x00011eae) == 'b\t#0x11ebc'
 
+
+@requires_capstone
 def test_arm64_disasm():
     cd = os.path.dirname(__file__)
     idbpath = os.path.join(cd, 'data', 'arm64', 'ls.i64')
@@ -30,6 +37,7 @@ def test_arm64_disasm():
         assert api.idc.GetDisasm(0x00005d38) == 'b\t#0x5c30'
 
 
+@requires_capstone
 def test_mips_disasm():
     cd = os.path.dirname(__file__)
     idbpath = os.path.join(cd, 'data', 'mips', 'ls.idb')
@@ -40,6 +48,8 @@ def test_mips_disasm():
         assert api.idc.GetDisasm(0x00005444) == 'addiu\t$t3, $t3, 1'
         assert api.idc.GetDisasm(0x00005448) == 'b\t0x523c'
 
+
+@requires_capstone
 def test_mipsel_disasm():
     cd = os.path.dirname(__file__)
     idbpath = os.path.join(cd, 'data', 'mipsel', 'ls.idb')
@@ -50,6 +60,8 @@ def test_mipsel_disasm():
         assert api.idc.GetDisasm(0x00005440) == 'addiu\t$t3, $t3, 1'
         assert api.idc.GetDisasm(0x00005444) == 'b\t0x5238'
 
+
+@requires_capstone
 def test_mips64el_disasm():
     cd = os.path.dirname(__file__)
     idbpath = os.path.join(cd, 'data', 'mips64el', 'ls.i64')
