@@ -494,9 +494,9 @@ def test_id1_2(elf_idb):
 @kern32_test([
     # collected empirically
     (695, 32, 14252),
-    (695, 64, 28504),
+    (695, 64, 14252),
     (700, 32, 14247),
-    (700, 64, 28494),
+    (700, 64, 14247),
 ])
 def test_nam_name_count(kernel32_idb, version, bitness, expected):
     assert kernel32_idb.nam.name_count == expected
