@@ -12,7 +12,8 @@ install:
     - pip install --upgrade pip
     # via https://github.com/angr/angr/issues/52
     - pip install -I --no-binary PyPI capstone
-    - pip install --upgrade pycodestyle pytest-cov pytest flake8
+    - pip install https://gitlab.com/pycqa/flake8/-/archive/9631dac52aa6ed8a3de9d0983c3c7b0267ae7d6d/flake8-9631dac52aa6ed8a3de9d0983c3c7b0267ae7d6d.zip
+    - pip install --upgrade pytest-cov pytest
     - pip install -e .
     # capstone puts the .so in the wrong directory when installed via pip
     # ref: https://github.com/aquynh/capstone/issues/445
