@@ -2,10 +2,13 @@
 import re
 import logging
 import weakref
-import functools
 import collections
 
 import six
+if six.PY2:
+    import functools32 as functools
+else:
+    import functools
 
 import idb.netnode
 import idb.analysis
