@@ -464,6 +464,14 @@ def test_input_md5(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     assert api.idc.GetInputMD5() == '00bf1bf1b779ce1af41371426821e0c2'
     assert api.idautils.GetInputFileMD5() == '00bf1bf1b779ce1af41371426821e0c2'
+    assert api.ida_nalt.retrieve_input_file_md5() == '00bf1bf1b779ce1af41371426821e0c2'
+
+
+@kern32_test()
+def test_input_sha256(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+    assert api.idc.GetInputSHA256() == 'ba1bc09b7bb290656582b4e4d896105caf00825b557ce45621e76741cd5dc262'
+    assert api.ida_nalt.retrieve_input_file_sha256() == 'ba1bc09b7bb290656582b4e4d896105caf00825b557ce45621e76741cd5dc262'
 
 
 @kern32_test()

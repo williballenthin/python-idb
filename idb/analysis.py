@@ -41,6 +41,13 @@ def as_md5(buf, wordsize=None):
     return binascii.hexlify(buf).decode('ascii')
 
 
+def as_sha256(buf, wordsize=None):
+    '''
+    parse raw sha256 bytes into a hex-formatted string.
+    '''
+    return binascii.hexlify(buf).decode('ascii')
+
+
 def cast(buf, V, wordsize=None):
     '''
     apply a vstruct class to a sequence of bytes.
@@ -498,6 +505,7 @@ Root = Analysis('Root Node', [
     Field('version',        'A', -1,       idb.netnode.as_int),
     Field('md5',            'S', 1302,     as_md5),
     Field('version_string', 'S', 1303,     idb.netnode.as_string),
+    Field('sha256',         'S', 1349,     as_sha256),
     Field('idainfo',        'S', 0x41b994, as_cast(IdaInfo)),
     Field('input_file_path','V', None,     idb.netnode.as_string)
 ])

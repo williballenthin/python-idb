@@ -799,7 +799,10 @@ class idc:
             return -1
 
     def GetInputMD5(self):
-        return idb.analysis.Root(self.idb).md5
+        return self.api.ida_nalt.retrieve_input_file_md5()
+
+    def GetInputSHA256(self):
+        return self.api.ida_nalt.retrieve_input_file_sha256()
 
     def Comment(self, ea):
         return self.api.ida_bytes.get_cmt(ea, False)
@@ -1252,6 +1255,12 @@ class ida_nalt:
             return 0x0
 
         # TODO: where to fetch ordinal?
+
+    def retrieve_input_file_sha256(self):
+        return idb.analysis.Root(self.idb).sha256
+
+    def retrieve_input_file_md5(self):
+        return idb.analysis.Root(self.idb).md5
 
 
 class ida_funcs:
