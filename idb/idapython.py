@@ -1752,7 +1752,10 @@ class _Strings:
 
         data = []
         for i in range(start, end):
-            b = IdbByte(i)
+            try:
+                b = IdbByte(i)
+            except KeyError as e:
+                break
             if b == 0:
                 flags = get_flags(i)
                 if not has_value(flags):
