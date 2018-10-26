@@ -271,7 +271,16 @@ class _Analysis(object):
         '''
         does the index look like not (address or node)?
         '''
-        return (not self._is_address(index)) and (not self._is_node(index))
+        if self._is_node(index):
+            return False
+
+        if index < 0x1000:
+            return True
+
+        if self._is_address(index):
+            return False
+
+        return True
 
     def __getattr__(self, key):
         '''
