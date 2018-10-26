@@ -1228,3 +1228,33 @@ def enumerate_entrypoints(db):
 
     for index, addr in ents.main_entry.items():
         yield EntryPoint(names.get(index), addr, ordinals.get(index), forwarded_symbols.get(index))
+
+
+
+
+ScriptSnippets = Analysis('$ scriptsnippets', [
+    # number of spaces per tab
+    Field('tabsize', 'Y', 0x0,     idb.netnode.as_uint),
+    # netnode references
+    Field('scripts', 'A', NUMBERS, idb.netnode.as_uint),
+])
+
+
+ScriptSnippet = namedtuple('ScriptSnippet', ['name', 'language', 'code'])
+
+
+def enumerate_script_snippets(db):
+    '''
+    enumerate script snippets stored in the given database.
+
+    yields:
+      Tuple[str, str, str]: filename, language (Python or IDC), and source code
+    '''
+    scripts = ScriptSnippets(db)
+
+    for nnid in scripts.scripts.values():
+        nn = idb.netnode.Netnode(db, nnid - 1)
+        name = nn.supstr(0x0, tag='S')
+        language = nn.supstr(0x1, tag='S')
+        code = nn.supstr(0x0, tag='X')
+        yield ScriptSnippet(name, language, code)
