@@ -1464,6 +1464,12 @@ class idaapi:
     dr_T = 4
     # Informational (a derived java class references its base class informationally)
     dr_I = 5
+    # return all references 
+    XREF_ALL = 0
+    # don't return ordinary flow xrefs
+    XREF_FAR = 1
+    # return data references only
+    XREF_DATA = 2
 
     def __init__(self, db, api):
         self.idb = db
@@ -1907,7 +1913,51 @@ class idautils:
         for xref in idb.analysis.get_crefs_from(self.idb, ea,
                                                 types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]):
             yield xref.dst
+    
+    def DataRefFrom(self,ea):
+        for xref in idb.analysis.get_drefs_from(self.idb, ea,
+                                                types=[idaapi.dr_U, idaapi.dr_O, idaapi.dr_W, idaapi.dr_R, idaapi.dr_T, idaapi.dr_I]):
+            yield xref.src
+    
+    def DataRefFrom(self,ea):
+        for xref in idb.analysis.get_drefs_from(self.idb, ea,
+                                                types=[idaapi.dr_U, idaapi.dr_O, idaapi.dr_W, idaapi.dr_R, idaapi.dr_T, idaapi.dr_I]):
+            yield xref.dst
+    
+    def XrefsTo(self,ea,flags=None):
+        if flags == idaapi.XREF_ALL:
+            typef=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F, idaapi.fl_CN, idaapi.fl_CF]
+            typed=[idaapi.dr_U, idaapi.dr_O, idaapi.dr_W, idaapi.dr_R, idaapi.dr_T, idaapi.dr_I]
+        if flags == idaapi.XREF_FAR:
+            typef=[idaapi.fl_JF, idaapi.fl_F, idaapi.fl_CF]
+            typed=None
+        if flags == idaapi.XREF_DATA:
+            typef=None
+            typed=[idaapi.dr_U, idaapi.dr_O, idaapi.dr_W, idaapi.dr_R, idaapi.dr_T, idaapi.dr_I]
+        for xref in idb.analysis._get_xrefs(self.idb, dst=ea, tag='X',
+                                                types=typef):
+            yield xref.src
+        for xref in idb.analysis._get_xrefs(self.idb, dst=ea, tag='D',
+                                                types=typed):
+            yield xref.src
 
+    def XrefsFrom(self,ea,flags=None):
+        if flags == idaapi.XREF_ALL:
+            typef=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F, idaapi.fl_CN, idaapi.fl_CF]
+            typed=[idaapi.dr_U, idaapi.dr_O, idaapi.dr_W, idaapi.dr_R, idaapi.dr_T, idaapi.dr_I]
+        if flags == idaapi.XREF_FAR:
+            typef=[idaapi.fl_JF, idaapi.fl_F, idaapi.fl_CF]
+            typed=None
+        if flags == idaapi.XREF_DATA:
+            typef=None
+            typed=[idaapi.dr_U, idaapi.dr_O, idaapi.dr_W, idaapi.dr_R, idaapi.dr_T, idaapi.dr_I]
+        for xref in idb.analysis._get_xrefs(self.idb, dst=ea, tag='X',
+                                                types=typef):
+            yield xref.dst
+        for xref in idb.analysis._get_xrefs(self.idb, dst=ea, tag='D',
+                                                types=typed):
+            yield xref.dst
+        
     def Strings(self, default_setup=False):
         return self.strings
 
