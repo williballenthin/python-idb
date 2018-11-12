@@ -935,7 +935,7 @@ class Function:
             yield StackChangePoint(offset, change)
 
 
-Xref = namedtuple('Xref', ['src', 'dst', 'type'])
+Xref = namedtuple('Xref', ['frm', 'to', 'type'])
 
 
 def _get_xrefs(db, tag, src=None, dst=None, types=None):

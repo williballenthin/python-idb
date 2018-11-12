@@ -1631,13 +1631,13 @@ class idaapi:
                     seen.add(block.startEA)
 
                     for xref in api.idaapi._get_flow_preds(block.startEA):
-                        if xref.src not in bbs_by_end:
-                            pred_start = api.idaapi._find_bb_start(xref.src)
-                            pred = BasicBlock(self, pred_start, xref.src, api.idc.NextHead(xref.src))
+                        if xref.frm not in bbs_by_end:
+                            pred_start = api.idaapi._find_bb_start(xref.frm)
+                            pred = BasicBlock(self, pred_start, xref.frm, api.idc.NextHead(xref.frm))
                             bbs_by_start[pred.startEA] = pred
                             bbs_by_end[pred.lastInstEA] = pred
                         else:
-                            pred = bbs_by_end[xref.src]
+                            pred = bbs_by_end[xref.frm]
 
                         logger.debug('pred: %s', pred)
 
@@ -1646,13 +1646,13 @@ class idaapi:
                         q.append(pred)
 
                     for xref in api.idaapi._get_flow_succs(block.lastInstEA):
-                        if xref.dst not in bbs_by_start:
-                            succ_end = api.idaapi._find_bb_end(xref.dst)
-                            succ = BasicBlock(self, xref.dst, succ_end, api.idc.NextHead(succ_end))
+                        if xref.to not in bbs_by_start:
+                            succ_end = api.idaapi._find_bb_end(xref.to)
+                            succ = BasicBlock(self, xref.to, succ_end, api.idc.NextHead(succ_end))
                             bbs_by_start[succ.startEA] = succ
                             bbs_by_end[succ.lastInstEA] = succ
                         else:
-                            succ = bbs_by_start[xref.dst]
+                            succ = bbs_by_start[xref.to]
 
                         logger.debug('succ: %s', succ)
 
@@ -1898,7 +1898,7 @@ class idautils:
         # a code xref is like a fallthrough or jump, not like a call.
         for xref in idb.analysis.get_crefs_to(self.idb, ea,
                                               types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]):
-            yield xref.src
+            yield xref.frm
 
     def CodeRefsFrom(self, ea, flow):
         if flow:
@@ -1912,17 +1912,17 @@ class idautils:
         # a code xref is like a fallthrough or jump, not like a call.
         for xref in idb.analysis.get_crefs_from(self.idb, ea,
                                                 types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]):
-            yield xref.dst
+            yield xref.to
     
     def DataRefFrom(self,ea):
         for xref in idb.analysis.get_drefs_from(self.idb, ea,
                                                 types=[idaapi.dr_U, idaapi.dr_O, idaapi.dr_W, idaapi.dr_R, idaapi.dr_T, idaapi.dr_I]):
-            yield xref.src
+            yield xref.frm
     
     def DataRefFrom(self,ea):
         for xref in idb.analysis.get_drefs_from(self.idb, ea,
                                                 types=[idaapi.dr_U, idaapi.dr_O, idaapi.dr_W, idaapi.dr_R, idaapi.dr_T, idaapi.dr_I]):
-            yield xref.dst
+            yield xref.to
     
     def XrefsTo(self,ea,flags=None):
         if flags == idaapi.XREF_ALL:
@@ -1936,10 +1936,10 @@ class idautils:
             typed=[idaapi.dr_U, idaapi.dr_O, idaapi.dr_W, idaapi.dr_R, idaapi.dr_T, idaapi.dr_I]
         for xref in idb.analysis._get_xrefs(self.idb, dst=ea, tag='X',
                                                 types=typef):
-            yield xref.src
+            yield xref.frm
         for xref in idb.analysis._get_xrefs(self.idb, dst=ea, tag='D',
                                                 types=typed):
-            yield xref.src
+            yield xref.frm
 
     def XrefsFrom(self,ea,flags=None):
         if flags == idaapi.XREF_ALL:
@@ -1953,10 +1953,10 @@ class idautils:
             typed=[idaapi.dr_U, idaapi.dr_O, idaapi.dr_W, idaapi.dr_R, idaapi.dr_T, idaapi.dr_I]
         for xref in idb.analysis._get_xrefs(self.idb, dst=ea, tag='X',
                                                 types=typef):
-            yield xref.dst
+            yield xref.to
         for xref in idb.analysis._get_xrefs(self.idb, dst=ea, tag='D',
                                                 types=typed):
-            yield xref.dst
+            yield xref.to
         
     def Strings(self, default_setup=False):
         return self.strings
