@@ -1914,23 +1914,20 @@ class idautils:
                                                 types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]):
             yield xref.to
 
+    ALL_DREF_TYPES = (idaapi.dr_U, idaapi.dr_O, idaapi.dr_W,
+                      idaapi.dr_R, idaapi.dr_T, idaapi.dr_I)
+
     def DataRefsFrom(self, ea):
         # IDAPython docstring says this returns a list,
         # but its actually a generator.
 
         # calls are not data references.
         # global variables are data references.
-        for xref in idb.analysis.get_drefs_from(self.idb, ea,
-                                                types=[idaapi.dr_U, idaapi.dr_O,
-                                                       idaapi.dr_W, idaapi.dr_R,
-                                                       idaapi.dr_T, idaapi.dr_I]):
+        for xref in idb.analysis.get_drefs_from(self.idb, ea, types=self.ALL_DREF_TYPES):
             yield xref.to
 
     def DataRefsTo(self, ea):
-        for xref in idb.analysis.get_drefs_to(self.idb, ea,
-                                              types=[idaapi.dr_U, idaapi.dr_O,
-                                                     idaapi.dr_W, idaapi.dr_R,
-                                                     idaapi.dr_T, idaapi.dr_I]):
+        for xref in idb.analysis.get_drefs_to(self.idb, ea, types=self.ALL_DREF_TYPES):
             yield xref.frm
 
     def XrefsTo(self,ea,flags=None):
