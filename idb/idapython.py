@@ -1910,13 +1910,22 @@ class idautils:
                                               types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]):
             yield xref.frm
 
+    def _get_fallthrough_xref_from(self, ea):
+        nextea = self.api.idc.NextHead(ea)
+        nextflags = self.api.idc.GetFlags(nextea)
+        if nextflags is None:
+            return None
+
+        if not self.api.ida_bytes.is_flow(nextflags):
+            return None
+
+        return idb.analysis.Xref(ea, nextea, 0x15)
+
     def CodeRefsFrom(self, ea, flow):
         if flow:
-            nextea = self.api.idc.NextHead(ea)
-            nextflags = self.api.idc.GetFlags(nextea)
-            if self.api.ida_bytes.is_flow(nextflags):
-                # instruction falls through to next insn
-                yield nextea
+            ftf = self._get_fallthrough_xref_from(ea)
+            if ftf is not None:
+                yield ftf.to
 
         # get all the code xrefs from this instruction.
         # a code xref is like a fallthrough or jump, not like a call.
