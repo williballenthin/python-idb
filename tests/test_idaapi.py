@@ -711,10 +711,13 @@ def test_XrefsTo(kernel32_idb, version, bitness, expected):
     # two write, one read xref
     assert set(api.idautils.XrefsTo(0x689DB018, api.idaapi.XREF_ALL)) == \
         set([(0x68904257, 0x689db018, 0x3),
-            (0x68906350, 0x689db018, 0x2),
-            (0x6893777c, 0x689db018, 0x2)])
+             (0x68906350, 0x689db018, 0x2),
+             (0x6893777c, 0x689db018, 0x2)])
 
-    assert set(api.idautils.XrefsTo(0x689DB018, api.idaapi.XREF_FAR)) == set([])
+    assert set(api.idautils.XrefsTo(0x689DB018, api.idaapi.XREF_FAR)) == \
+        set([(0x68904257, 0x689db018, 0x3),
+             (0x68906350, 0x689db018, 0x2),
+             (0x6893777c, 0x689db018, 0x2)])
 
     assert set(api.idautils.XrefsTo(0x689DB018, api.idaapi.XREF_DATA)) == \
         set([(0x68904257, 0x689db018, 0x3),
