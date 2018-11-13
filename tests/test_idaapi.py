@@ -383,11 +383,11 @@ def test_find_bb_start(kernel32_idb, version, bitness, expected):
 def test_flow_preds(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
-    assert lpluck('src', api.idaapi._get_flow_preds(0x68901695)) == []
-    assert lpluck('src', api.idaapi._get_flow_preds(0x68901697)) == [0x68901695]
-    assert lpluck('src', api.idaapi._get_flow_preds(0x68901698)) == [0x68901697]
+    assert lpluck('frm', api.idaapi._get_flow_preds(0x68901695)) == []
+    assert lpluck('frm', api.idaapi._get_flow_preds(0x68901697)) == [0x68901695]
+    assert lpluck('frm', api.idaapi._get_flow_preds(0x68901698)) == [0x68901697]
 
-    assert lpluck('src', api.idaapi._get_flow_preds(0x68906156)) == [0x6890169E]
+    assert lpluck('frm', api.idaapi._get_flow_preds(0x68906156)) == [0x6890169E]
     assert lpluck('type', api.idaapi._get_flow_preds(0x68906156)) == [api.idaapi.fl_JN]
 
 
@@ -395,11 +395,11 @@ def test_flow_preds(kernel32_idb, version, bitness, expected):
 def test_flow_succs(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
-    assert lpluck('dst', api.idaapi._get_flow_succs(0x68901695)) == [0x68901697]
-    assert lpluck('dst', api.idaapi._get_flow_succs(0x68901697)) == [0x68901698]
-    assert lpluck('dst', api.idaapi._get_flow_succs(0x68901698)) == [0x6890169A]
+    assert lpluck('to', api.idaapi._get_flow_succs(0x68901695)) == [0x68901697]
+    assert lpluck('to', api.idaapi._get_flow_succs(0x68901697)) == [0x68901698]
+    assert lpluck('to', api.idaapi._get_flow_succs(0x68901698)) == [0x6890169A]
 
-    assert lpluck('dst', api.idaapi._get_flow_succs(0x6890169E)) == [0x689016A4, 0x68906156]
+    assert lpluck('to', api.idaapi._get_flow_succs(0x6890169E)) == [0x689016A4, 0x68906156]
     assert lpluck('type', api.idaapi._get_flow_succs(0x6890169E)) == [api.idaapi.fl_F, api.idaapi.fl_JN]
 
 
