@@ -1964,7 +1964,8 @@ class idautils:
             # Jump Far.
             # Jump Near.
             typef = [idaapi.fl_CF, idaapi.fl_CN, idaapi.fl_JF, idaapi.fl_JN]
-            typed = None
+            # strange, but true: include drefs in XREF_FAR
+            typed = self.ALL_DREF_TYPES
 
         # return data references only
         elif flags == idaapi.XREF_DATA:
