@@ -1985,25 +1985,46 @@ class idautils:
                     yield ftf
 
         if typed:
-            for xref in idb.analysis._get_xrefs(self.idb, dst=ea, tag='D', types=typed):
+            for xref in idb.analysis.get_drefs_to(self.idb, ea, typed):
                 yield xref
 
-    def XrefsFrom(self,ea,flags=None):
+    def XrefsFrom(self, ea, flags=idaapi.XREF_ALL):
+        # return all references
         if flags == idaapi.XREF_ALL:
-            typef=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F, idaapi.fl_CN, idaapi.fl_CF]
-            typed=[idaapi.dr_U, idaapi.dr_O, idaapi.dr_W, idaapi.dr_R, idaapi.dr_T, idaapi.dr_I]
-        if flags == idaapi.XREF_FAR:
-            typef=[idaapi.fl_JF, idaapi.fl_F, idaapi.fl_CF]
-            typed=None
-        if flags == idaapi.XREF_DATA:
-            typef=None
-            typed=[idaapi.dr_U, idaapi.dr_O, idaapi.dr_W, idaapi.dr_R, idaapi.dr_T, idaapi.dr_I]
-        for xref in idb.analysis._get_xrefs(self.idb, dst=ea, tag='X',
-                                                types=typef):
-            yield xref.to
-        for xref in idb.analysis._get_xrefs(self.idb, dst=ea, tag='D',
-                                                types=typed):
-            yield xref.to
+            typef = self.ALL_CREF_TYPES
+            typed = self.ALL_DREF_TYPES
+
+        # don't return ordinary flow xrefs
+        elif flags == idaapi.XREF_FAR:
+            # Call Far
+            # Call Near
+            # Jump Far.
+            # Jump Near.
+            typef = [idaapi.fl_CF, idaapi.fl_CN, idaapi.fl_JF, idaapi.fl_JN]
+            # strange, but true: include drefs in XREF_FAR
+            typed = self.ALL_DREF_TYPES
+
+        # return data references only
+        elif flags == idaapi.XREF_DATA:
+            typef = None
+            typed = self.ALL_DREF_TYPES
+
+        else:
+            raise ValueError('unexpected flags value')
+
+        if typef:
+            for xref in idb.analysis.get_crefs_from(self.idb, ea, typef):
+                yield xref
+
+            # fallthrough flow is not explicitly encoded
+            if idaapi.fl_F in typef:
+                ftf = self._get_fallthrough_xref_from(ea)
+                if ftf is not None:
+                    yield ftf
+
+        if typed:
+            for xref in idb.analysis.get_drefs_from(self.idb, ea, typed):
+                yield xref
 
     def Strings(self, default_setup=False):
         return self.strings

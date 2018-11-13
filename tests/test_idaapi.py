@@ -723,6 +723,43 @@ def test_XrefsTo(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test()
+def test_XrefsFrom(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+
+    # insn
+    # 689016C0 mov     eax, ___security_cookie
+    assert set(api.idautils.XrefsFrom(0x689016C0, api.idaapi.XREF_ALL)) == \
+        set([(0x689016c0, 0x689016c5, 0x15),
+             (0x689016c0, 0x689db370, 0x3)])
+
+    assert set(api.idautils.XrefsFrom(0x689016C0, api.idaapi.XREF_FAR)) == \
+        set([(0x689016c0, 0x689db370, 0x3)])
+
+    assert set(api.idautils.XrefsFrom(0x689016C0, api.idaapi.XREF_DATA)) == \
+        set([(0x689016c0, 0x689db370, 0x3)])
+
+    # insn 689016E7 jz      loc_68904247
+    assert set(api.idautils.XrefsFrom(0x689016E7, api.idaapi.XREF_ALL)) == \
+        set([(0x689016e7, 0x689016ed, 0x15),
+             (0x689016e7, 0x68904247, 0x13)])
+
+    assert set(api.idautils.XrefsFrom(0x689016E7, api.idaapi.XREF_FAR)) == \
+        set([(0x689016e7, 0x68904247, 0x13)])
+
+    assert set(api.idautils.XrefsFrom(0x689016E7, api.idaapi.XREF_DATA)) == set([])
+
+    # insn: .text:6894F4BC                 dd offset sub_689AE1DC
+    assert set(api.idautils.XrefsFrom(0x6894F4BC, api.idaapi.XREF_ALL)) == \
+        set([(0x6894f4bc, 0x689ae1dc, 0x1)])
+
+    assert set(api.idautils.XrefsFrom(0x6894F4BC, api.idaapi.XREF_FAR)) == \
+        set([(0x6894f4bc, 0x689ae1dc, 0x1)])
+
+    assert set(api.idautils.XrefsFrom(0x6894F4BC, api.idaapi.XREF_DATA)) == \
+        set([(0x6894f4bc, 0x689ae1dc, 0x1)])
+
+
+@kern32_test()
 def test_imports(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     assert api.ida_nalt.get_import_module_qty() == 47
