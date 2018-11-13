@@ -264,21 +264,21 @@ def test_stack_change_points(kernel32_idb, version, bitness, expected):
 
 @kern32_test()
 def test_xrefs(kernel32_idb, version, bitness, expected):
-    assert lpluck('dst', idb.analysis.get_crefs_from(kernel32_idb, 0x68901695)) == []
-    assert lpluck('dst', idb.analysis.get_crefs_from(kernel32_idb, 0x6890169E)) == [0x68906156]
+    assert lpluck('to', idb.analysis.get_crefs_from(kernel32_idb, 0x68901695)) == []
+    assert lpluck('to', idb.analysis.get_crefs_from(kernel32_idb, 0x6890169E)) == [0x68906156]
 
-    assert lpluck('src', idb.analysis.get_crefs_to(kernel32_idb, 0x6890169E)) == []
-    assert lpluck('src', idb.analysis.get_crefs_to(kernel32_idb, 0x68906156)) == [0x6890169E]
+    assert lpluck('frm', idb.analysis.get_crefs_to(kernel32_idb, 0x6890169E)) == []
+    assert lpluck('frm', idb.analysis.get_crefs_to(kernel32_idb, 0x68906156)) == [0x6890169E]
 
     # .text:689016BA 004 81 EC 14 02 00 00                       sub     esp, 214h
     # .text:689016C0 218 A1 70 B3 9D 68                          mov     eax, ___security_cookie
     # .text:689016C5 218 33 C5                                   xor     eax, ebp
     security_cookie = 0x689DB370
-    assert lpluck('dst', idb.analysis.get_drefs_from(kernel32_idb, 0x689016C0)) == [security_cookie]
-    assert lpluck('src', idb.analysis.get_drefs_to(kernel32_idb, 0x689016C0)) == []
+    assert lpluck('to', idb.analysis.get_drefs_from(kernel32_idb, 0x689016C0)) == [security_cookie]
+    assert lpluck('frm', idb.analysis.get_drefs_to(kernel32_idb, 0x689016C0)) == []
 
-    assert 0x689016C0 in pluck('src', idb.analysis.get_drefs_to(kernel32_idb, security_cookie))
-    assert lpluck('dst', idb.analysis.get_drefs_from(kernel32_idb, security_cookie)) == []
+    assert 0x689016C0 in pluck('frm', idb.analysis.get_drefs_to(kernel32_idb, security_cookie))
+    assert lpluck('to', idb.analysis.get_drefs_from(kernel32_idb, security_cookie)) == []
 
 
 @kern32_test([
