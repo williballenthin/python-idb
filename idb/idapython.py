@@ -1925,7 +1925,14 @@ class idautils:
                                                        idaapi.dr_W, idaapi.dr_R,
                                                        idaapi.dr_T, idaapi.dr_I]):
             yield xref.to
-    
+
+    def DataRefsTo(self, ea):
+        for xref in idb.analysis.get_drefs_to(self.idb, ea,
+                                              types=[idaapi.dr_U, idaapi.dr_O,
+                                                     idaapi.dr_W, idaapi.dr_R,
+                                                     idaapi.dr_T, idaapi.dr_I]):
+            yield xref.frm
+
     def XrefsTo(self,ea,flags=None):
         if flags == idaapi.XREF_ALL:
             typef=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F, idaapi.fl_CN, idaapi.fl_CF]

@@ -657,6 +657,26 @@ def test_DataRefsFrom(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test()
+def test_DataRefsTo(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+
+    # global variable:
+    #  .data:689DB3B0 dword_689DB3B0  dd 0
+    # xrefs:
+    #  write:  .text:689881F4 mov     dword_689DB3B0, 0C0000409h
+    #  offset: .text:68988230 off_68988230    dd offset dword_689DB3B0
+    assert set(api.idautils.DataRefsTo(0x689DB3B0)) == set([0x689881f4, 0x68988230])
+
+    # global variable:
+    #   .data:689DB374 dword_689DB374  dd 0
+    # xrefs:
+    #   read:   .text:68912D7C mov     ecx, dword_689DB374
+    #   read:   .text:6899506F mov     eax, dword_689DB374
+    #   offset: .text:689C0184 dd offset dword_689DB374
+    assert set(api.idautils.DataRefsTo(0x689DB374)) == set([0x68912d7c, 0x6899506f, 0x689c0184])
+
+
+@kern32_test()
 def test_imports(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     assert api.ida_nalt.get_import_module_qty() == 47
