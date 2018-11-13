@@ -677,6 +677,52 @@ def test_DataRefsTo(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test()
+def test_XrefsTo(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+
+    # first instruction in function: sub_689016B5
+    #   .text:689016B5 mov     edi, edi
+    # single call to it:
+    #  Python>list(map(repr_xref, XrefsTo(0x689016B5)))
+    #  ['0x689016a7 0x689016b5 0x11']
+    assert set(api.idautils.XrefsTo(0x689016B5, api.idaapi.XREF_ALL)) == \
+        set([(0x689016a7, 0x689016b5, 0x11)])
+
+    assert set(api.idautils.XrefsTo(0x689016B5, api.idaapi.XREF_FAR)) == \
+        set([(0x689016a7, 0x689016b5, 0x11)])
+
+    assert set(api.idautils.XrefsTo(0x689016B5, api.idaapi.XREF_DATA)) == set([])
+
+    # first insn in basic block, two flows to it:
+    #  fallthrough
+    #  jnz from 68904251
+    # 68904257 mov     eax, hHeap
+    assert set(api.idautils.XrefsTo(0x68904257, api.idaapi.XREF_ALL)) == \
+        set([(0x68904251, 0x68904257, 0x15),
+             (0x689138c1, 0x68904257, 0x13)])
+
+    assert set(api.idautils.XrefsTo(0x68904257, api.idaapi.XREF_FAR)) == \
+        set([(0x689138c1, 0x68904257, 0x13)])
+
+    assert set(api.idautils.XrefsTo(0x68904257, api.idaapi.XREF_DATA)) == set([])
+
+    # global variable `hHeap`
+    #  .data:689DB018 hHeap           dd 0
+    # two write, one read xref
+    assert set(api.idautils.XrefsTo(0x689DB018, api.idaapi.XREF_ALL)) == \
+        set([(0x68904257, 0x689db018, 0x3),
+            (0x68906350, 0x689db018, 0x2),
+            (0x6893777c, 0x689db018, 0x2)])
+
+    assert set(api.idautils.XrefsTo(0x689DB018, api.idaapi.XREF_FAR)) == set([])
+
+    assert set(api.idautils.XrefsTo(0x689DB018, api.idaapi.XREF_DATA)) == \
+        set([(0x68904257, 0x689db018, 0x3),
+            (0x68906350, 0x689db018, 0x2),
+            (0x6893777c, 0x689db018, 0x2)])
+
+
+@kern32_test()
 def test_imports(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     assert api.ida_nalt.get_import_module_qty() == 47
