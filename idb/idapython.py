@@ -1887,12 +1887,22 @@ class idautils:
             ret.append(func.startEA)
         return list(sorted(ret))
 
+    def _get_fallthrough_xref_to(self, ea):
+        # fallthrough flow is not explicitly encoded
+        flags = self.api.idc.GetFlags(ea)
+        if flags is None:
+            return None
+
+        if not self.api.ida_bytes.is_flow(flags):
+            return None
+
+        return idb.analysis.Xref(self.api.idc.PrevHead(ea), ea, 0x15)
+
     def CodeRefsTo(self, ea, flow):
         if flow:
-            flags = self.api.idc.GetFlags(ea)
-            if flags is not None and self.api.ida_bytes.is_flow(flags):
-                # prev instruction fell through to this insn
-                yield self.api.idc.PrevHead(ea)
+            ftf = self._get_fallthrough_xref_to(ea)
+            if ftf is not None:
+                yield ftf.frm
 
         # get all the code xrefs to this instruction.
         # a code xref is like a fallthrough or jump, not like a call.
