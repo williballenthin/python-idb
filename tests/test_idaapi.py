@@ -643,6 +643,20 @@ def test_CodeRefsFrom(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test()
+def test_DataRefsFrom(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+
+    # .text:6890618E cmp     ___security_cookie, 0
+    assert set(api.idautils.DataRefsFrom(0x6890618E)) == set([0x689db370])
+
+    # .text:689061AB mov     eax, ___security_cookie
+    assert set(api.idautils.DataRefsFrom(0x689061AB)) == set([0x689db370])
+
+    # .text:689061B2 mov     dword_689DB05
+    assert set(api.idautils.DataRefsFrom(0x689061B2)) == set([0x689DB054])
+
+
+@kern32_test()
 def test_imports(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     assert api.ida_nalt.get_import_module_qty() == 47

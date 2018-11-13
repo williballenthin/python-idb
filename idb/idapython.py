@@ -1464,7 +1464,7 @@ class idaapi:
     dr_T = 4
     # Informational (a derived java class references its base class informationally)
     dr_I = 5
-    # return all references 
+    # return all references
     XREF_ALL = 0
     # don't return ordinary flow xrefs
     XREF_FAR = 1
@@ -1913,15 +1913,17 @@ class idautils:
         for xref in idb.analysis.get_crefs_from(self.idb, ea,
                                                 types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]):
             yield xref.to
-    
-    def DataRefFrom(self,ea):
+
+    def DataRefsFrom(self, ea):
+        # IDAPython docstring says this returns a list,
+        # but its actually a generator.
+
+        # calls are not data references.
+        # global variables are data references.
         for xref in idb.analysis.get_drefs_from(self.idb, ea,
-                                                types=[idaapi.dr_U, idaapi.dr_O, idaapi.dr_W, idaapi.dr_R, idaapi.dr_T, idaapi.dr_I]):
-            yield xref.frm
-    
-    def DataRefFrom(self,ea):
-        for xref in idb.analysis.get_drefs_from(self.idb, ea,
-                                                types=[idaapi.dr_U, idaapi.dr_O, idaapi.dr_W, idaapi.dr_R, idaapi.dr_T, idaapi.dr_I]):
+                                                types=[idaapi.dr_U, idaapi.dr_O,
+                                                       idaapi.dr_W, idaapi.dr_R,
+                                                       idaapi.dr_T, idaapi.dr_I]):
             yield xref.to
     
     def XrefsTo(self,ea,flags=None):
@@ -1957,7 +1959,7 @@ class idautils:
         for xref in idb.analysis._get_xrefs(self.idb, dst=ea, tag='D',
                                                 types=typed):
             yield xref.to
-        
+
     def Strings(self, default_setup=False):
         return self.strings
 
