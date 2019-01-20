@@ -1912,6 +1912,20 @@ class idautils:
         except KeyError:
             return
 
+    def Heads(self, start, end):
+        ea = start
+
+        while not self.api.ida_bytes.is_head(self.api.idc.GetFlags(ea)):
+            ea = self.api.idc.NextHead(ea)
+            if ea > end:
+                return
+
+        while ea != self.api.idc.BADADDR:
+            yield ea
+            ea = self.api.idc.NextHead(ea)
+            if ea > end:
+                return
+
     def _get_fallthrough_xref_to(self, ea):
         # fallthrough flow is not explicitly encoded
         flags = self.api.idc.GetFlags(ea)
