@@ -1878,9 +1878,13 @@ class idautils:
     def Segments(self):
         return sorted(idb.analysis.Segments(self.idb).segments.keys())
 
-    def Functions(self):
+    def Functions(self, start=None, end=None):
         ret = []
         for ea, func in idb.analysis.Functions(self.idb).functions.items():
+            if start and start > ea:
+                continue
+            if end and end <= ea:
+                continue
             # we won't report chunks
             if is_flag_set(func.flags, func.FUNC_TAIL):
                 continue
