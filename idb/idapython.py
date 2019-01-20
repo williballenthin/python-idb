@@ -1891,6 +1891,27 @@ class idautils:
             ret.append(func.startEA)
         return list(sorted(ret))
 
+    def Chunks(self, fva):
+        try:
+            func_t = idb.analysis.Functions(self.idb).functions[fva]
+        except KeyError:
+            logger.debug('failed to fetch func_t: 0x%x', fva)
+            return
+
+        yield (func_t.startEA, func_t.endEA)
+
+        try:
+            f = idb.analysis.Function(self.idb, fva)
+        except KeyError:
+            logger.debug('failed to fetch Function: 0x%x', fva)
+            return
+
+        try:
+            for start, size in f.get_chunks():
+                yield (start, start+size)
+        except KeyError:
+            return
+
     def _get_fallthrough_xref_to(self, ea):
         # fallthrough flow is not explicitly encoded
         flags = self.api.idc.GetFlags(ea)
