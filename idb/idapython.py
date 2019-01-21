@@ -1374,6 +1374,9 @@ class ida_funcs:
 
     def get_func_name(self, ea):
         func = self.get_func(ea)
+        if func is None:
+            raise KeyError(ea)
+
         # ensure this is a function
         if func.startEA != ea:
             raise KeyError(ea)
