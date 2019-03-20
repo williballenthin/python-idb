@@ -706,10 +706,16 @@ class idc:
                 return seg
 
     def SegStart(self, ea):
-        return self._get_segment(ea).startEA
+        seg = self._get_segment(ea)
+        if seg is None:
+            return None
+        return seg.startEA
 
     def SegEnd(self, ea):
-        return self._get_segment(ea).endEA
+        seg = self._get_segment(ea)
+        if seg is None:
+            return None
+        return seg.endEA
 
     def FirstSeg(self):
         segs = idb.analysis.Segments(self.idb).segments
