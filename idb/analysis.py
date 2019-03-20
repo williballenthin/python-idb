@@ -453,13 +453,13 @@ class IdaInfo(vstruct.VStruct):
         # 8 bytes for < 7.0
         # 16 bytes for >= 7.0
         self.procname = v_str(size=0x10)
-        self.s_genflags = v_uint16()
-        self.lflags = v_uint32()
+        self.lflags = v_uint8()
+        self.demnames = v_uint8()
+        self.filetype = v_uint16()
         # TODO: the exact layout, particularly across versions, of the below is unknown.
         # offsets to fields in <7.0 seem to be available here:
         # https://github.com/tmr232/idapython/blob/master/python/idc.py#L2591
         #self.database_change_count = v_uint32()
-        #self.filetype = v_uint16()
         #self.ostype = v_uint16()
         #self.apptype = v_uint16()
         #self.asmtype = v_uint8()
