@@ -993,6 +993,9 @@ class idc:
     def GetInputSHA256(self):
         return self.api.ida_nalt.retrieve_input_file_sha256()
 
+    def GetInputFile(self):
+        return self.api.ida_nalt.get_input_file_path()
+
     def Comment(self, ea):
         return self.api.ida_bytes.get_cmt(ea, False)
 
@@ -1450,6 +1453,9 @@ class ida_nalt:
 
     def retrieve_input_file_md5(self):
         return idb.analysis.Root(self.idb).md5
+
+    def get_input_file_path(self):
+        return idb.analysis.Root(self.idb).input_file_path
 
 
 class ida_funcs:
