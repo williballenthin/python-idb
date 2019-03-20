@@ -1911,12 +1911,12 @@ class idaapi:
             return self.inf.procname
 
         @property
-        def s_genflags(self):
+        def lflags(self):
             return self.inf.lflags
 
         @property
-        def lflags(self):
-            return self.inf.lflags
+        def filetype(self):
+            return self.inf.filetype
 
         def is_32bit(self):
             return self.lflags & self.api.ida_ida.LFLG_PC_FLAT > 0
@@ -1947,6 +1947,37 @@ class idaapi:
 
     def get_imagebase(self):
         return self.api.ida_nalt.get_imagebase()
+
+    TYPE_NAMES = {
+         0  : 'MS DOS EXE File',  # (obsolete)
+         1  : 'MS DOS COM File',  # (obsolete)
+         2  : 'Binary file',
+         3  : 'MS DOS Driver',
+         4  : 'New Executable (NE)',
+         5  : 'Intel Hex Object File',
+         6  : 'MOS Technology Hex Object File',
+         7  : 'Linear Executable (LX)',
+         8  : 'Linear Executable (LE)',
+         9  : 'Netware Loadable Module (NLM)',
+         10 : 'Common Object File Format (COFF)',
+         11 : 'Portable Executable (PE)',
+         12 : 'Object Module Format',
+         13 : 'R-records',
+         14 : 'ZIP file',  # (this file is never loaded to IDA database)
+         15 : 'Library of OMF Modules',
+         16 : 'ar library',
+         17 : 'file is loaded using LOADER DLL',
+         18 : 'Executable and Linkable Format (ELF)',
+         19 : 'Watcom DOS32 Extender (W32RUN)',
+         20 : 'Linux a.out (AOUT)',
+         21 : 'PalmPilot program file',
+         22 : 'MS DOS EXE File',
+         23 : 'MS DOS COM File',
+         24 : 'AIX ar library',
+    }
+
+    def get_file_type_name(self):
+        return self.TYPE_NAMES[self.get_inf_structure().filetype]
 
 
 class StringItem:
