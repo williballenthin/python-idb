@@ -450,10 +450,14 @@ class IdaInfo(vstruct.VStruct):
         self.zero = v_bytes(size=0x0)
         self.version = v_uint16()
         self.procname_size = v_bytes(size=0x0)
+        # 8 bytes for < 7.0
+        # 16 bytes for >= 7.0
         self.procname = v_str(size=0x10)
+        self.s_genflags = v_uint16()
+        self.lflags = v_uint32()
         # TODO: the exact layout, particularly across versions, of the below is unknown.
-        #self.s_genflags = v_uint16()
-        #self.lflags = v_uint32()
+        # offsets to fields in <7.0 seem to be available here:
+        # https://github.com/tmr232/idapython/blob/master/python/idc.py#L2591
         #self.database_change_count = v_uint32()
         #self.filetype = v_uint16()
         #self.ostype = v_uint16()
@@ -500,6 +504,12 @@ class IdaInfo(vstruct.VStruct):
         if self.procname_size:
             size = six.indexbytes(self.procname_size, 0x0)
             self['procname'].vsSetLength(size)
+        # pre-7.0
+        elif self.tag == 'IDA':
+            self['procname'].vsSetLength(8)
+        # 7.0+
+        else:
+            self['procname'].vsSetLength(16)
 
     @property
     def procName(self):

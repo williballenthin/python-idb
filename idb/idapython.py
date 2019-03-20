@@ -380,6 +380,195 @@ class ida_netnode:
         return idb.netnode.Netnode(self.idb, *args, **kwargs)
 
 
+class ida_ida:
+    def __init__(self, db, api):
+        self.idb = db
+        self.api = api
+
+        # via: https://www.hex-rays.com/products/ida/support/idapython_docs/ida_ida-module.html
+
+        # filetype_t
+        # from: https://www.hex-rays.com/products/ida/support/sdkdoc/ida_8hpp.html
+        self.f_EXE_old = 0
+        self.f_COM_old = 1
+        self.f_BIN = 2
+        self.f_DRV = 3
+        self.f_WIN = 4
+        self.f_HEX = 5
+        self.f_MEX = 6
+        self.f_LX = 7
+        self.f_LE = 8
+        self.f_NLM = 9
+        self.f_COFF = 10
+        self.f_PE = 11
+        self.f_OMF = 12
+        self.f_SREC = 13
+        self.f_ZIP = 14
+        self.f_OMFLIB = 15
+        self.f_AR = 16
+        self.f_LOADER = 17
+        self.f_ELF = 18
+        self.f_W32RUN = 19
+        self.f_AOUT = 20
+        self.f_PRC = 21
+        self.f_EXE = 22
+        self.f_COM = 23
+        self.f_AIXAR = 24
+        self.f_MACHO = 25
+        # storage_type_t
+        # from: https://www.hex-rays.com/products/ida/support/sdkdoc/ida_8hpp.html
+        self.STT_CUR = -1
+        self.STT_VA = 0
+        self.STT_MM = 1
+        self.STT_DBG = 2
+        # Autoanalysis is enabled?
+        self.INFFL_AUTO = 1
+        # the target assembler
+        self.INFFL_ALLASM = 2
+        # loading an idc file that contains database info
+        self.INFFL_LOADIDC = 4
+        # do not store user info in the database
+        self.INFFL_NOUSER = 8
+        # (internal) temporary interdiction to modify the database
+        self.INFFL_READONLY = 16
+        # check manual operands? (unused)
+        self.INFFL_CHKOPS = 32
+        # allow non-matched operands? (unused)
+        self.INFFL_NMOPS = 64
+        # currently using graph options ({graph})
+        self.INFFL_GRAPH_VIEW = 128
+        # decode floating point processor instructions?
+        self.LFLG_PC_FPP = 1
+        # 32-bit program?
+        self.LFLG_PC_FLAT = 2
+        # 64-bit program?
+        self.LFLG_64BIT = 4
+        # Is dynamic library?
+        self.LFLG_IS_DLL = 8
+        # treat 'REF_OFF32' as 32-bit offset for 16bit segments (otherwise try SEG16:OFF16)
+        self.LFLG_FLAT_OFF32 = 16
+        # Byte order: is MSB first?
+        self.LFLG_MSF = 32
+        # (wide bytes: {dnbits} > 8)
+        self.LFLG_WIDE_HBF = 64
+        # do not store input full path in debugger process options
+        self.LFLG_DBG_NOPATH = 128
+        # memory snapshot was taken?
+        self.LFLG_SNAPSHOT = 256
+        # pack the database?
+        self.LFLG_PACK = 512
+        # compress the database?
+        self.LFLG_COMPRESS = 1024
+        # is kernel mode binary?
+        self.LFLG_KERNMODE = 2048
+        # leave database components unpacked
+        self.IDB_UNPACKED = 0
+        # pack database components into .idb
+        self.IDB_PACKED = 1
+        # compress & pack database components
+        self.IDB_COMPRESSED = 2
+        # Trace execution flow.
+        self.AF_CODE = 1
+        # Mark typical code sequences as code.
+        self.AF_MARKCODE = 2
+        # Locate and create jump tables.
+        self.AF_JUMPTBL = 4
+        # Control flow to data segment is ignored.
+        self.AF_PURDAT = 8
+        # Analyze and create all xrefs.
+        self.AF_USED = 16
+        # Delete instructions with no xrefs.
+        self.AF_UNK = 32
+        # Create function if data xref data->code32 exists.
+        self.AF_PROCPTR = 64
+        # Create functions if call is present.
+        self.AF_PROC = 128
+        # Create function tails.
+        self.AF_FTAIL = 256
+        # Create stack variables.
+        self.AF_LVAR = 512
+        # Propagate stack argument information.
+        self.AF_STKARG = 1024
+        # Propagate register argument information.
+        self.AF_REGARG = 2048
+        # Trace stack pointer.
+        self.AF_TRACE = 4096
+        # Perform full SP-analysis.
+        self.AF_VERSP = 8192
+        # Perform 'no-return' analysis.
+        self.AF_ANORET = 16384
+        # Try to guess member function types.
+        self.AF_MEMFUNC = 32768
+        # Truncate functions upon code deletion.
+        self.AF_TRFUNC = 65536
+        # Create string literal if data xref exists.
+        self.AF_STRLIT = 131072
+        # Check for unicode strings.
+        self.AF_CHKUNI = 262144
+        # Create offsets and segments using fixup info.
+        self.AF_FIXUP = 524288
+        # Create offset if data xref to seg32 exists.
+        self.AF_DREFOFF = 1048576
+        # Convert 32bit instruction operand to offset.
+        self.AF_IMMOFF = 2097152
+        # Automatically convert data to offsets.
+        self.AF_DATOFF = 4194304
+        # Use flirt signatures.
+        self.AF_FLIRT = 8388608
+        # Append a signature name comment for recognized anonymous library functions.
+        self.AF_SIGCMT = 16777216
+        # Allow recognition of several copies of the same function.
+        self.AF_SIGMLT = 33554432
+        # Automatically hide library functions.
+        self.AF_HFLIRT = 67108864
+        # Rename jump functions as j_...
+        self.AF_JFUNC = 134217728
+        # Rename empty functions as nullsub_...
+        self.AF_NULLSUB = 268435456
+        # Coagulate data segs at the final pass.
+        self.AF_DODATA = 536870912
+        # Coagulate code segs at the final pass.
+        self.AF_DOCODE = 1073741824
+        # Final pass of analysis.
+        self.AF_FINAL = -2147483648
+        # Handle EH information.
+        self.AF2_DOEH = 1
+        # Handle RTTI information
+        self.AF2_DORTTI = 2
+        self.NM_REL_OFF = 0
+        self.NM_PTR_OFF = 1
+        self.NM_NAM_OFF = 2
+        self.NM_REL_EA = 3
+        self.NM_PTR_EA = 4
+        self.NM_NAM_EA = 5
+        self.NM_EA = 6
+        self.NM_EA4 = 7
+        self.NM_EA8 = 8
+        self.NM_SHORT = 9
+        self.NM_SERIAL = 10
+        # 4 byte alignment for 8byte scalars (__int64/double) inside structures?
+        self.ABI_8ALIGN4 = 1
+        # do not align stack arguments to stack slots
+        self.ABI_PACK_STKARGS = 2
+        self.ABI_BIGARG_ALIGN = 4
+        # long double areuments are passed on stack
+        self.ABI_STACK_LDBL = 8
+        # varargs are always passed on stack (even when there are free registers)
+        self.ABI_STACK_VARARGS = 16
+        # use the floating-point register set
+        self.ABI_HARD_FLOAT = 32
+        # compiler/abi were set by user flag and require SETCOMP_BY_USER flag to be changed
+        self.ABI_SET_BY_USER = 64
+        # use gcc layout for udts (used for mingw)
+        self.ABI_GCC_LAYOUT = 128
+        # max number of operands allowed for an instruction
+        self.UA_MAXOP = 8
+        self.MAXADDR = 4278190080
+        self.IDB_EXT32 = 'idb'
+        self.IDB_EXT64 = 'i64'
+        self.IDB_EXT = 'idb'
+
+
 class idc:
 
     SEGPERM_EXEC   = 1  # Execute
@@ -1704,8 +1893,57 @@ class idaapi:
     def get_segm_end(self, ea):
         return self.api.idc.SegEnd(ea)
 
+    class IdaInfo(object):
+        def __init__(self, api, inf):
+            self.api = api
+            self.inf = inf
+
+        @property
+        def tag(self):
+            return self.inf.tag
+
+        @property
+        def version(self):
+            return self.inf.version
+
+        @property
+        def procName(self):
+            return self.inf.procname
+
+        @property
+        def s_genflags(self):
+            return self.inf.lflags
+
+        @property
+        def lflags(self):
+            return self.inf.lflags
+
+        def is_32bit(self):
+            return self.lflags & self.api.ida_ida.LFLG_PC_FLAT > 0
+
+        def is_64bit(self):
+            return self.lflags & self.api.ida_ida.LFLG_64BIT > 0
+
+        def is_snapshot(self):
+            return self.lflags & self.api.ida_ida.LFLG_SNAPSHOT > 0
+
+        def is_dll(self):
+            return self.lflags & self.api.ida_ida.LFLG_IS_DLL > 0
+
+        def is_flat_off32(self):
+            return self.lflags & self.api.ida_ida.LFLG_FLAT_OFF32 > 0
+
+        def is_be(self):
+            return self.lflags & self.api.ida_ida.LFLG_MSF > 0
+
+        def is_wide_high_byte_first(self):
+            return self.lflags & self.api.ida_ida.LFLG_WIDE_HBF > 0
+
+        def is_kernel_mode(self):
+            return self.lflags & self.api.ida_ida.LFLG_KERNMODE > 0
+
     def get_inf_structure(self):
-        return idb.analysis.Root(self.idb).idainfo
+        return self.IdaInfo(self.api, idb.analysis.Root(self.idb).idainfo)
 
     def get_imagebase(self):
         return self.api.ida_nalt.get_imagebase()
@@ -2158,6 +2396,7 @@ class IDAPython:
         self.idc = idc(db, self)
         self.idaapi = idaapi(db, self)
         self.idautils = idautils(db, self)
+        self.ida_ida = ida_ida(db, self)
         self.ida_funcs = ida_funcs(db, self)
         self.ida_bytes = ida_bytes(db, self)
         self.ida_netnode = ida_netnode(db, self)
