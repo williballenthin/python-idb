@@ -2359,6 +2359,13 @@ class idautils:
             name = self.api.ida_name.get_nlist_name(i)
             yield (ea, name)
 
+    def Entries(self):
+        for i in range(self.api.ida_entry.get_entry_qty()):
+            ordinal = self.api.ida_entry.get_entry_ordinal(i)
+            yield (i,
+                   ordinal,
+                   self.api.ida_entry.get_entry(ordinal),
+                   self.api.ida_entry.get_entry_name(ordinal))
 
 class ida_entry:
     def __init__(self, db, api):
