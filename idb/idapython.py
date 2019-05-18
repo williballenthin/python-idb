@@ -1032,6 +1032,13 @@ class idc:
     def GetFunctionName(self, ea):
         return self.api.ida_funcs.get_func_name(ea)
 
+    def FindFuncEnd(self, ea):
+        func = self.api.ida_funcs.get_func(ea)
+        if not func:
+            return self.BADADDR
+        else:
+            return func.endEA
+
     def LocByName(self, name):
         try:
             key = ("N" + name).encode("utf-8")
