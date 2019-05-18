@@ -842,6 +842,20 @@ def test_XrefsFrom(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test()
+def test_FindFuncEnd(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+
+    # this is the start of a function
+    assert api.idc.FindFuncEnd(0x68901c31) == 0x68901c3d
+
+    # this is in the middle of a function
+    assert api.idc.FindFuncEnd(0x6890443f) == 0x6890445c
+
+    # this is not inside a function
+    assert api.idc.FindFuncEnd(0x6896ebf4) == api.idc.BADADDR
+
+
+@kern32_test()
 def test_imports(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     assert api.ida_nalt.get_import_module_qty() == 47
