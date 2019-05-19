@@ -968,6 +968,16 @@ class idc:
         op = self._disassemble(ea)
         return "%s\t%s" % (op.mnemonic, op.op_str)
 
+    def GetOpnd(self, ea, n):
+        op = self._disassemble(ea)
+        opnds = op.op_str.split(", ")
+        n_opnds = len(opnds)
+
+        if 0 <= n < n_opnds:
+            return opnds[n]
+        else:
+            return ""
+
     # one instruction or data
     CIC_ITEM = 1
     # function
