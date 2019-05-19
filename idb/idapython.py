@@ -2002,7 +2002,7 @@ class idaapi:
             return self.inf.version
 
         @property
-        def procName(self):
+        def procname(self):
             return self.inf.procname
 
         @property
