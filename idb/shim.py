@@ -33,7 +33,7 @@ if sys.version_info[0] == 2:
             newmod.__package__ = ""
 
             for attr in dir(mod):
-                if attr.startswith("__"):
+                if attr.startswith("__") and attr != "__EA64__":
                     continue
                 newmod.__dict__[attr] = getattr(mod, attr)
             return newmod
