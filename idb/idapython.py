@@ -1476,6 +1476,37 @@ class ida_bytes:
     def next_inited(self, ea, maxea):
         return self.next_that(ea, maxea, lambda flags: ida_bytes.has_value(flags))
 
+    def get_item_end(self, ea):
+        ea += 1
+        flags = self.api.idc.GetFlags(ea)
+        while flags is not None and not self.api.ida_bytes.is_head(flags) and self.api.idc.SegEnd(ea):
+            ea += 1
+            flags = self.api.idc.GetFlags(ea)
+        return ea
+
+    def get_byte(self, ea):
+        return ord(self.get_bytes(ea, 1))
+
+    def get_word(self, ea):
+        if self.api.idaapi.get_inf_structure().is_be:
+            fmt = ">H"
+        else:
+            fmt = "<H"
+        return struct.unpack(fmt, self.get_bytes(ea, 2))[0]
+
+    def get_dword(self, ea):
+        if self.api.idaapi.get_inf_structure().is_be:
+            fmt = ">I"
+        else:
+            fmt = "<I"
+        return struct.unpack(fmt, self.get_bytes(ea, 4))[0]
+
+    def get_qword(self, ea):
+        if self.api.idaapi.get_inf_structure().is_be:
+            fmt = ">Q"
+        else:
+            fmt = "<Q"
+        return struct.unpack(fmt, self.get_bytes(ea, 8))[0]
 
 class ida_nalt:
     def __init__(self, db, api):
