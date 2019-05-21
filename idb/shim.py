@@ -74,7 +74,7 @@ elif sys.version_info[0] == 3:
 
             mod = self.hooks[spec.name]
             for attr in dir(mod):
-                if attr.startswith('__') and attr != '__EA64__':
+                if attr.startswith("__") and attr != "__EA64__":
                     continue
                 module.__dict__[attr] = getattr(mod, attr)
             return module

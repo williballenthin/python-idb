@@ -846,13 +846,13 @@ def test_FindFuncEnd(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
     # this is the start of a function
-    assert api.idc.FindFuncEnd(0x68901c31) == 0x68901c3d
+    assert api.idc.FindFuncEnd(0x68901C31) == 0x68901C3D
 
     # this is in the middle of a function
-    assert api.idc.FindFuncEnd(0x6890443f) == 0x6890445c
+    assert api.idc.FindFuncEnd(0x6890443F) == 0x6890445C
 
     # this is not inside a function
-    assert api.idc.FindFuncEnd(0x6896ebf4) == api.idc.BADADDR
+    assert api.idc.FindFuncEnd(0x6896EBF4) == api.idc.BADADDR
 
 
 @kern32_test()

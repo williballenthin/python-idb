@@ -578,19 +578,20 @@ class ida_ida:
         self.IDB_EXT64 = "i64"
         self.IDB_EXT = "idb"
 
+
 class ida_ua:
     # op_t
     # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group__o__.html
 
-    o_void     = 0    # No operand
-    o_reg      = 1    # General register
-    o_mem      = 2    # Direct memory reference
-    o_phrase   = 3    # Memory reference using registers
-    o_displ    = 4    # Memory reference using registers and displacement
-    o_imm      = 5    # Immediate value
-    o_far      = 6    # Immediate far address
-    o_near     = 7    # Immediate near  address
-    o_idpspec0 = 8    # Processor specific
+    o_void = 0  # No operand
+    o_reg = 1  # General register
+    o_mem = 2  # Direct memory reference
+    o_phrase = 3  # Memory reference using registers
+    o_displ = 4  # Memory reference using registers and displacement
+    o_imm = 5  # Immediate value
+    o_far = 6  # Immediate far address
+    o_near = 7  # Immediate near  address
+    o_idpspec0 = 8  # Processor specific
     o_idpspec1 = 9
     o_idpspec2 = 10
     o_idpspec3 = 11
@@ -600,6 +601,7 @@ class ida_ua:
     def __init__(self, db, api):
         self.idb = db
         self.api = api
+
 
 class idc:
     SEGPERM_EXEC = 1  # Execute
@@ -1712,7 +1714,7 @@ class ida_funcs:
     def get_func_name(self, ea):
         func = self.get_func(ea)
         if func is None:
-            return ''
+            return ""
 
         ea = func.startEA
 
@@ -1736,6 +1738,7 @@ class ida_funcs:
 
     def getn_func(self, n):
         return idb.analysis.Functions(self.idb).functions.values()[n]
+
 
 class BasicBlock(object):
     """
@@ -2158,6 +2161,7 @@ class idaapi:
 
     def get_name(self, ea):
         return self.api.ida_name.get_name(ea)
+
 
 class StringItem:
     def __init__(self, ea, length, strtype, s):
