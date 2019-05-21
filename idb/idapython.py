@@ -2608,6 +2608,12 @@ class ida_name:
     def get_name(self, ea):
         flags = self.api.ida_bytes.get_flags(ea)
         if not self.api.ida_bytes.has_name(flags):
+            func = self.api.ida_funcs.get_func(ea)
+            if func and func.startEA == ea:
+                return self.api.ida_funcs.get_func_name(ea)
+            refs = self.api.idautils.CodeRefsTo(ea, 0)
+            if next(refs, None):
+                return "loc_%X" % (ea)
             return ""
 
         try:
