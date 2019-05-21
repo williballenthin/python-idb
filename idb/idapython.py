@@ -575,6 +575,28 @@ class ida_ida:
         self.IDB_EXT64 = "i64"
         self.IDB_EXT = "idb"
 
+class ida_ua:
+    # op_t
+    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group__o__.html
+
+    o_void     = 0    # No operand
+    o_reg      = 1    # General register
+    o_mem      = 2    # Direct memory reference
+    o_phrase   = 3    # Memory reference using registers
+    o_displ    = 4    # Memory reference using registers and displacement
+    o_imm      = 5    # Immediate value
+    o_far      = 6    # Immediate far address
+    o_near     = 7    # Immediate near  address
+    o_idpspec0 = 8    # Processor specific
+    o_idpspec1 = 9
+    o_idpspec2 = 10
+    o_idpspec3 = 11
+    o_idpspec4 = 12
+    o_idpspec5 = 13
+
+    def __init__(self, db, api):
+        self.idb = db
+        self.api = api
 
 class idc:
     SEGPERM_EXEC = 1  # Execute
@@ -979,6 +1001,44 @@ class idc:
             return opnds[n]
         else:
             return ""
+
+    def GetOpType(self, ea, n):
+        from capstone import CS_OP_INVALID, CS_OP_REG, CS_OP_MEM, CS_OP_IMM
+
+        op = self._disassemble(ea)
+        opnds = op.operands
+        n_opnds = len(opnds)
+
+        # capstone produces 2 operands for immediate far jmp/call, IDA only 1
+        # TODO: we need better handling of o_far recognition
+        is_far = False
+        if op.mnemonic in ["ljmp", "lcall"]:
+            n_opnds = 1
+            is_far = True
+        # continue normal operand type check
+        if 0 <= n < n_opnds:
+            op_n = opnds[n]
+            if op_n.type == CS_OP_INVALID:
+                return -1
+            elif op_n.type == CS_OP_REG:
+                return self.api.ida_ua.o_reg
+            elif op_n.type == CS_OP_MEM:
+                op_mem = op_n.value.mem
+                if op_mem.base == 0:
+                    return self.api.ida_ua.o_mem
+                if op_mem.base != 0 and op_mem.disp == 0:
+                    return self.api.ida_ua.o_phrase
+                if op_mem.base != 0 and op_mem.disp != 0:
+                    return self.api.ida_ua.o_displ
+            elif op_n.type == CS_OP_IMM:
+                if is_far:
+                    return self.api.ida_ua.o_far
+                elif self.api.ida_bytes.is_code(self.GetFlags(op_n.value.imm)):
+                    return self.api.ida_ua.o_near
+                else:
+                    return self.api.ida_ua.o_imm
+        else:
+            return self.api.ida_ua.o_void
 
     # one instruction or data
     CIC_ITEM = 1
@@ -2725,3 +2785,4 @@ class IDAPython:
         self.ida_name = ida_name(db, self)
         self.ida_struct = ida_struct(db, self)
         self.ida_typeinf = ida_typeinf(db, self)
+        self.ida_ua = ida_ua(db, self)
