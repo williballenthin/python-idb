@@ -78,8 +78,7 @@ def test_bytes(kernel32_idb, version, bitness, expected):
     # assert idc.hasValue(idc.GetFlags(0x88888888)) is False
 
     assert idc.ItemSize(0x68901010) == 2
-    with pytest.raises(ValueError):
-        idc.ItemSize(0x68901011)
+    assert idc.ItemSize(0x68901011) == 1
     assert idc.ItemSize(0x68901012) == 1
 
     assert idc.GetManyBytes(0x68901010, 0x3) == b"\x8B\xFF\x55"

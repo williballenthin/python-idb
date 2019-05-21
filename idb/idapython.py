@@ -835,20 +835,7 @@ class idc:
         return ea
 
     def ItemSize(self, ea):
-        oea = ea
-        flags = self.GetFlags(ea)
-        if not self.api.ida_bytes.is_head(flags):
-            raise ValueError("ItemSize must only be called on a head address.")
-
-        ea += 1
-        flags = self.GetFlags(ea)
-        while (
-            flags is not None and flags != 0 and not self.api.ida_bytes.is_head(flags)
-        ):
-            ea += 1
-            # TODO: handle Index/KeyError here when we overrun a segment
-            flags = self.GetFlags(ea)
-        return ea - oea
+        return self.api.ida_bytes.get_item_end(ea) - ea
 
     def NextHead(self, ea):
         ea += 1
@@ -1479,7 +1466,11 @@ class ida_bytes:
     def get_item_end(self, ea):
         ea += 1
         flags = self.api.idc.GetFlags(ea)
-        while flags is not None and not self.api.ida_bytes.is_head(flags) and self.api.idc.SegEnd(ea):
+        while (
+            flags is not None
+            and not self.api.ida_bytes.is_head(flags)
+            and self.api.idc.SegEnd(ea)
+        ):
             ea += 1
             flags = self.api.idc.GetFlags(ea)
         return ea
@@ -1507,6 +1498,7 @@ class ida_bytes:
         else:
             fmt = "<Q"
         return struct.unpack(fmt, self.get_bytes(ea, 8))[0]
+
 
 class ida_nalt:
     def __init__(self, db, api):
