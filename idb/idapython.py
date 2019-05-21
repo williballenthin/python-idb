@@ -1712,11 +1712,9 @@ class ida_funcs:
     def get_func_name(self, ea):
         func = self.get_func(ea)
         if func is None:
-            raise KeyError(ea)
+            return ''
 
-        # ensure this is a function
-        if func.startEA != ea:
-            raise KeyError(ea)
+        ea = func.startEA
 
         # shouldn't be a chunk
         if is_flag_set(func.flags, func.FUNC_TAIL):
