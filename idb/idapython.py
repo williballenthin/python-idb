@@ -64,14 +64,16 @@ def wrap_module(into, full=True):
             for attr in dir(self):
                 # Do not set private fields and api/idb objs already present in
                 # every module
-                if attr.startswith("_") or attr == 'api' or attr == 'idb':
+                if attr.startswith("_") or attr == "api" or attr == "idb":
                     continue
                 obj = getattr(self, attr)
                 # If full is False, only set "constants"
                 if not full and callable(obj):
                     continue
                 setattr(mod, attr, obj)
+
         return wrapped_func
+
     return decorator
 
 
@@ -1154,9 +1156,6 @@ class idc:
     def GetInputFile(self):
         return os.path.basename(self.api.ida_nalt.get_input_file_path())
 
-    def get_input_file_path(self):
-        return self.api.ida_nalt.get_input_file_path()
-
     def Comment(self, ea):
         return self.api.ida_bytes.get_cmt(ea, False)
 
@@ -2213,15 +2212,6 @@ class idaapi:
 
     def get_file_type_name(self):
         return self.TYPE_NAMES[self.get_inf_structure().filetype]
-
-    def get_func_qty(self):
-        return self.api.ida_funcs.get_func_qty()
-
-    def getn_func(self, n):
-        return self.api.ida_funcs.getn_func(n)
-
-    def get_name(self, ea):
-        return self.api.ida_name.get_name(ea)
 
 
 class StringItem:
