@@ -769,6 +769,10 @@ class idc:
         else:
             raise RuntimeError("unexpected wordsize")
 
+        # Command line arguments passed to idapython scripts. Args passed via -S
+        # switch in IDA
+        self.ARGV = []
+
         ## Mantain API compatibility for API < 7
         self.GetMnem = self.print_insn_mnem
         self.GetOpnd = self.print_operand
