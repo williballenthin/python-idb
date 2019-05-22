@@ -1007,6 +1007,38 @@ class idc:
                     capstone.CS_ARCH_MIPS,
                     capstone.CS_MODE_MIPS64 | capstone.CS_MODE_LITTLE_ENDIAN,
                 )
+        elif procname == "ppc":
+            if bitness == 32:
+                dis = self._load_dis(
+                    capstone.CS_ARCH_PPC,
+                    capstone.CS_MODE_32 | capstone.CS_MODE_BIG_ENDIAN,
+                )
+            elif bitness == 64:
+                dis = self._load_dis(
+                    capstone.CS_ARCH_PPC,
+                    capstone.CS_MODE_64 | capstone.CS_MODE_BIG_ENDIAN,
+                )
+        elif procname == "ppcl":
+            if bitness == 32:
+                dis = self._load_dis(
+                    capstone.CS_ARCH_PPC,
+                    capstone.CS_MODE_32 | capstone.CS_MODE_LITTLE_ENDIAN,
+                )
+            elif bitness == 64:
+                dis = self._load_dis(
+                    capstone.CS_ARCH_PPC,
+                    capstone.CS_MODE_64 | capstone.CS_MODE_LITTLE_ENDIAN,
+                )
+        elif procname == "sparcb":
+            if bitness == 32:
+                dis = self._load_dis(
+                    capstone.CS_ARCH_SPARC, capstone.CS_MODE_BIG_ENDIAN
+                )
+        elif procname == "sparcl":
+            if bitness == 32:
+                dis = self._load_dis(
+                    capstone.CS_ARCH_SPARC, capstone.CS_MODE_LITTLE_ENDIAN
+                )
 
         if dis is None:
             raise NotImplementedError(
