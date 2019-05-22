@@ -208,6 +208,13 @@ class Unpacker:
         else:
             raise RuntimeError("unexpected wordsize")
 
+    def off(self):
+        offset = self.addr()
+        mask = (2 ** (self.wordsize *8 )) - 1
+        if offset & (1 << ((self.wordsize * 8) - 1)):
+            return offset | ~mask
+        else:
+            return offset
 
 Field = namedtuple("Field", ["name", "tag", "index", "cast", "minver"])
 # namedtuple default args.
@@ -966,8 +973,10 @@ class func_t:
                 # eg. all of these, if high bit of flags not set.
                 pass
         else:
+            # We are in a function tail. Chunks can be above or below the tail
+            # owner
             try:
-                self.owner = self.startEA - u.addr()
+                self.owner = self.startEA - u.off()
                 self.refqty = u.dd()
             except IndexError:
                 # see warning note above
