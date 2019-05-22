@@ -46,6 +46,35 @@ def memoized_method(*lru_args, **lru_kwargs):
     return decorator
 
 
+# This decorator is meant to wrap a module in another one like IDA does with
+# ida_* wrapped in idaapi and/or idc.
+# We could use __getattr__ in idaapi to act as a proxy but that will break
+# statements like "from idaapi import *" or "from idc import *", a quite common
+# pattern in IDAPython scripts.
+# We do it here instead of shim.py:HookedImporter to get the same wraps in
+# situations where the shim is not needed
+# Use it on ida_* __init__()
+# XXX: This is mostly a prototype. Needs further considerations.
+def wrap_module(into, full=True):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapped_func(self, *args, **kwargs):
+            func(self, *args, **kwargs)
+            mod = self.api.__dict__[into]
+            for attr in dir(self):
+                # Do not set private fields and api/idb objs already present in
+                # every module
+                if attr.startswith("_") or attr == 'api' or attr == 'idb':
+                    continue
+                obj = getattr(self, attr)
+                # If full is False, only set "constants"
+                if not full and callable(obj):
+                    continue
+                setattr(mod, attr, obj)
+        return wrapped_func
+    return decorator
+
+
 def is_flag_set(flags, flag):
     return flags & flag == flag
 
@@ -382,6 +411,7 @@ class AFLAGS:
 
 
 class ida_netnode:
+    @wrap_module("idaapi")
     def __init__(self, db, api):
         self.idb = db
         self.api = api
@@ -391,6 +421,8 @@ class ida_netnode:
 
 
 class ida_ida:
+    @wrap_module("idaapi")
+    @wrap_module("idc", full=False)
     def __init__(self, db, api):
         self.idb = db
         self.api = api
@@ -598,6 +630,8 @@ class ida_ua:
     o_idpspec4 = 12
     o_idpspec5 = 13
 
+    @wrap_module("idaapi")
+    @wrap_module("idc", full=False)
     def __init__(self, db, api):
         self.idb = db
         self.api = api
@@ -1278,6 +1312,7 @@ class idc:
 
 
 class ida_bytes:
+    @wrap_module("idaapi")
     def __init__(self, db, api):
         self.idb = db
         self.api = api
@@ -1501,6 +1536,7 @@ class ida_bytes:
 
 
 class ida_nalt:
+    @wrap_module("idaapi")
     def __init__(self, db, api):
         self.idb = db
         self.api = api
@@ -1666,6 +1702,8 @@ class ida_funcs:
     # This is a function tail. More...
     FUNC_TAIL = 0x00008000
 
+    @wrap_module("idaapi")
+    @wrap_module("idc", full=False)
     def __init__(self, db, api):
         self.idb = db
         self.api = api
@@ -2587,6 +2625,7 @@ class idautils:
 
 
 class ida_entry:
+    @wrap_module("idaapi")
     def __init__(self, db, api):
         self.idb = db
         self.api = api
@@ -2624,6 +2663,7 @@ class ida_entry:
 
 
 class ida_name:
+    @wrap_module("idaapi")
     def __init__(self, db, api):
         self.idb = db
         self.api = api
