@@ -769,6 +769,12 @@ class idc:
         else:
             raise RuntimeError("unexpected wordsize")
 
+        ## Mantain API compatibility for API < 7
+        self.GetMnem = self.print_insn_mnem
+        self.GetOpnd = self.print_operand
+        self.GetOpType = self.get_operand_type
+        self.FindFuncEnd = self.find_func_end
+
     def ScreenEA(self):
         return self.api.ScreenEA
 
@@ -1012,7 +1018,7 @@ class idc:
         else:
             return op
 
-    def GetMnem(self, ea):
+    def print_insn_mnem(self, ea):
         op = self._disassemble(ea)
         return op.mnemonic
 
@@ -1020,7 +1026,7 @@ class idc:
         op = self._disassemble(ea)
         return "%s\t%s" % (op.mnemonic, op.op_str)
 
-    def GetOpnd(self, ea, n):
+    def print_operand(self, ea, n):
         op = self._disassemble(ea)
         opnds = op.op_str.split(", ")
         n_opnds = len(opnds)
@@ -1030,7 +1036,7 @@ class idc:
         else:
             return ""
 
-    def GetOpType(self, ea, n):
+    def get_operand_type(self, ea, n):
         from capstone import CS_OP_INVALID, CS_OP_REG, CS_OP_MEM, CS_OP_IMM
 
         op = self._disassemble(ea)
@@ -1132,7 +1138,7 @@ class idc:
     def GetFunctionName(self, ea):
         return self.api.ida_funcs.get_func_name(ea)
 
-    def FindFuncEnd(self, ea):
+    def find_func_end(self, ea):
         func = self.api.ida_funcs.get_func(ea)
         if not func:
             return self.BADADDR
@@ -1315,6 +1321,9 @@ class ida_bytes:
     def __init__(self, db, api):
         self.idb = db
         self.api = api
+
+        ## Mantain API compatibility for API < 7
+        self.get_long = self.get_dword
 
     def get_cmt(self, ea, repeatable):
         flags = self.api.idc.GetFlags(ea)
