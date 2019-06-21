@@ -874,7 +874,7 @@ class idc:
         inst_buf = self.GetManyBytes(ea, size)
         segment = self._get_segment(ea)
         bitness = 16 << segment.bitness# 16, 32, 64
-        procname = self.api.idaapi.get_inf_structure().procname.lower()
+        procname = self.api.idaapi.get_inf_structure().procName.lower()
 
         dis = None
         if procname == "arm" and bitness == 64:
@@ -2201,13 +2201,13 @@ class idautils:
 
         while not self.api.ida_bytes.is_head(self.api.idc.GetFlags(ea)):
             ea = self.api.idc.NextHead(ea)
-            if ea > end:
+            if ea >= end:
                 return
 
         while ea != self.api.idc.BADADDR:
             yield ea
             ea = self.api.idc.NextHead(ea)
-            if ea > end:
+            if ea >= end:
                 return
 
     def _get_fallthrough_xref_to(self, ea):
