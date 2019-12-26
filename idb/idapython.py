@@ -803,7 +803,9 @@ class idc:
 
         ea += 1
         flags = self.GetFlags(ea)
-        while flags is not None and not self.api.ida_bytes.is_head(flags):
+        while flags is not None \
+                and flags != 0 \
+                and not self.api.ida_bytes.is_head(flags):
             ea += 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
@@ -812,7 +814,9 @@ class idc:
     def NextHead(self, ea):
         ea += 1
         flags = self.GetFlags(ea)
-        while flags is not None and not self.api.ida_bytes.is_head(flags):
+        while flags is not None \
+                and flags != 0 \
+                and not self.api.ida_bytes.is_head(flags):
             ea += 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
@@ -1689,6 +1693,9 @@ class idaapi:
         '''
         if not is_empty(idb.analysis.get_crefs_from(self.idb, ea,
                                                     types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F])):
+            return ea
+
+        if not self.api.idc.GetFlags(ea):
             return ea
 
         while True:
