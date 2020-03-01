@@ -210,11 +210,12 @@ class Unpacker:
 
     def off(self):
         offset = self.addr()
-        mask = (2 ** (self.wordsize *8 )) - 1
+        mask = (2 ** (self.wordsize * 8)) - 1
         if offset & (1 << ((self.wordsize * 8) - 1)):
             return offset | ~mask
         else:
             return offset
+
 
 Field = namedtuple("Field", ["name", "tag", "index", "cast", "minver"])
 # namedtuple default args.
