@@ -8,7 +8,7 @@ import idb.fileformat
 
 
 slow = pytest.mark.skipif(
-    not pytest.config.getoption("--runslow"),
+    not runslow,
     reason="need --runslow option to run"
 )
 

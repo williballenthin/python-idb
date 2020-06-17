@@ -6,7 +6,7 @@ from fixtures import *
 
 
 debug = pytest.mark.skipif(
-    not pytest.config.getoption("--rundebug"),
+    not rundebug,
     reason="need --rundebug option to run"
 )
 

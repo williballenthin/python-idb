@@ -7,7 +7,7 @@ from fixtures import *
 
 
 slow = pytest.mark.skipif(
-    not pytest.config.getoption("--runslow"),
+    not runslow,
     reason="need --runslow option to run"
 )
 
