@@ -1,10 +1,9 @@
 import os
+
 import pytest
-
-import idb
-
 from fixtures import *
 
+import idb
 
 slow = pytest.mark.skipif(
     not runslow,
@@ -60,7 +59,8 @@ def test_bytes(kernel32_idb, version, bitness, expected):
     assert byte == 0x8B
 
     # this effective address does not exist
-    assert not idc.GetFlags(0x88888888) # FIXME:our idc.GetFlags return None, but it should return 0 when running in ida.
+    assert not idc.GetFlags(
+        0x88888888)  # FIXME:our idc.GetFlags return None, but it should return 0 when running in ida.
     # assert idc.hasValue(idc.GetFlags(0x88888888)) is False
 
     assert idc.ItemSize(0x68901010) == 2
@@ -419,8 +419,8 @@ def test_flow_chart(kernel32_idb, version, bitness, expected):
                     lpluck(
                         'startEA',
                         bb.succs()))) == [
-                0x689016A4,
-                0x68906156]
+                       0x689016A4,
+                       0x68906156]
         elif bb.startEA == 0x689016A4:
             assert lpluck('startEA', bb.succs()) == []
         elif bb.startEA == 0x68906156:
@@ -619,10 +619,10 @@ def test_CodeRefsTo(kernel32_idb, version, bitness, expected):
     assert set(api.idautils.CodeRefsTo(0x689AD974, True)) == set([])
 
     # this is the start of a basic block with one incoming edge, from a taken conditional jump.
-    assert set(api.idautils.CodeRefsTo(0x68901031, True)) == set([0x6890102b])
+    assert set(api.idautils.CodeRefsTo(0x68901031, True)) == {0x6890102b}
 
     # this is an instruction at the middle of a basic block.
-    assert set(api.idautils.CodeRefsTo(0x68901012, True)) == set([0x68901010])
+    assert set(api.idautils.CodeRefsTo(0x68901012, True)) == {0x68901010}
     assert set(api.idautils.CodeRefsTo(0x68901012, False)) == set([])
 
 
@@ -631,15 +631,15 @@ def test_CodeRefsFrom(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
     # this is an instruction at the middle of a basic block.
-    assert set(api.idautils.CodeRefsFrom(0x68901010, True)) == set([0x68901012])
+    assert set(api.idautils.CodeRefsFrom(0x68901010, True)) == {0x68901012}
     assert set(api.idautils.CodeRefsFrom(0x68901010, False)) == set([])
 
     # this is the end of a function.
     assert set(api.idautils.CodeRefsFrom(0x689011B2, True)) == set([])
 
     # this is a conditional jump.
-    assert set(api.idautils.CodeRefsFrom(0x6890102B, True)) == set([0x6890113B, 0x68901031])
-    assert set(api.idautils.CodeRefsFrom(0x6890102B, False)) == set([0x6890113B])
+    assert set(api.idautils.CodeRefsFrom(0x6890102B, True)) == {0x6890113B, 0x68901031}
+    assert set(api.idautils.CodeRefsFrom(0x6890102B, False)) == {0x6890113B}
 
 
 @kern32_test()
@@ -647,13 +647,13 @@ def test_DataRefsFrom(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
     # .text:6890618E cmp     ___security_cookie, 0
-    assert set(api.idautils.DataRefsFrom(0x6890618E)) == set([0x689db370])
+    assert set(api.idautils.DataRefsFrom(0x6890618E)) == {0x689db370}
 
     # .text:689061AB mov     eax, ___security_cookie
-    assert set(api.idautils.DataRefsFrom(0x689061AB)) == set([0x689db370])
+    assert set(api.idautils.DataRefsFrom(0x689061AB)) == {0x689db370}
 
     # .text:689061B2 mov     dword_689DB05
-    assert set(api.idautils.DataRefsFrom(0x689061B2)) == set([0x689DB054])
+    assert set(api.idautils.DataRefsFrom(0x689061B2)) == {0x689DB054}
 
 
 @kern32_test()
@@ -665,7 +665,7 @@ def test_DataRefsTo(kernel32_idb, version, bitness, expected):
     # xrefs:
     #  write:  .text:689881F4 mov     dword_689DB3B0, 0C0000409h
     #  offset: .text:68988230 off_68988230    dd offset dword_689DB3B0
-    assert set(api.idautils.DataRefsTo(0x689DB3B0)) == set([0x689881f4, 0x68988230])
+    assert set(api.idautils.DataRefsTo(0x689DB3B0)) == {0x689881f4, 0x68988230}
 
     # global variable:
     #   .data:689DB374 dword_689DB374  dd 0
@@ -673,7 +673,7 @@ def test_DataRefsTo(kernel32_idb, version, bitness, expected):
     #   read:   .text:68912D7C mov     ecx, dword_689DB374
     #   read:   .text:6899506F mov     eax, dword_689DB374
     #   offset: .text:689C0184 dd offset dword_689DB374
-    assert set(api.idautils.DataRefsTo(0x689DB374)) == set([0x68912d7c, 0x6899506f, 0x689c0184])
+    assert set(api.idautils.DataRefsTo(0x689DB374)) == {0x68912d7c, 0x6899506f, 0x689c0184}
 
 
 @kern32_test()
@@ -686,10 +686,10 @@ def test_XrefsTo(kernel32_idb, version, bitness, expected):
     #  Python>list(map(repr_xref, XrefsTo(0x689016B5)))
     #  ['0x689016a7 0x689016b5 0x11']
     assert set(api.idautils.XrefsTo(0x689016B5, api.idaapi.XREF_ALL)) == \
-        set([(0x689016a7, 0x689016b5, 0x11)])
+           {(0x689016a7, 0x689016b5, 0x11)}
 
     assert set(api.idautils.XrefsTo(0x689016B5, api.idaapi.XREF_FAR)) == \
-        set([(0x689016a7, 0x689016b5, 0x11)])
+           {(0x689016a7, 0x689016b5, 0x11)}
 
     assert set(api.idautils.XrefsTo(0x689016B5, api.idaapi.XREF_DATA)) == set([])
 
@@ -698,11 +698,10 @@ def test_XrefsTo(kernel32_idb, version, bitness, expected):
     #  jnz from 68904251
     # 68904257 mov     eax, hHeap
     assert set(api.idautils.XrefsTo(0x68904257, api.idaapi.XREF_ALL)) == \
-        set([(0x68904251, 0x68904257, 0x15),
-             (0x689138c1, 0x68904257, 0x13)])
+           {(0x68904251, 0x68904257, 0x15), (0x689138c1, 0x68904257, 0x13)}
 
     assert set(api.idautils.XrefsTo(0x68904257, api.idaapi.XREF_FAR)) == \
-        set([(0x689138c1, 0x68904257, 0x13)])
+           {(0x689138c1, 0x68904257, 0x13)}
 
     assert set(api.idautils.XrefsTo(0x68904257, api.idaapi.XREF_DATA)) == set([])
 
@@ -710,19 +709,13 @@ def test_XrefsTo(kernel32_idb, version, bitness, expected):
     #  .data:689DB018 hHeap           dd 0
     # two write, one read xref
     assert set(api.idautils.XrefsTo(0x689DB018, api.idaapi.XREF_ALL)) == \
-        set([(0x68904257, 0x689db018, 0x3),
-             (0x68906350, 0x689db018, 0x2),
-             (0x6893777c, 0x689db018, 0x2)])
+           {(0x68904257, 0x689db018, 0x3), (0x68906350, 0x689db018, 0x2), (0x6893777c, 0x689db018, 0x2)}
 
     assert set(api.idautils.XrefsTo(0x689DB018, api.idaapi.XREF_FAR)) == \
-        set([(0x68904257, 0x689db018, 0x3),
-             (0x68906350, 0x689db018, 0x2),
-             (0x6893777c, 0x689db018, 0x2)])
+           {(0x68904257, 0x689db018, 0x3), (0x68906350, 0x689db018, 0x2), (0x6893777c, 0x689db018, 0x2)}
 
     assert set(api.idautils.XrefsTo(0x689DB018, api.idaapi.XREF_DATA)) == \
-        set([(0x68904257, 0x689db018, 0x3),
-            (0x68906350, 0x689db018, 0x2),
-            (0x6893777c, 0x689db018, 0x2)])
+           {(0x68904257, 0x689db018, 0x3), (0x68906350, 0x689db018, 0x2), (0x6893777c, 0x689db018, 0x2)}
 
 
 @kern32_test()
@@ -732,34 +725,32 @@ def test_XrefsFrom(kernel32_idb, version, bitness, expected):
     # insn
     # 689016C0 mov     eax, ___security_cookie
     assert set(api.idautils.XrefsFrom(0x689016C0, api.idaapi.XREF_ALL)) == \
-        set([(0x689016c0, 0x689016c5, 0x15),
-             (0x689016c0, 0x689db370, 0x3)])
+           {(0x689016c0, 0x689016c5, 0x15), (0x689016c0, 0x689db370, 0x3)}
 
     assert set(api.idautils.XrefsFrom(0x689016C0, api.idaapi.XREF_FAR)) == \
-        set([(0x689016c0, 0x689db370, 0x3)])
+           {(0x689016c0, 0x689db370, 0x3)}
 
     assert set(api.idautils.XrefsFrom(0x689016C0, api.idaapi.XREF_DATA)) == \
-        set([(0x689016c0, 0x689db370, 0x3)])
+           {(0x689016c0, 0x689db370, 0x3)}
 
     # insn 689016E7 jz      loc_68904247
     assert set(api.idautils.XrefsFrom(0x689016E7, api.idaapi.XREF_ALL)) == \
-        set([(0x689016e7, 0x689016ed, 0x15),
-             (0x689016e7, 0x68904247, 0x13)])
+           {(0x689016e7, 0x689016ed, 0x15), (0x689016e7, 0x68904247, 0x13)}
 
     assert set(api.idautils.XrefsFrom(0x689016E7, api.idaapi.XREF_FAR)) == \
-        set([(0x689016e7, 0x68904247, 0x13)])
+           {(0x689016e7, 0x68904247, 0x13)}
 
     assert set(api.idautils.XrefsFrom(0x689016E7, api.idaapi.XREF_DATA)) == set([])
 
     # insn: .text:6894F4BC                 dd offset sub_689AE1DC
     assert set(api.idautils.XrefsFrom(0x6894F4BC, api.idaapi.XREF_ALL)) == \
-        set([(0x6894f4bc, 0x689ae1dc, 0x1)])
+           {(0x6894f4bc, 0x689ae1dc, 0x1)}
 
     assert set(api.idautils.XrefsFrom(0x6894F4BC, api.idaapi.XREF_FAR)) == \
-        set([(0x6894f4bc, 0x689ae1dc, 0x1)])
+           {(0x6894f4bc, 0x689ae1dc, 0x1)}
 
     assert set(api.idautils.XrefsFrom(0x6894F4BC, api.idaapi.XREF_DATA)) == \
-        set([(0x6894f4bc, 0x689ae1dc, 0x1)])
+           {(0x6894f4bc, 0x689ae1dc, 0x1)}
 
 
 @kern32_test()
@@ -770,6 +761,7 @@ def test_imports(kernel32_idb, version, bitness, expected):
     assert api.ida_nalt.get_import_module_name(1) == 'ntdll'
 
     names = []
+
     def cb(addr, name, ordinal):
         names.append((addr, name, ordinal))
         return True
@@ -795,14 +787,15 @@ def test_exports(kernel32_idb, version, bitness, expected):
 @kern32_test()
 def test_GetType(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
-    assert api.idc.GetType(0x68901695) == 'BOOL __stdcall DllEntryPoint(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)'
+    assert api.idc.GetType(
+        0x68901695) == 'BOOL __stdcall DllEntryPoint(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)'
 
     # valid function, but no type data associated...
 
     #     .text:6899AE01                         ; Attributes: bp-based frame
     #     .text:6899AE01
     #     .text:6899AE01                         sub_6899AE01 proc near
-    assert api.idc.GetType(0x6899AE01) == None
+    assert api.idc.GetType(0x6899AE01) is None
 
 
 @kern32_test()
@@ -819,7 +812,7 @@ def test_multi_bitness():
 
     with idb.from_file(idbpath) as db:
         api = idb.IDAPython(db)
-        assert api.idc.GetDisasm(0x0)    == 'xor\tdx, dx'    # 16-bit
+        assert api.idc.GetDisasm(0x0) == 'xor\tdx, dx'  # 16-bit
         assert api.idc.GetDisasm(0x1000) == 'xor\tedx, edx'  # 32-bit
 
 
@@ -871,4 +864,3 @@ def test_function_comment():
         api = idb.IDAPython(db)
         assert api.ida_funcs.get_func_cmt(3, False) == 'function comment'
         assert api.ida_funcs.get_func_cmt(3, True) == 'repeatable function comment'
-
