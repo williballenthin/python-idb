@@ -589,7 +589,7 @@ def test_all_comments(kernel32_idb, version, bitness, expected):
         regcmts.append(api.ida_bytes.get_cmt(ea, False))
         repcmts.append(api.ida_bytes.get_cmt(ea, True))
 
-    assert len(regcmts), len(repcmnts) == expected
+    assert len(regcmts), len(repcmts) == expected
 
 
 @kern32_test()
