@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-import idc
 import idaapi
 import idautils
+import idc
 
 
 def print_section_list():
@@ -18,7 +18,7 @@ def print_section_list():
         print(' - perm: 0x%x' % seg.perm)
         print(' - bitness: 0x%x' % seg.bitness)
         print(' - sel: 0x%x' % seg.sel)
-        #print(' - defsr: 0x%x' % seg.defsr)
+        # print(' - defsr: 0x%x' % seg.defsr)
         print(' - type: 0x%x' % seg.type)
         print(' - color: 0x%x' % seg.color)
 

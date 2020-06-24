@@ -1,11 +1,11 @@
 import sys
+
 if sys.version_info[0] == 2:
     import imp
     import sys
     import logging
 
     import idb
-
 
     logger = logging.getLogger(__name__)
 
@@ -51,7 +51,6 @@ elif sys.version_info[0] == 3:
     import importlib.util
 
     import idb
-
 
     logger = logging.getLogger(__name__)
 

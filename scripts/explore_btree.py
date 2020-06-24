@@ -5,17 +5,16 @@ Interactively explore an IDB B-Tree like a file system.
 author: Willi Ballenthin
 email: willi.ballenthin@gmail.com
 '''
-import sys
+import argparse
 import cmd
 import logging
+import sys
 
 import hexdump
-import argparse
 import tabulate
 
 import idb
 import idb.netnode
-
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +27,9 @@ def render_key(key, wordsize):
     if key[0] == 0x2E:
         k = idb.netnode.parse_key(key, wordsize)
         return 'nodeid: %x tag: %s index: %s' % (
-                k.nodeid,
-                k.tag,
-                hex(k.index) if k.index is not None else 'None')
+            k.nodeid,
+            k.tag,
+            hex(k.index) if k.index is not None else 'None')
     else:
         return bytes(key).decode('ascii')
 

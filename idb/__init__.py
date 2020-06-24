@@ -7,7 +7,6 @@ import six
 #    import idb.IDAPython
 from idb.idapython import IDAPython
 
-
 if six.PY2:
     def memview(buf):
         # on py2.7, we get this madness::

@@ -5,15 +5,12 @@ Extract the original file MD5 from the IDA Pro database.
 author: Willi Ballenthin
 email: willi.ballenthin@gmail.com
 '''
-import sys
-import logging
-
-import hexdump
 import argparse
+import logging
+import sys
 
 import idb
 import idb.netnode
-
 
 logger = logging.getLogger(__name__)
 

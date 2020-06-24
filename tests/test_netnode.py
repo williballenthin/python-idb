@@ -1,15 +1,12 @@
 import pytest
-
-import idb.netnode
-
 from fixtures import *
 
+import idb.netnode
 
 debug = pytest.mark.skipif(
     not rundebug,
     reason="need --rundebug option to run"
 )
-
 
 ROOT_NODEID = 'Root Node'
 
@@ -50,7 +47,6 @@ def test_alts(kernel32_idb, version, bitness, expected):
     root = idb.netnode.Netnode(kernel32_idb, ROOT_NODEID)
     uint = kernel32_idb.uint
     assert list(root.alts()) == [uint(-8), uint(-6), uint(-5), uint(-4), uint(-3), uint(-2), uint(-1)]
-
 
 
 # the small netnode has a root btree node with a single child.

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+
 from setuptools import setup, find_packages
 
 # For Testing:
@@ -40,16 +41,16 @@ setup(
     url='https://github.com/williballenthin/python-idb',
     license='Apache License 2.0',
     install_requires=DEPS,
-    extras_require = {
+    extras_require={
         # install like `pip install python-idb[disassembly]`
         # note, capstone is annoying to install on windows and in virtualenvs.
-        'disassembly':  ['capstone'],
+        'disassembly': ['capstone'],
     },
     packages=find_packages(exclude=['*.tests', '*.tests.*']),
     entry_points={
         "console_scripts": [
         ]
-      },
+    },
 
     classifiers=[
         'License :: OSI Approved :: Apache Software License',

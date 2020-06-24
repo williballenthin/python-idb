@@ -5,15 +5,13 @@ some documentation
 author: Willi Ballenthin
 email: willi.ballenthin@gmail.com
 '''
-import sys
-import os.path
-import logging
-
 import argparse
+import logging
+import os.path
+import sys
 
 import idb
 import idb.shim
-
 
 logger = logging.getLogger(__name__)
 

@@ -13,18 +13,16 @@ author: Willi Ballenthin <william.ballenthin@fireeye.com>
 import logging
 from collections import namedtuple
 
-import idc
+import ida_funcs
 import idaapi
 import idautils
-import ida_funcs
-
+import idc
 
 logger = logging.getLogger(__name__)
 
 BasicBlock = namedtuple('BasicBlock', ['va', 'size'])
 
-
-# each rule must have at least this many non-masked bytes 
+# each rule must have at least this many non-masked bytes
 MIN_BB_BYTE_COUNT = 4
 
 
@@ -109,7 +107,7 @@ def get_basic_block_rule(bb):
             #  and compute the addresses of each component byte.
             fixup_byte_addrs = set([])
             for fixup in fixups:
-                for i in range(fixup, fixup+4):
+                for i in range(fixup, fixup + 4):
                     fixup_byte_addrs.add(i)
 
             # fetch and format each byte of the instruction,
@@ -209,11 +207,11 @@ def get_segments():
     fetch the segments in the current executable.
     '''
     for segstart in idautils.Segments():
-         segend = idaapi.getseg(segstart).endEA
-         segsize = segend - segstart
-         segname = str(idc.SegName(segstart)).rstrip('\x00')
-         segbuf = get_segment_buffer(segstart)
-         yield Segment(segstart, segend, segname, segbuf)
+        segend = idaapi.getseg(segstart).endEA
+        segsize = segend - segstart
+        segname = str(idc.SegName(segstart)).rstrip('\x00')
+        segbuf = get_segment_buffer(segstart)
+        yield Segment(segstart, segend, segname, segbuf)
 
 
 class TestDidntRunError(Exception):

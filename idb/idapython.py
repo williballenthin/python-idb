@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-import re
-import logging
-import weakref
 import collections
+import logging
+import re
+import weakref
 
 import six
+
 if six.PY2:
     import functools32 as functools
 else:
@@ -13,9 +14,7 @@ else:
 import idb.netnode
 import idb.analysis
 
-
 logger = logging.getLogger(__name__)
-
 
 
 # via: https://stackoverflow.com/a/33672499/87207
@@ -26,13 +25,17 @@ def memoized_method(*lru_args, **lru_kwargs):
             # We're storing the wrapped method inside the instance. If we had
             # a strong reference to self the instance would never die.
             self_weak = weakref.ref(self)
+
             @functools.wraps(func)
             @functools.lru_cache(*lru_args, **lru_kwargs)
             def cached_method(*args, **kwargs):
                 return func(self_weak(), *args, **kwargs)
+
             setattr(self, func.__name__, cached_method)
             return cached_method(*args, **kwargs)
+
         return wrapped_func
+
     return decorator
 
 
@@ -570,17 +573,16 @@ class ida_ida:
 
 
 class idc:
-
-    SEGPERM_EXEC   = 1  # Execute
-    SEGPERM_WRITE  = 2  # Write
-    SEGPERM_READ   = 4  # Read
+    SEGPERM_EXEC = 1  # Execute
+    SEGPERM_WRITE = 2  # Write
+    SEGPERM_READ = 4  # Read
     SEGPERM_MAXVAL = 7  # (SEGPERM_EXEC + SEGPERM_WRITE + SEGPERM_READ)
 
-    SFL_COMORG   = 0x01  # IDP dependent field (IBM PC: if set, ORG directive is not commented out)
-    SFL_OBOK     = 0x02  # orgbase is present? (IDP dependent field)
-    SFL_HIDDEN   = 0x04  # is the segment hidden?
-    SFL_DEBUG    = 0x08  # is the segment created for the debugger?
-    SFL_LOADER   = 0x10  # is the segment created by the loader?
+    SFL_COMORG = 0x01  # IDP dependent field (IBM PC: if set, ORG directive is not commented out)
+    SFL_OBOK = 0x02  # orgbase is present? (IDP dependent field)
+    SFL_HIDDEN = 0x04  # is the segment hidden?
+    SFL_DEBUG = 0x08  # is the segment created for the debugger?
+    SFL_LOADER = 0x10  # is the segment created by the loader?
     SFL_HIDETYPE = 0x20  # hide segment type (do not print it in the listing)
 
     def __init__(self, db, api):
@@ -607,90 +609,90 @@ class idc:
         # https://github.com/zachriggle/idapython/blob/37d2fd13b31fec8e6e53fbb9704fa3cd0cbd5b07/python/idc.py#L4149
         if self.idb.wordsize == 4:
             # function start address
-            self.FUNCATTR_START   = 0
+            self.FUNCATTR_START = 0
             # function end address
-            self.FUNCATTR_END     = 4
+            self.FUNCATTR_END = 4
             # function flags
-            self.FUNCATTR_FLAGS   = 8
+            self.FUNCATTR_FLAGS = 8
             # function frame id
-            self.FUNCATTR_FRAME   = 10
+            self.FUNCATTR_FRAME = 10
             # size of local variables
-            self.FUNCATTR_FRSIZE  = 14
+            self.FUNCATTR_FRSIZE = 14
             # size of saved registers area
-            self.FUNCATTR_FRREGS  = 18
+            self.FUNCATTR_FRREGS = 18
             # number of bytes purged from the stack
             self.FUNCATTR_ARGSIZE = 20
             # frame pointer delta
-            self.FUNCATTR_FPD     = 24
+            self.FUNCATTR_FPD = 24
             # function color code
-            self.FUNCATTR_COLOR   = 28
+            self.FUNCATTR_COLOR = 28
 
             # starting address
-            self.SEGATTR_START   =  0
+            self.SEGATTR_START = 0
             # ending address
-            self.SEGATTR_END     =  4
+            self.SEGATTR_END = 4
             self.SEGATTR_ORGBASE = 16
             # alignment
-            self.SEGATTR_ALIGN   = 20
+            self.SEGATTR_ALIGN = 20
             # combination
-            self.SEGATTR_COMB    = 21
+            self.SEGATTR_COMB = 21
             # permissions
-            self.SEGATTR_PERM    = 22
+            self.SEGATTR_PERM = 22
             # bitness (0: 16, 1: 32, 2: 64 bit segment)
             self.SEGATTR_BITNESS = 23
             # segment flags
-            self.SEGATTR_FLAGS   = 24
+            self.SEGATTR_FLAGS = 24
             # segment selector
-            self.SEGATTR_SEL     = 28
+            self.SEGATTR_SEL = 28
             # default ES value
-            self.SEGATTR_ES      = 32
+            self.SEGATTR_ES = 32
             # default CS value
-            self.SEGATTR_CS      = 36
+            self.SEGATTR_CS = 36
             # default SS value
-            self.SEGATTR_SS      = 40
+            self.SEGATTR_SS = 40
             # default DS value
-            self.SEGATTR_DS      = 44
+            self.SEGATTR_DS = 44
             # default FS value
-            self.SEGATTR_FS      = 48
+            self.SEGATTR_FS = 48
             # default GS value
-            self.SEGATTR_GS      = 52
+            self.SEGATTR_GS = 52
             # segment type
-            self.SEGATTR_TYPE    = 96
+            self.SEGATTR_TYPE = 96
             # segment color
-            self.SEGATTR_COLOR   = 100
+            self.SEGATTR_COLOR = 100
 
             self.BADADDR = 0xFFFFFFFF
 
         elif self.idb.wordsize == 8:
-            self.FUNCATTR_START   = 0
-            self.FUNCATTR_END     = 8
-            self.FUNCATTR_FLAGS   = 16
-            self.FUNCATTR_FRAME   = 18
-            self.FUNCATTR_FRSIZE  = 26
-            self.FUNCATTR_FRREGS  = 34
+            self.FUNCATTR_START = 0
+            self.FUNCATTR_END = 8
+            self.FUNCATTR_FLAGS = 16
+            self.FUNCATTR_FRAME = 18
+            self.FUNCATTR_FRSIZE = 26
+            self.FUNCATTR_FRREGS = 34
             self.FUNCATTR_ARGSIZE = 36
-            self.FUNCATTR_FPD     = 44
-            self.FUNCATTR_COLOR   = 52
-            self.FUNCATTR_OWNER   = 18
-            self.FUNCATTR_REFQTY  = 26
+            self.FUNCATTR_FPD = 44
+            self.FUNCATTR_COLOR = 52
+            self.FUNCATTR_OWNER = 18
+            self.FUNCATTR_REFQTY = 26
 
-            self.SEGATTR_START   =  0
-            self.SEGATTR_END     =  8
+            self.SEGATTR_START = 0
+            self.SEGATTR_END = 8
             self.SEGATTR_ORGBASE = 32
-            self.SEGATTR_ALIGN   = 40
-            self.SEGATTR_COMB    = 41
-            self.SEGATTR_PERM    = 42
+            self.SEGATTR_ALIGN = 40
+            self.SEGATTR_COMB = 41
+            self.SEGATTR_PERM = 42
             self.SEGATTR_BITNESS = 43
-            self.SEGATTR_FLAGS   = 44
-            self.SEGATTR_SEL     = 48
-            self.SEGATTR_ES      = 56
-            self.SEGATTR_CS      = 64
-            self.SEGATTR_SS      = 72
-            self.SEGATTR_DS      = 80
-            self.SEGATTR_FS      = 88
-            self.SEGATTR_GS      = 96
-            self.SEGATTR_TYPE    = 184
-            self.SEGATTR_COLOR   = 188
+            self.SEGATTR_FLAGS = 44
+            self.SEGATTR_SEL = 48
+            self.SEGATTR_ES = 56
+            self.SEGATTR_CS = 64
+            self.SEGATTR_SS = 72
+            self.SEGATTR_DS = 80
+            self.SEGATTR_FS = 88
+            self.SEGATTR_GS = 96
+            self.SEGATTR_TYPE = 184
+            self.SEGATTR_COLOR = 188
 
             self.BADADDR = 0xFFFFFFFFFFFFFFFF
         else:
@@ -854,7 +856,7 @@ class idc:
             # so, we pad the Segment with NULL bytes.
             # this is consistent with the IDAPython behavior.
             # see github issue #29.
-            ret.extend([0x0 for _ in  range(size - len(ret))])
+            ret.extend([0x0 for _ in range(size - len(ret))])
 
         if six.PY2:
             return ''.join(map(chr, ret))
@@ -870,14 +872,13 @@ class idc:
             self.bit_dis[(arch, mode)] = r
         return self.bit_dis[(arch, mode)]
 
-
     def _disassemble(self, ea):
         import capstone
 
         size = self.ItemSize(ea)
         inst_buf = self.GetManyBytes(ea, size)
         segment = self._get_segment(ea)
-        bitness = 16 << segment.bitness# 16, 32, 64
+        bitness = 16 << segment.bitness  # 16, 32, 64
         procname = self.api.idaapi.get_inf_structure().procName.lower()
 
         dis = None
@@ -888,7 +889,8 @@ class idc:
                 dis = self._load_dis(capstone.CS_ARCH_ARM, capstone.CS_MODE_THUMB)
             else:
                 dis = self._load_dis(capstone.CS_ARCH_ARM, capstone.CS_MODE_ARM)
-        elif procname in ['metapc', '8086', '80286r', '80286p', '80386r', '80386p','80486r', '80486p', '80586r', '80586p', '80686p', 'k62', 'p2', 'p3', 'athlon', 'p4', '8085']:
+        elif procname in ['metapc', '8086', '80286r', '80286p', '80386r', '80386p', '80486r', '80486p', '80586r',
+                          '80586p', '80686p', 'k62', 'p2', 'p3', 'athlon', 'p4', '8085']:
             if bitness == 16:
                 dis = self._load_dis(capstone.CS_ARCH_X86, capstone.CS_MODE_16)
             elif bitness == 32:
@@ -1119,17 +1121,17 @@ class idc:
     def isNum0(flags):
         t = flags & FLAGS.MS_0TYPE
         return t == FLAGS.FF_0NUMB or \
-            t == FLAGS.FF_0NUMO or \
-            t == FLAGS.FF_0NUMD or \
-            t == FLAGS.FF_0NUMH
+               t == FLAGS.FF_0NUMO or \
+               t == FLAGS.FF_0NUMD or \
+               t == FLAGS.FF_0NUMH
 
     @staticmethod
     def isNum1(flags):
         t = flags & FLAGS.MS_1TYPE
         return t == FLAGS.FF_1NUMB or \
-            t == FLAGS.FF_1NUMO or \
-            t == FLAGS.FF_1NUMD or \
-            t == FLAGS.FF_1NUMH
+               t == FLAGS.FF_1NUMO or \
+               t == FLAGS.FF_1NUMD or \
+               t == FLAGS.FF_1NUMH
 
     @staticmethod
     def get_optype_flags0(flags):
@@ -1325,7 +1327,7 @@ class ida_bytes:
         return self.api.idc.GetManyBytes(ea, count)
 
     def next_that(self, ea, maxea, testf):
-        for i in range(ea+1, maxea):
+        for i in range(ea + 1, maxea):
             flags = self.get_flags(i)
             if testf(flags):
                 return i
@@ -1968,31 +1970,31 @@ class idaapi:
         return self.api.ida_nalt.get_imagebase()
 
     TYPE_NAMES = {
-         0  : 'MS DOS EXE File',  # (obsolete)
-         1  : 'MS DOS COM File',  # (obsolete)
-         2  : 'Binary file',
-         3  : 'MS DOS Driver',
-         4  : 'New Executable (NE)',
-         5  : 'Intel Hex Object File',
-         6  : 'MOS Technology Hex Object File',
-         7  : 'Linear Executable (LX)',
-         8  : 'Linear Executable (LE)',
-         9  : 'Netware Loadable Module (NLM)',
-         10 : 'Common Object File Format (COFF)',
-         11 : 'Portable Executable (PE)',
-         12 : 'Object Module Format',
-         13 : 'R-records',
-         14 : 'ZIP file',  # (this file is never loaded to IDA database)
-         15 : 'Library of OMF Modules',
-         16 : 'ar library',
-         17 : 'file is loaded using LOADER DLL',
-         18 : 'Executable and Linkable Format (ELF)',
-         19 : 'Watcom DOS32 Extender (W32RUN)',
-         20 : 'Linux a.out (AOUT)',
-         21 : 'PalmPilot program file',
-         22 : 'MS DOS EXE File',
-         23 : 'MS DOS COM File',
-         24 : 'AIX ar library',
+        0: 'MS DOS EXE File',  # (obsolete)
+        1: 'MS DOS COM File',  # (obsolete)
+        2: 'Binary file',
+        3: 'MS DOS Driver',
+        4: 'New Executable (NE)',
+        5: 'Intel Hex Object File',
+        6: 'MOS Technology Hex Object File',
+        7: 'Linear Executable (LX)',
+        8: 'Linear Executable (LE)',
+        9: 'Netware Loadable Module (NLM)',
+        10: 'Common Object File Format (COFF)',
+        11: 'Portable Executable (PE)',
+        12: 'Object Module Format',
+        13: 'R-records',
+        14: 'ZIP file',  # (this file is never loaded to IDA database)
+        15: 'Library of OMF Modules',
+        16: 'ar library',
+        17: 'file is loaded using LOADER DLL',
+        18: 'Executable and Linkable Format (ELF)',
+        19: 'Watcom DOS32 Extender (W32RUN)',
+        20: 'Linux a.out (AOUT)',
+        21: 'PalmPilot program file',
+        22: 'MS DOS EXE File',
+        23: 'MS DOS COM File',
+        24: 'AIX ar library',
     }
 
     def get_file_type_name(self):
@@ -2018,10 +2020,11 @@ class _Strings:
     PASCAL_16 = 0x5
     LEN2 = 0x8
     LEN2_16 = 0x9
-    LEN4 =  0xC
+    LEN4 = 0xC
     LEN4_16 = 0xD
 
-    ASCII_BYTE = b" !\"#\$%&\'\(\)\*\+,-\./0123456789:;<=>\?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\[\]\^_`abcdefghijklmnopqrstuvwxyz\{\|\}\\\~\t"
+    ASCII_BYTE = b" !\"#\$%&\'\(\)\*\+,-\./0123456789:;<=>\?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\[\]\^_`" \
+                 b"abcdefghijklmnopqrstuvwxyz\{\|\}\\\~\t"
 
     def __init__(self, db, api):
         self.db = db
@@ -2051,7 +2054,7 @@ class _Strings:
         for i in range(start, end):
             try:
                 b = IdbByte(i)
-            except KeyError as e:
+            except KeyError:
                 break
             if b == 0:
                 flags = get_flags(i)
@@ -2199,7 +2202,7 @@ class idautils:
 
         try:
             for start, size in f.get_chunks():
-                yield (start, start+size)
+                yield (start, start + size)
         except KeyError:
             return
 
@@ -2373,6 +2376,7 @@ class idautils:
                    ordinal,
                    self.api.ida_entry.get_entry(ordinal),
                    self.api.ida_entry.get_entry_name(ordinal))
+
 
 class ida_entry:
     def __init__(self, db, api):

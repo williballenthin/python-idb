@@ -5,16 +5,14 @@ Parse and display license information from an IDA Pro database.
 author: Willi Ballenthin
 email: willi.ballenthin@gmail.com
 '''
-import sys
-import struct
-import logging
-import datetime
-
 import argparse
+import datetime
+import logging
+import struct
+import sys
 
 import idb
 import idb.netnode
-
 
 logger = logging.getLogger(__name__)
 

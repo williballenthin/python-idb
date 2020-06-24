@@ -1,9 +1,8 @@
-import struct
 import logging
+import struct
 from collections import namedtuple
 
 import six
-
 
 logger = logging.getLogger(__name__)
 

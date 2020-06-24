@@ -1,8 +1,8 @@
 import os.path
 
-import idb
-
 from fixtures import *
+
+import idb
 
 
 @requires_capstone

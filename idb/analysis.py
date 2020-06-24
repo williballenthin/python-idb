@@ -1,23 +1,22 @@
-import types
-import struct
-import logging
 import binascii
 import datetime
 import itertools
+import logging
+import struct
+import types
 from collections import namedtuple
 
 import six
 import vstruct
-from vstruct.primitives import v_str
 from vstruct.primitives import v_bytes
-from vstruct.primitives import v_uint8
+from vstruct.primitives import v_str
 from vstruct.primitives import v_uint16
 from vstruct.primitives import v_uint32
 from vstruct.primitives import v_uint64
+from vstruct.primitives import v_uint8
 
 import idb
 import idb.netnode
-
 
 logger = logging.getLogger(__name__)
 
@@ -85,8 +84,10 @@ def as_cast(V):
         s = S(buf)
         assert s.gid == 0x1000
     '''
+
     def inner(buf, wordsize=None):
         return cast(buf, V, wordsize=wordsize)
+
     setattr(inner, 'V', V.__name__)
     return inner
 
@@ -243,8 +244,8 @@ class _Analysis(object):
         #   fields with matching minvers override previously defined fields of the same name
         self._fields_by_name = {f.name: f for f in self.fields
                                 if (not f.minver) or
-                                   (f.minver and
-                                    idb_version >= f.minver)}
+                                (f.minver and
+                                 idb_version >= f.minver)}
 
     def _is_address(self, index):
         '''
@@ -391,8 +392,10 @@ def Analysis(nodeid, fields):
         root = Root(some_idb)
         assert root.version == 695
     '''
+
     def inner(db):
         return _Analysis(db, nodeid, fields)
+
     return inner
 
 
@@ -459,27 +462,27 @@ class IdaInfo(vstruct.VStruct):
         # TODO: the exact layout, particularly across versions, of the below is unknown.
         # offsets to fields in <7.0 seem to be available here:
         # https://github.com/tmr232/idapython/blob/master/python/idc.py#L2591
-        #self.database_change_count = v_uint32()
-        #self.ostype = v_uint16()
-        #self.apptype = v_uint16()
-        #self.asmtype = v_uint8()
-        #self.specsegs = v_uint8()
-        #self.af = v_uint32()
-        #self.af2 = v_uint32()
-        #self.baseaddr = v_word()
-        #self.start_ss = v_uint32()
-        #self.start_cs = v_uint32()
-        #self.start_ip = v_uint32()
-        #self.start_ea = v_uint32()
-        #self.start_sp = v_uint32()
-        #self.main = v_uint32()
-        #self.min_ea = v_uint32()
-        #self.max_ea = v_uint32()
-        #self.omin_ea = v_uint32()
-        #self.omax_ea = v_uint32()
-        #self.lowoff = v_uint32()
-        #self.highoff = v_uint32()
-        #self.maxref = v_word()
+        # self.database_change_count = v_uint32()
+        # self.ostype = v_uint16()
+        # self.apptype = v_uint16()
+        # self.asmtype = v_uint8()
+        # self.specsegs = v_uint8()
+        # self.af = v_uint32()
+        # self.af2 = v_uint32()
+        # self.baseaddr = v_word()
+        # self.start_ss = v_uint32()
+        # self.start_cs = v_uint32()
+        # self.start_ip = v_uint32()
+        # self.start_ea = v_uint32()
+        # self.start_sp = v_uint32()
+        # self.main = v_uint32()
+        # self.min_ea = v_uint32()
+        # self.max_ea = v_uint32()
+        # self.omin_ea = v_uint32()
+        # self.omax_ea = v_uint32()
+        # self.lowoff = v_uint32()
+        # self.highoff = v_uint32()
+        # self.maxref = v_word()
         # ... and a bunch of other stuff
 
     def pcb_tag(self):
@@ -517,30 +520,27 @@ class IdaInfo(vstruct.VStruct):
 
 
 Root = Analysis('Root Node', [
-    Field('imagebase',      'A', -6,       idb.netnode.as_int),
-    Field('crc',            'A', -5,       idb.netnode.as_int),
-    Field('open_count',     'A', -4,       idb.netnode.as_int),
-    Field('created',        'A', -2,       as_unix_timestamp),
-    Field('version',        'A', -1,       idb.netnode.as_int),
-    Field('md5',            'S', 1302,     as_md5),
-    Field('version_string', 'S', 1303,     idb.netnode.as_string),
-    Field('sha256',         'S', 1349,     as_sha256),
-    Field('idainfo',        'S', 0x41b994, as_cast(IdaInfo)),
-    Field('input_file_path','V', None,     idb.netnode.as_string)
+    Field('imagebase', 'A', -6, idb.netnode.as_int),
+    Field('crc', 'A', -5, idb.netnode.as_int),
+    Field('open_count', 'A', -4, idb.netnode.as_int),
+    Field('created', 'A', -2, as_unix_timestamp),
+    Field('version', 'A', -1, idb.netnode.as_int),
+    Field('md5', 'S', 1302, as_md5),
+    Field('version_string', 'S', 1303, idb.netnode.as_string),
+    Field('sha256', 'S', 1349, as_sha256),
+    Field('idainfo', 'S', 0x41b994, as_cast(IdaInfo)),
+    Field('input_file_path', 'V', None, idb.netnode.as_string)
 ])
-
 
 Loader = Analysis('$ loader name', [
     Field('plugin', 'S', 0, idb.netnode.as_string),
     Field('format', 'S', 1, idb.netnode.as_string),
 ])
 
-
 # see `scripts/dump_user.py` for intepretation.
 OriginalUser = Analysis('$ original user', [
     Field('data', 'S', 0, bytes),
 ])
-
 
 # see `scripts/dump_user.py` for intepretation.
 User = Analysis('$ user1', [
@@ -590,8 +590,8 @@ class FileRegionV70:
 #       0x4: end effective address
 #       0x8: rva start?
 FileRegions = Analysis('$ fileregions', [
-    Field('regions',  'S', ADDRESSES, as_cast(FileRegion)),
-    Field('regions',  'S', ADDRESSES, FileRegionV70, minver=700),
+    Field('regions', 'S', ADDRESSES, as_cast(FileRegion)),
+    Field('regions', 'S', ADDRESSES, FileRegionV70, minver=700),
 ])
 
 
@@ -764,6 +764,7 @@ class Struct:
         assert len(struc.get_members()) == 5
         assert list(struc.get_members())[0].get_type() == 'DWORD'
     '''
+
     def __init__(self, db, structid):
         self.idb = db
 
@@ -1170,14 +1171,12 @@ Segments = Analysis('$ segs', [
     Field('segments', 'S', ALL, Seg),
 ])
 
-
 Imports = Analysis('$ imports', [
     # index: entry number, value: node id
     Field('lib_netnodes', 'A', NUMBERS, idb.netnode.as_uint),
     # index: entry number, value: dll name
     Field('lib_names', 'S', NUMBERS, idb.netnode.as_string),
 ])
-
 
 Import = namedtuple('Import', ['library', 'function_name', 'function_address'])
 
@@ -1222,7 +1221,6 @@ EntryPoints = Analysis('$ entry points', [
     Field('main_entry_name', 'S', ADDRESSES, idb.netnode.as_string),
 ])
 
-
 EntryPoint = namedtuple('EntryPoint', ['name', 'address', 'ordinal', 'forwarded_symbol'])
 
 
@@ -1249,15 +1247,12 @@ def enumerate_entrypoints(db):
         yield EntryPoint(names.get(index), addr, ordinals.get(index), forwarded_symbols.get(index))
 
 
-
-
 ScriptSnippets = Analysis('$ scriptsnippets', [
     # number of spaces per tab
-    Field('tabsize', 'Y', 0x0,     idb.netnode.as_uint),
+    Field('tabsize', 'Y', 0x0, idb.netnode.as_uint),
     # netnode references
     Field('scripts', 'A', NUMBERS, idb.netnode.as_uint),
 ])
-
 
 ScriptSnippet = namedtuple('ScriptSnippet', ['name', 'language', 'code'])
 

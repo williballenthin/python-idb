@@ -2,36 +2,36 @@ name: Python IDB
 on: [push, pull_request]
 
 jobs:
-    build:
-        runs-on: ${{ matrix.os }}
-        strategy:
-            matrix:
-                os: [ubuntu-latest, macos-latest, windows-latest]
-                python-version: ['2.7', '3.6', '3.7', '3.8']
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['2.7', '3.6', '3.7', '3.8']
 
-        name: Python ${{ matrix.python-version }} at ${{ matrix.os }}
-        steps:
-            - uses: actions/checkout@v2
-            - name: Setup python
-              uses: actions/setup-python@v2
-              with:
-                  python-version: ${{ matrix.python-version }}
-                  architecture: x64
-            - name: Install dependencies
-              run: |
-                pip install --upgrade pip
-                pip install -I PyPI capstone flake8
-                pip install --upgrade pytest-cov pytest
-                pip install -e .
-            - name: QA checks
-              run: |
-                # stop the build if there are Python syntax errors or undefined names
-                flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics
-                # exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide
-                flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-            - name: Run tests
-              run: |
-                find . -name \*.py -exec pycodestyle --ignore=E501 {} \;
-                py.test ./tests/ -v --cov=idb
+    name: Python ${{ matrix.python-version }} at ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -I PyPI capstone flake8
+          pip install --upgrade pytest-cov pytest
+          pip install -e .
+      - name: QA checks
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics
+          # exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Run tests
+        run: |
+          find . -name \*.py -exec pycodestyle --ignore=E501 {} \;
+          py.test ./tests/ -v --cov=idb
 
 

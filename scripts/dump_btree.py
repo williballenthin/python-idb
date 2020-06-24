@@ -5,15 +5,14 @@ some documentation
 author: Willi Ballenthin
 email: willi.ballenthin@gmail.com
 '''
-import sys
+import argparse
 import logging
+import sys
 
 import hexdump
-import argparse
 
 import idb
 import idb.netnode
-
 
 logger = logging.getLogger(__name__)
 

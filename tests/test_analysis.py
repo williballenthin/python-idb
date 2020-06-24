@@ -1,8 +1,6 @@
-import pytest
+from fixtures import *
 
 import idb.analysis
-
-from fixtures import *
 
 
 def pluck(prop, s):
@@ -314,6 +312,7 @@ def test_segstrings(kernel32_idb, version, bitness, expected):
     # the first string is some binary data.
     assert strs[1:] == ['.text', 'CODE', '.data', 'DATA', '.idata']
 
+
 def test_segments2(elf_idb):
     EXPECTED = {
         '.init': {
@@ -578,6 +577,6 @@ def test_idainfo(kernel32_idb, version, bitness, expected):
     idbpath = os.path.join(cd, 'data', 'multibitness', 'multibitness.idb')
     with idb.from_file(idbpath) as db:
         idainfo = idb.analysis.Root(db).idainfo
-        assert idainfo.tag == 'IDA'    # like from 6.95
+        assert idainfo.tag == 'IDA'  # like from 6.95
         assert idainfo.version == 700  # like from 7.00
         assert idainfo.procname == 'metapc'  # actually stored as `| 0x06 m e t a p c |`

@@ -15,5 +15,5 @@ def test_issue28():
         api = idb.IDAPython(db)
         assert [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
                 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2] == [
-                    api.idc.GetSegmentAttr(s, api.idc.SEGATTR_BITNESS)
-                    for s in api.idautils.Segments()]
+                   api.idc.GetSegmentAttr(s, api.idc.SEGATTR_BITNESS)
+                   for s in api.idautils.Segments()]

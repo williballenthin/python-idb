@@ -5,13 +5,12 @@ import pytest
 
 import idb
 
-
 try:
     import capstone
+
     no_capstone = False
 except:
     no_capstone = True
-
 
 CD = os.path.dirname(__file__)
 
@@ -78,13 +77,16 @@ COMMON_FIXTURES = {
     (700, 64): load_idb(os.path.join(CD, 'data', 'v7.0b', 'x64', 'kernel32.i64')),
 }
 
+
 @pytest.fixture
 def runslow(request):
     return request.config.getoption("--runslow")
 
+
 @pytest.fixture
 def rundebug(request):
     return request.config.getoption("--rundebug")
+
 
 def kern32_test(specs=None):
     '''

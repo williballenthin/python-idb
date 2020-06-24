@@ -1,11 +1,10 @@
-import pytest
 import binascii
 
+import pytest
 from fixtures import *
 
-import idb.netnode
 import idb.fileformat
-
+import idb.netnode
 
 slow = pytest.mark.skipif(
     not runslow,

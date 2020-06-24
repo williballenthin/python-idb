@@ -2,22 +2,21 @@
 lots of inspiration from: https://github.com/nlitsme/pyidbutil
 '''
 import abc
-import zlib
-import struct
-import logging
 import functools
+import logging
+import struct
+import zlib
 from collections import namedtuple
 
 import vstruct
 from vstruct.primitives import v_bytes
-from vstruct.primitives import v_uint8
 from vstruct.primitives import v_uint16
 from vstruct.primitives import v_uint32
 from vstruct.primitives import v_uint64
+from vstruct.primitives import v_uint8
 
 import idb
 import idb.netnode
-
 
 logger = logging.getLogger(__name__)
 
@@ -858,9 +857,9 @@ class ID1(vstruct.VStruct):
             raise RuntimeError('unexpected wordsize')
 
         self.signature = v_bytes(size=0x04)
-        self.unk04 = v_uint32()     # 0x3
+        self.unk04 = v_uint32()  # 0x3
         self.segment_count = v_uint32()
-        self.unk0C = v_uint32()     # 0x800
+        self.unk0C = v_uint32()  # 0x800
         self.page_count = v_uint32()
         # varrays are not actually very list-like,
         #  so the struct field will be ._segments
@@ -986,11 +985,11 @@ class NAM(vstruct.VStruct):
             raise RuntimeError('unexpected wordsize')
 
         self.signature = v_bytes(size=0x04)
-        self.unk04 = v_uint32()      # 0x3
+        self.unk04 = v_uint32()  # 0x3
         self.non_empty = v_uint32()  # (0x1 non-empty) or (0x0 empty)
-        self.unk0C = v_uint32()      # 0x800
+        self.unk0C = v_uint32()  # 0x800
         self.page_count = v_uint32()
-        self.unk14 = self.v_word()   # 0x0
+        self.unk14 = self.v_word()  # 0x0
         # this appears to actually be the number of dwords used by the names.
         # so for an .i64, this is 2x the name count.
         self.dword_count = v_uint32()
