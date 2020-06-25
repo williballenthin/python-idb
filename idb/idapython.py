@@ -2023,8 +2023,8 @@ class _Strings:
     LEN4 = 0xC
     LEN4_16 = 0xD
 
-    ASCII_BYTE = b" !\"#\$%&\'\(\)\*\+,-\./0123456789:;<=>\?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\[\]\^_`" \
-                 b"abcdefghijklmnopqrstuvwxyz\{\|\}\\\~\t"
+    ASCII_BYTE = b" !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`" \
+                 b"abcdefghijklmnopqrstuvwxyz{|}\\~\t"
 
     def __init__(self, db, api):
         self.db = db
