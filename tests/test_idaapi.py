@@ -802,7 +802,7 @@ def test_GetType(kernel32_idb, version, bitness, expected):
 def test_inf_structure(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     inf_structure = api.idaapi.get_inf_structure()
-    assert inf_structure.procname == 'metapc'
+    assert inf_structure.procName == 'metapc'
 
 
 @requires_capstone
