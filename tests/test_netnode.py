@@ -3,12 +3,9 @@ from fixtures import *
 
 import idb.netnode
 
-debug = pytest.mark.skipif(
-    not rundebug,
-    reason="need --rundebug option to run"
-)
+debug = pytest.mark.skipif(not rundebug, reason="need --rundebug option to run")
 
-ROOT_NODEID = 'Root Node'
+ROOT_NODEID = "Root Node"
 
 
 @kern32_test()
@@ -27,16 +24,18 @@ def test_valobj(kernel32_idb, version, bitness, expected):
     # Out[29]: 'Z:\\home\\user\\Downloads\\kernel32\\kernel32.dll\x00'
     root = idb.netnode.Netnode(kernel32_idb, ROOT_NODEID)
     assert root.value_exists() is True
-    assert root.valobj().endswith(b'kernel32.dll\x00')
-    assert root.valstr().endswith('kernel32.dll')
+    assert root.valobj().endswith(b"kernel32.dll\x00")
+    assert root.valstr().endswith("kernel32.dll")
 
 
-@kern32_test([
-    (695, 32, [1, 2, 65, 66, 1300, 1301, 1302, 1303, 1305, 1349, 4307348]),
-    (695, 64, [1, 2, 65, 66, 1300, 1301, 1302, 1303, 1305, 1349, 4307348]),
-    (700, 32, [1, 2, 65, 66, 1300, 1301, 1302, 1303, 1305, 1349, 1352, 4307348]),
-    (700, 64, [1, 2, 65, 66, 1300, 1301, 1302, 1303, 1305, 1349, 1352, 4307348]),
-])
+@kern32_test(
+    [
+        (695, 32, [1, 2, 65, 66, 1300, 1301, 1302, 1303, 1305, 1349, 4307348]),
+        (695, 64, [1, 2, 65, 66, 1300, 1301, 1302, 1303, 1305, 1349, 4307348]),
+        (700, 32, [1, 2, 65, 66, 1300, 1301, 1302, 1303, 1305, 1349, 1352, 4307348]),
+        (700, 64, [1, 2, 65, 66, 1300, 1301, 1302, 1303, 1305, 1349, 1352, 4307348]),
+    ]
+)
 def test_sups(kernel32_idb, version, bitness, expected):
     root = idb.netnode.Netnode(kernel32_idb, ROOT_NODEID)
     assert list(root.sups()) == expected
@@ -46,7 +45,15 @@ def test_sups(kernel32_idb, version, bitness, expected):
 def test_alts(kernel32_idb, version, bitness, expected):
     root = idb.netnode.Netnode(kernel32_idb, ROOT_NODEID)
     uint = kernel32_idb.uint
-    assert list(root.alts()) == [uint(-8), uint(-6), uint(-5), uint(-4), uint(-3), uint(-2), uint(-1)]
+    assert list(root.alts()) == [
+        uint(-8),
+        uint(-6),
+        uint(-5),
+        uint(-4),
+        uint(-3),
+        uint(-2),
+        uint(-1),
+    ]
 
 
 # the small netnode has a root btree node with a single child.
@@ -54,5 +61,11 @@ def test_alts(kernel32_idb, version, bitness, expected):
 def test_small(small_idb):
     root = idb.netnode.Netnode(small_idb, ROOT_NODEID)
     uint32 = small_idb.uint
-    assert list(root.alts()) == [uint32(-8), uint32(-5), uint32(-4),
-                                 uint32(-3), uint32(-2), uint32(-1)]
+    assert list(root.alts()) == [
+        uint32(-8),
+        uint32(-5),
+        uint32(-4),
+        uint32(-3),
+        uint32(-2),
+        uint32(-1),
+    ]
