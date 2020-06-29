@@ -9,16 +9,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ['2.7', '3.6', '3.7', '3.8']
-        exclude:
-          - os: ubuntu-latest
-            python-version: 2.7
-          - os: windows-latest
-            python-version: 2.7
-          - os: windows-latest
-            python-version: 3.6
-          - os: windows-latest
-            python-version: 3.7
-
 
     name: Python ${{ matrix.python-version }} at ${{ matrix.os }}
     steps:
@@ -43,6 +33,4 @@ jobs:
       - name: Run tests
         run: |
           find . -name \*.py -exec pycodestyle --ignore=E501 {} \;
-          py.test ./tests/ -v --cov=idb
-
-
+          find . -name test*py -exec py.test {} -v --cov=idb \;
