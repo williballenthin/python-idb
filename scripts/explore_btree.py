@@ -1,38 +1,38 @@
 #!/usr/bin/env python
-'''
+"""
 Interactively explore an IDB B-Tree like a file system.
 
 author: Willi Ballenthin
 email: willi.ballenthin@gmail.com
-'''
-import sys
+"""
+import argparse
 import cmd
 import logging
+import sys
 
 import hexdump
-import argparse
 import tabulate
 
 import idb
 import idb.netnode
 
-
 logger = logging.getLogger(__name__)
 
 
 def h(i):
-    return '%x' % (i)
+    return "%x" % (i)
 
 
 def render_key(key, wordsize):
     if key[0] == 0x2E:
         k = idb.netnode.parse_key(key, wordsize)
-        return 'nodeid: %x tag: %s index: %s' % (
-                k.nodeid,
-                k.tag,
-                hex(k.index) if k.index is not None else 'None')
+        return "nodeid: %x tag: %s index: %s" % (
+            k.nodeid,
+            k.tag,
+            hex(k.index) if k.index is not None else "None",
+        )
     else:
-        return bytes(key).decode('ascii')
+        return bytes(key).decode("ascii")
 
 
 class BTreeExplorer(cmd.Cmd):
@@ -43,34 +43,36 @@ class BTreeExplorer(cmd.Cmd):
 
     @property
     def prompt(self):
-        return '/'.join(map(h, self.path)) + "/ > "
+        return "/".join(map(h, self.path)) + "/ > "
 
     @property
     def current_page(self):
         return self.db.id0.get_page(self.path[-1])
 
     def do_ls(self, line):
-        '''
+        """
         list the entries in the current B-tree page.
-        '''
+        """
         page = self.current_page
 
         rows = []
 
         if page.is_leaf():
-            print('leaf: true')
+            print("leaf: true")
             for i, entry in enumerate(page.get_entries()):
                 rows.append((hex(i), render_key(entry.key, self.db.wordsize)))
         else:
-            print('leaf: false')
-            rows.append(('', 'ppointer', hex(page.ppointer)))
+            print("leaf: false")
+            rows.append(("", "ppointer", hex(page.ppointer)))
             for i, entry in enumerate(page.get_entries()):
-                rows.append((hex(i), render_key(entry.key, self.db.wordsize), hex(entry.page)))
+                rows.append(
+                    (hex(i), render_key(entry.key, self.db.wordsize), hex(entry.page))
+                )
 
-        print(tabulate.tabulate(rows, headers=['entry', 'key', 'page number']))
+        print(tabulate.tabulate(rows, headers=["entry", "key", "page number"]))
 
     def do_cd(self, line):
-        '''
+        """
         traverse the B-tree.
 
         you may only traverse to child nodes, or to the parent node.
@@ -87,15 +89,15 @@ class BTreeExplorer(cmd.Cmd):
         traverse to parent::
 
             > cd ..
-        '''
-        if ' ' in line:
-            part = line.partition(' ')[0]
+        """
+        if " " in line:
+            part = line.partition(" ")[0]
         else:
             part = line
 
-        if part == '..':
+        if part == "..":
             if len(self.path) == 1:
-                print('error: cannot go up, already at root node.')
+                print("error: cannot go up, already at root node.")
                 return
             self.path = self.path[:-1]
             return
@@ -104,15 +106,17 @@ class BTreeExplorer(cmd.Cmd):
 
         target = int(part, 0x10)
 
-        if not (target == page.ppointer or
-                target in map(lambda e: e.page, page.get_entries())):
-            print('error: invalid page number.')
+        if not (
+            target == page.ppointer
+            or target in map(lambda e: e.page, page.get_entries())
+        ):
+            print("error: invalid page number.")
             return
 
         self.path.append(target)
 
     def do_cat(self, line):
-        '''
+        """
         display the contents of an entry.
 
         example::
@@ -135,9 +139,9 @@ class BTreeExplorer(cmd.Cmd):
             00000030: 6F 6E 2D 69 64 62 5C 74  65 73 74 73 5C 64 61 74  on-idb\\tests\dat
             00000040: 61 5C 73 6D 61 6C 6C 5C  73 6D 61 6C 6C 2E 62 69  a\\small\\small.bi
             00000050: 6E 00
-        '''
-        if ' ' in line:
-            part = line.partition(' ')[0]
+        """
+        if " " in line:
+            part = line.partition(" ")[0]
         else:
             part = line
         target = int(part, 0x10)
@@ -159,13 +163,16 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
 
-    parser = argparse.ArgumentParser(description="Interactively explore an IDB B-tree like a file system.")
-    parser.add_argument("idbpath", type=str,
-                        help="Path to input idb file")
-    parser.add_argument("-v", "--verbose", action="store_true",
-                        help="Enable debug logging")
-    parser.add_argument("-q", "--quiet", action="store_true",
-                        help="Disable all output but errors")
+    parser = argparse.ArgumentParser(
+        description="Interactively explore an IDB B-tree like a file system."
+    )
+    parser.add_argument("idbpath", type=str, help="Path to input idb file")
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Enable debug logging"
+    )
+    parser.add_argument(
+        "-q", "--quiet", action="store_true", help="Disable all output but errors"
+    )
     args = parser.parse_args(args=argv)
 
     if args.verbose:

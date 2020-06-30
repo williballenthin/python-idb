@@ -1,23 +1,22 @@
-import types
-import struct
-import logging
 import binascii
 import datetime
 import itertools
+import logging
+import struct
+import types
 from collections import namedtuple
 
 import six
 import vstruct
-from vstruct.primitives import v_str
 from vstruct.primitives import v_bytes
-from vstruct.primitives import v_uint8
+from vstruct.primitives import v_str
 from vstruct.primitives import v_uint16
 from vstruct.primitives import v_uint32
 from vstruct.primitives import v_uint64
+from vstruct.primitives import v_uint8
 
 import idb
 import idb.netnode
-
 
 logger = logging.getLogger(__name__)
 
@@ -27,29 +26,29 @@ def is_flag_set(flags, flag):
 
 
 def as_unix_timestamp(buf, wordsize=None):
-    '''
+    """
     parse unix timestamp bytes into a timestamp.
-    '''
+    """
     q = struct.unpack_from("<I", buf, 0x0)[0]
     return datetime.datetime.utcfromtimestamp(q)
 
 
 def as_md5(buf, wordsize=None):
-    '''
+    """
     parse raw md5 bytes into a hex-formatted string.
-    '''
-    return binascii.hexlify(buf).decode('ascii')
+    """
+    return binascii.hexlify(buf).decode("ascii")
 
 
 def as_sha256(buf, wordsize=None):
-    '''
+    """
     parse raw sha256 bytes into a hex-formatted string.
-    '''
-    return binascii.hexlify(buf).decode('ascii')
+    """
+    return binascii.hexlify(buf).decode("ascii")
 
 
 def cast(buf, V, wordsize=None):
-    '''
+    """
     apply a vstruct class to a sequence of bytes.
 
     Args:
@@ -63,14 +62,14 @@ def cast(buf, V, wordsize=None):
 
         s = cast(buf, Stat)
         assert s.gid == 0x1000
-    '''
+    """
     v = V(wordsize=wordsize)
     v.vsParse(buf)
     return v
 
 
 def as_cast(V):
-    '''
+    """
     create a partial function that casts buffers to the given vstruct.
 
     Args:
@@ -84,15 +83,17 @@ def as_cast(V):
         S = as_cast(Stat)
         s = S(buf)
         assert s.gid == 0x1000
-    '''
+    """
+
     def inner(buf, wordsize=None):
         return cast(buf, V, wordsize=wordsize)
-    setattr(inner, 'V', V.__name__)
+
+    setattr(inner, "V", V.__name__)
     return inner
 
 
 def unpack_dd(buf, offset=0):
-    '''
+    """
     unpack up to 32-bits using the IDA-specific data packing format.
 
     Args:
@@ -104,7 +105,7 @@ def unpack_dd(buf, offset=0):
 
     Raises:
       KeyError: if the bounds of the region are exceeded.
-    '''
+    """
     if offset != 0:
         # this isn't particularly fast... but its more readable.
         buf = buf[offset:]
@@ -120,16 +121,16 @@ def unpack_dd(buf, offset=0):
             low = (six.indexbytes(buf, 0x3) << 8) + six.indexbytes(buf, 0x4)
             size = 5
         else:
-            hi = (((header & 0x3F) << 8) + six.indexbytes(buf, 0x1))
+            hi = ((header & 0x3F) << 8) + six.indexbytes(buf, 0x1)
             low = (six.indexbytes(buf, 0x2) << 8) + six.indexbytes(buf, 0x3)
             size = 4
         return (hi << 16) + low, size
 
 
 def unpack_dw(buf, offset=0):
-    '''
+    """
     unpack word.
-    '''
+    """
     if offset != 0:
         buf = buf[offset:]
 
@@ -143,9 +144,9 @@ def unpack_dw(buf, offset=0):
 
 
 def unpack_dq(buf, offset=0):
-    '''
+    """
     unpack qword.
-    '''
+    """
     if offset != 0:
         buf = buf[offset:]
 
@@ -180,7 +181,7 @@ class Unpacker:
     def _do_unpack(self, unpack_fn):
         v, delta = unpack_fn(self.buf, offset=self.offset)
         if self.should_log:
-            logger.debug('%s at %x: %x', unpack_fn.__name__, self.offset, v)
+            logger.debug("%s at %x: %x", unpack_fn.__name__, self.offset, v)
         self.offset += delta
         return v
 
@@ -199,10 +200,10 @@ class Unpacker:
         elif self.wordsize == 8:
             return self._do_unpack(unpack_dq)
         else:
-            raise RuntimeError('unexpected wordsize')
+            raise RuntimeError("unexpected wordsize")
 
 
-Field = namedtuple('Field', ['name', 'tag', 'index', 'cast', 'minver'])
+Field = namedtuple("Field", ["name", "tag", "index", "cast", "minver"])
 # namedtuple default args.
 # via: https://stackoverflow.com/a/18348004/87207
 Field.__new__.__defaults__ = (None,) * len(Field._fields)
@@ -216,20 +217,20 @@ class IndexType:
         return self.name.upper()
 
 
-ALL = IndexType('all')
-ADDRESSES = IndexType('addresses')
-NUMBERS = IndexType('numbers')
-NODES = IndexType('nodes')
+ALL = IndexType("all")
+ADDRESSES = IndexType("addresses")
+NUMBERS = IndexType("numbers")
+NODES = IndexType("nodes")
 
 VARIABLE_INDEXES = (ALL, ADDRESSES, NUMBERS, NODES)
 
 
 class _Analysis(object):
-    '''
+    """
     this is basically a metaclass for analyzers of IDA Pro netnode namespaces (named nodeid).
     provide set of fields, and parse them from netnodes (nodeid, tag, and optional index)
      when accessed.
-    '''
+    """
 
     def __init__(self, db, nodeid, fields):
         self.idb = db
@@ -237,19 +238,20 @@ class _Analysis(object):
         self.netnode = idb.netnode.Netnode(db, nodeid)
         self.fields = fields
 
-        idb_version = idb.netnode.Netnode(db, 'Root Node').altval(index=-1)
+        idb_version = idb.netnode.Netnode(db, "Root Node").altval(index=-1)
 
         # note that order of fields is important:
         #   fields with matching minvers override previously defined fields of the same name
-        self._fields_by_name = {f.name: f for f in self.fields
-                                if (not f.minver) or
-                                   (f.minver and
-                                    idb_version >= f.minver)}
+        self._fields_by_name = {
+            f.name: f
+            for f in self.fields
+            if (not f.minver) or (f.minver and idb_version >= f.minver)
+        }
 
     def _is_address(self, index):
-        '''
+        """
         does the given index fall within a segment?
-        '''
+        """
         try:
             self.idb.id1.get_segment(index)
             return True
@@ -257,20 +259,20 @@ class _Analysis(object):
             return False
 
     def _is_node(self, index):
-        '''
+        """
         does the index look like a raw nodeid?
-        '''
+        """
         if self.idb.wordsize == 4:
             return index & 0xFF000000 == 0xFF000000
         elif self.idb.wordsize == 8:
             return index & 0xFF00000000000000 == 0xFF00000000000000
         else:
-            raise RuntimeError('unexpected wordsize')
+            raise RuntimeError("unexpected wordsize")
 
     def _is_number(self, index):
-        '''
+        """
         does the index look like not (address or node)?
-        '''
+        """
         if self._is_node(index):
             return False
 
@@ -283,7 +285,7 @@ class _Analysis(object):
         return True
 
     def __getattr__(self, key):
-        '''
+        """
         for the given field name, fetch the value from the appropriate netnode.
         if the field matches multiple indices, then return a mapping from index to value.
 
@@ -309,7 +311,7 @@ class _Analysis(object):
 
         Raises:
           KeyError: if the field does not exist.
-        '''
+        """
         if key not in self._fields_by_name:
             return super(_Analysis, self).__getattribute__(key)
 
@@ -325,7 +327,7 @@ class _Analysis(object):
             elif field.index == ALL:
                 nfilter = lambda x: True
             else:
-                raise ValueError('unexpected index')
+                raise ValueError("unexpected index")
 
             # indexes are variable, so map them to the values
             ret = {}
@@ -345,11 +347,10 @@ class _Analysis(object):
             if field.cast is None:
                 return bytes(v)
             else:
-                return field.cast(bytes(v),
-                                  wordsize=self.idb.wordsize)
+                return field.cast(bytes(v), wordsize=self.idb.wordsize)
 
     def get_field_tag(self, name):
-        '''
+        """
         get the tag associated with the given field name.
 
         Example::
@@ -361,11 +362,11 @@ class _Analysis(object):
 
         Returns:
           str: a single character string tag.
-        '''
+        """
         return self._fields_by_name[name].tag
 
     def get_field_index(self, name):
-        '''
+        """
         get the index associated with the given field name.
         Example::
 
@@ -377,12 +378,12 @@ class _Analysis(object):
         Returns:
           int or IndexType: the index, if its specified.
             otherwise, this will be an `IndexType` that indicates what indices are expected.
-        '''
+        """
         return self._fields_by_name[name].index
 
 
 def Analysis(nodeid, fields):
-    '''
+    """
     build a partial constructor for _Analysis with the given nodeid and fields.
 
     Example::
@@ -390,9 +391,11 @@ def Analysis(nodeid, fields):
         Root = Analysis('Root Node', [Field(...), ...])
         root = Root(some_idb)
         assert root.version == 695
-    '''
+    """
+
     def inner(db):
         return _Analysis(db, nodeid, fields)
+
     return inner
 
 
@@ -407,7 +410,7 @@ class IdaInfo(vstruct.VStruct):
         elif wordsize == 8:
             v_word = v_uint64
         else:
-            raise ValueError('unexpected wordsize')
+            raise ValueError("unexpected wordsize")
 
         """
         v7.0:
@@ -459,93 +462,92 @@ class IdaInfo(vstruct.VStruct):
         # TODO: the exact layout, particularly across versions, of the below is unknown.
         # offsets to fields in <7.0 seem to be available here:
         # https://github.com/tmr232/idapython/blob/master/python/idc.py#L2591
-        #self.database_change_count = v_uint32()
-        #self.ostype = v_uint16()
-        #self.apptype = v_uint16()
-        #self.asmtype = v_uint8()
-        #self.specsegs = v_uint8()
-        #self.af = v_uint32()
-        #self.af2 = v_uint32()
-        #self.baseaddr = v_word()
-        #self.start_ss = v_uint32()
-        #self.start_cs = v_uint32()
-        #self.start_ip = v_uint32()
-        #self.start_ea = v_uint32()
-        #self.start_sp = v_uint32()
-        #self.main = v_uint32()
-        #self.min_ea = v_uint32()
-        #self.max_ea = v_uint32()
-        #self.omin_ea = v_uint32()
-        #self.omax_ea = v_uint32()
-        #self.lowoff = v_uint32()
-        #self.highoff = v_uint32()
-        #self.maxref = v_word()
+        # self.database_change_count = v_uint32()
+        # self.ostype = v_uint16()
+        # self.apptype = v_uint16()
+        # self.asmtype = v_uint8()
+        # self.specsegs = v_uint8()
+        # self.af = v_uint32()
+        # self.af2 = v_uint32()
+        # self.baseaddr = v_word()
+        # self.start_ss = v_uint32()
+        # self.start_cs = v_uint32()
+        # self.start_ip = v_uint32()
+        # self.start_ea = v_uint32()
+        # self.start_sp = v_uint32()
+        # self.main = v_uint32()
+        # self.min_ea = v_uint32()
+        # self.max_ea = v_uint32()
+        # self.omin_ea = v_uint32()
+        # self.omax_ea = v_uint32()
+        # self.lowoff = v_uint32()
+        # self.highoff = v_uint32()
+        # self.maxref = v_word()
         # ... and a bunch of other stuff
 
     def pcb_tag(self):
-        if self.tag == 'IDA':
+        if self.tag == "IDA":
             # under 7.0
             pass
-        elif self.tag == 'ida':
+        elif self.tag == "ida":
             # 7.0
-            self['zero'].vsSetLength(0x1)
+            self["zero"].vsSetLength(0x1)
         else:
-            raise NotImplementedError('raise unknown database tag: ' + self.tag)
+            raise NotImplementedError("raise unknown database tag: " + self.tag)
 
     def pcb_version(self):
         # 6.95 database upgraded to v7.0b
         # we have a single byte that describes how long the procname is.
-        if self.tag == 'IDA' and self.version == 700:
-            self['procname_size'].vsSetLength(0x1)
+        if self.tag == "IDA" and self.version == 700:
+            self["procname_size"].vsSetLength(0x1)
 
     def pcb_procname_size(self):
         # 6.95 database upgraded to v7.0b
         # we have a single byte that describes how long the procname is.
         if self.procname_size:
             size = six.indexbytes(self.procname_size, 0x0)
-            self['procname'].vsSetLength(size)
+            self["procname"].vsSetLength(size)
         # pre-7.0
-        elif self.tag == 'IDA':
-            self['procname'].vsSetLength(8)
+        elif self.tag == "IDA":
+            self["procname"].vsSetLength(8)
         # 7.0+
         else:
-            self['procname'].vsSetLength(16)
+            self["procname"].vsSetLength(16)
 
     @property
     def procName(self):
         return self.procname
 
 
-Root = Analysis('Root Node', [
-    Field('imagebase',      'A', -6,       idb.netnode.as_int),
-    Field('crc',            'A', -5,       idb.netnode.as_int),
-    Field('open_count',     'A', -4,       idb.netnode.as_int),
-    Field('created',        'A', -2,       as_unix_timestamp),
-    Field('version',        'A', -1,       idb.netnode.as_int),
-    Field('md5',            'S', 1302,     as_md5),
-    Field('version_string', 'S', 1303,     idb.netnode.as_string),
-    Field('sha256',         'S', 1349,     as_sha256),
-    Field('idainfo',        'S', 0x41b994, as_cast(IdaInfo)),
-    Field('input_file_path','V', None,     idb.netnode.as_string)
-])
+Root = Analysis(
+    "Root Node",
+    [
+        Field("imagebase", "A", -6, idb.netnode.as_int),
+        Field("crc", "A", -5, idb.netnode.as_int),
+        Field("open_count", "A", -4, idb.netnode.as_int),
+        Field("created", "A", -2, as_unix_timestamp),
+        Field("version", "A", -1, idb.netnode.as_int),
+        Field("md5", "S", 1302, as_md5),
+        Field("version_string", "S", 1303, idb.netnode.as_string),
+        Field("sha256", "S", 1349, as_sha256),
+        Field("idainfo", "S", 0x41B994, as_cast(IdaInfo)),
+        Field("input_file_path", "V", None, idb.netnode.as_string),
+    ],
+)
 
-
-Loader = Analysis('$ loader name', [
-    Field('plugin', 'S', 0, idb.netnode.as_string),
-    Field('format', 'S', 1, idb.netnode.as_string),
-])
-
-
-# see `scripts/dump_user.py` for intepretation.
-OriginalUser = Analysis('$ original user', [
-    Field('data', 'S', 0, bytes),
-])
-
+Loader = Analysis(
+    "$ loader name",
+    [
+        Field("plugin", "S", 0, idb.netnode.as_string),
+        Field("format", "S", 1, idb.netnode.as_string),
+    ],
+)
 
 # see `scripts/dump_user.py` for intepretation.
-User = Analysis('$ user1', [
-    Field('data', 'S', 0, bytes),
-])
+OriginalUser = Analysis("$ original user", [Field("data", "S", 0, bytes),])
+
+# see `scripts/dump_user.py` for intepretation.
+User = Analysis("$ user1", [Field("data", "S", 0, bytes),])
 
 
 # this works for v6.95.
@@ -556,6 +558,7 @@ User = Analysis('$ user1', [
 # which looks pack_dd/dq to me.
 # TODO: need a way to detect versions and switch analysis implementations.
 
+
 class FileRegion(vstruct.VStruct):
     def __init__(self, wordsize):
         vstruct.VStruct.__init__(self)
@@ -564,7 +567,7 @@ class FileRegion(vstruct.VStruct):
         elif wordsize == 8:
             v_word = v_uint64
         else:
-            raise ValueError('unexpected wordsize')
+            raise ValueError("unexpected wordsize")
 
         self.start = v_word()
         self.end = v_word()
@@ -589,10 +592,13 @@ class FileRegionV70:
 #       0x0: start effective address
 #       0x4: end effective address
 #       0x8: rva start?
-FileRegions = Analysis('$ fileregions', [
-    Field('regions',  'S', ADDRESSES, as_cast(FileRegion)),
-    Field('regions',  'S', ADDRESSES, FileRegionV70, minver=700),
-])
+FileRegions = Analysis(
+    "$ fileregions",
+    [
+        Field("regions", "S", ADDRESSES, as_cast(FileRegion)),
+        Field("regions", "S", ADDRESSES, FileRegionV70, minver=700),
+    ],
+)
 
 
 class func_t:
@@ -640,17 +646,20 @@ class func_t:
 #   format1:
 #     index: effective address
 #     value: func_t
-Functions = Analysis('$ funcs', [
-    Field('functions', 'S', ADDRESSES, func_t),
-    Field('comments', 'C', ADDRESSES, idb.netnode.as_string),
-    Field('repeatable_comments', 'R', ADDRESSES, idb.netnode.as_string),
-])
+Functions = Analysis(
+    "$ funcs",
+    [
+        Field("functions", "S", ADDRESSES, func_t),
+        Field("comments", "C", ADDRESSES, idb.netnode.as_string),
+        Field("repeatable_comments", "R", ADDRESSES, idb.netnode.as_string),
+    ],
+)
 
 
 class PString(vstruct.VStruct):
-    '''
+    """
     short pascal string, prefixed with single byte length.
-    '''
+    """
 
     def __init__(self, length_is_total=True):
         vstruct.VStruct.__init__(self)
@@ -662,7 +671,7 @@ class PString(vstruct.VStruct):
         length = self.length
         if self.length_is_total:
             length = length - 1
-        self['s'].vsSetLength(length)
+        self["s"].vsSetLength(length)
 
 
 class TypeString(vstruct.VStruct):
@@ -674,11 +683,11 @@ class TypeString(vstruct.VStruct):
 
     def pcb_header(self):
         if self.header != 0x3D:
-            raise RuntimeError('unexpected type header')
+            raise RuntimeError("unexpected type header")
 
     def pcb_length(self):
         length = self.length
-        self['s'].vsSetLength(length - 1)
+        self["s"].vsSetLength(length - 1)
 
 
 class StructMember:
@@ -689,28 +698,28 @@ class StructMember:
         self.netnode = idb.netnode.Netnode(db, self.nodeid)
 
     def get_name(self):
-        return self.netnode.name().partition('.')[2]
+        return self.netnode.name().partition(".")[2]
 
     def get_type(self):
         # nodeid: ff000078 tag: S index: 0x3000
         # 00000000: 3D 0A 48 49 4E 53 54 41  4E 43 45 00              =.HINSTANCE.
 
-        v = self.netnode.supval(tag='S', index=0x3000)
+        v = self.netnode.supval(tag="S", index=0x3000)
         s = TypeString()
         s.vsParse(v)
         return s.s
 
     def get_enum_id(self):
-        return self.altval(tag='A', index=0xB)
+        return self.altval(tag="A", index=0xB)
 
     def get_struct_id(self):
-        return self.altval(tag='A', index=0x3)
+        return self.altval(tag="A", index=0x3)
 
     def get_member_comment(self):
-        return self.supstr(tag='S', index=0x0)
+        return self.supstr(tag="S", index=0x0)
 
     def get_repeatable_member_comment(self):
-        return self.supstr(tag='S', index=0x1)
+        return self.supstr(tag="S", index=0x1)
 
     # TODO: tag='A', index=0x10
     # TODO: tag='S', index=0x9, "ptrseg"
@@ -719,9 +728,9 @@ class StructMember:
         try:
             typ = self.get_type()
         except KeyError:
-            return 'StructMember(name: %s)' % (self.get_name())
+            return "StructMember(name: %s)" % (self.get_name())
         else:
-            return 'StructMember(name: %s, type: %s)' % (self.get_name(), typ)
+            return "StructMember(name: %s, type: %s)" % (self.get_name(), typ)
 
 
 class STRUCT_FLAGS:
@@ -756,14 +765,15 @@ class STRUCT_FLAGS:
 
 
 class Struct:
-    '''
+    """
     Example::
 
         struc = Struct(idb, 0xFF000075)
         assert struc.get_name() == 'EXCEPTION_INFO'
         assert len(struc.get_members()) == 5
         assert list(struc.get_members())[0].get_type() == 'DWORD'
-    '''
+    """
+
     def __init__(self, db, structid):
         self.idb = db
 
@@ -776,13 +786,13 @@ class Struct:
         self.netnode = idb.netnode.Netnode(db, self.nodeid)
 
     def get_members(self):
-        v = self.netnode.supval(tag='M', index=0)
+        v = self.netnode.supval(tag="M", index=0)
         u = Unpacker(v, wordsize=self.idb.wordsize)
         flags = u.dd()
         count = u.dd()
 
         if not flags & STRUCT_FLAGS.SF_FRAME:
-            raise RuntimeError('unexpected frame header')
+            raise RuntimeError("unexpected frame header")
 
         for i in range(count):
             nodeid_offset = u.addr()
@@ -796,10 +806,10 @@ class Struct:
 
 
 def chunks(l, n):
-    '''
+    """
     Yield successive n-sized chunks from l.
     via: https://stackoverflow.com/a/312464/87207
-    '''
+    """
     if isinstance(l, types.GeneratorType):
         while True:
             v = list(itertools.islice(l, n))
@@ -810,7 +820,7 @@ def chunks(l, n):
         i = 0
         while True:
             try:
-                v = l[i:i + n]
+                v = l[i : i + n]
                 yield v
             except IndexError:
                 return
@@ -821,20 +831,22 @@ def pairs(l):
     return chunks(l, 2)
 
 
-Chunk = namedtuple('Chunk', ['effective_address', 'length'])
-FunctionParameter = namedtuple('FunctionParameter', ['type', 'name'])
-FunctionSignature = namedtuple('FunctionSignature', ['calling_convention', 'rtype', 'unk', 'parameters'])
-StackChangePoint = namedtuple('StackChangePoint', ['effective_address', 'change'])
+Chunk = namedtuple("Chunk", ["effective_address", "length"])
+FunctionParameter = namedtuple("FunctionParameter", ["type", "name"])
+FunctionSignature = namedtuple(
+    "FunctionSignature", ["calling_convention", "rtype", "unk", "parameters"]
+)
+StackChangePoint = namedtuple("StackChangePoint", ["effective_address", "change"])
 
 
 class Function:
-    '''
+    """
     Example::
 
         func = Function(idb, 0x401000)
         assert func.get_name() == 'DllEntryPoint'
         assert func.get_signature() == '... DllEntryPoint(...)'
-    '''
+    """
 
     def __init__(self, db, fva):
         self.idb = db
@@ -845,18 +857,18 @@ class Function:
         try:
             return self.netnode.name()
         except KeyError:
-            return 'sub_%X' % (self.nodeid)
+            return "sub_%X" % (self.nodeid)
 
     def get_signature(self):
-        typebuf = self.netnode.supval(tag='S', index=0x3000)
-        namebuf = self.netnode.supval(tag='S', index=0x3001)
+        typebuf = self.netnode.supval(tag="S", index=0x3000)
+        namebuf = self.netnode.supval(tag="S", index=0x3001)
 
         if six.indexbytes(typebuf, 0x0) != 0xC:
-            raise RuntimeError('unexpected signature header')
+            raise RuntimeError("unexpected signature header")
 
-        if six.indexbytes(typebuf, 0x1) == ord('S'):
+        if six.indexbytes(typebuf, 0x1) == ord("S"):
             # this is just a guess...
-            conv = '__stdcall'
+            conv = "__stdcall"
         else:
             raise NotImplementedError()
 
@@ -885,7 +897,7 @@ class Function:
         return FunctionSignature(conv, rtype.s, sp_delta, params)
 
     def get_chunks(self):
-        v = self.netnode.supval(tag='S', index=0x7000)
+        v = self.netnode.supval(tag="S", index=0x7000)
 
         # stored as:
         #
@@ -908,7 +920,7 @@ class Function:
         elif self.idb.wordsize == 8:
             unpacker = unpack_dqs
         else:
-            raise RuntimeError('unexpected wordsize')
+            raise RuntimeError("unexpected wordsize")
 
         for delta, length in pairs(unpacker(v)):
             ea = last_ea + last_length + delta
@@ -924,7 +936,7 @@ class Function:
     def get_stack_change_points(self):
         # ref: ida.wll@0x100793d0
         try:
-            v = self.netnode.supval(tag='S', index=0x1000)
+            v = self.netnode.supval(tag="S", index=0x1000)
         except KeyError:
             return
         offset = self.nodeid
@@ -934,7 +946,7 @@ class Function:
         elif self.idb.wordsize == 8:
             unpacker = unpack_dqs
         else:
-            raise RuntimeError('unexpected wordsize')
+            raise RuntimeError("unexpected wordsize")
         for (delta, change) in pairs(unpacker(v)):
             offset += delta
             if change & 1:
@@ -945,12 +957,12 @@ class Function:
             yield StackChangePoint(offset, change)
 
 
-Xref = namedtuple('Xref', ['frm', 'to', 'type'])
+Xref = namedtuple("Xref", ["frm", "to", "type"])
 
 
 def _get_xrefs(db, tag, src=None, dst=None, types=None):
     if src is None and dst is None:
-        raise ValueError('one of src or dst must be provided')
+        raise ValueError("one of src or dst must be provided")
 
     nn = idb.netnode.Netnode(db, src if dst is None else dst)
     try:
@@ -965,7 +977,7 @@ def _get_xrefs(db, tag, src=None, dst=None, types=None):
 
 
 def get_crefs_to(db, ea, types=None):
-    '''
+    """
     fetches the code references to the given address.
 
     Args:
@@ -975,12 +987,12 @@ def get_crefs_to(db, ea, types=None):
 
     Yields:
       int: xref address.
-    '''
-    return _get_xrefs(db, dst=ea, tag='X', types=types)
+    """
+    return _get_xrefs(db, dst=ea, tag="X", types=types)
 
 
 def get_crefs_from(db, ea, types=None):
-    '''
+    """
     fetches the code references from the given address.
 
     Args:
@@ -990,12 +1002,12 @@ def get_crefs_from(db, ea, types=None):
 
     Yields:
       int: xref address.
-    '''
-    return _get_xrefs(db, src=ea, tag='x', types=types)
+    """
+    return _get_xrefs(db, src=ea, tag="x", types=types)
 
 
 def get_drefs_to(db, ea, types=None):
-    '''
+    """
     fetches the data references to the given address.
 
     Args:
@@ -1005,12 +1017,12 @@ def get_drefs_to(db, ea, types=None):
 
     Yields:
       int: xref address.
-    '''
-    return _get_xrefs(db, dst=ea, tag='D', types=types)
+    """
+    return _get_xrefs(db, dst=ea, tag="D", types=types)
 
 
 def get_drefs_from(db, ea, types=None):
-    '''
+    """
     fetches the data references from the given address.
 
     Args:
@@ -1020,8 +1032,8 @@ def get_drefs_from(db, ea, types=None):
 
     Yields:
       int: xref address.
-    '''
-    return _get_xrefs(db, src=ea, tag='d', types=types)
+    """
+    return _get_xrefs(db, src=ea, tag="d", types=types)
 
 
 # under v6.95, this works.
@@ -1040,21 +1052,17 @@ class Fixup(vstruct.VStruct):
             self.unk07 = v_uint16()
             self.offset = v_uint64()
         else:
-            raise ValueError('unexpected wordsize')
+            raise ValueError("unexpected wordsize")
 
     def pcb_type(self):
         if self.type != 0x04:
-            raise NotImplementedError(
-                'fixup type %x not yet supported' %
-                (self.type))
+            raise NotImplementedError("fixup type %x not yet supported" % (self.type))
 
     def get_fixup_length(self):
         if self.type == 0x4:
             return 0x4
         else:
-            raise NotImplementedError(
-                'fixup type %x not yet supported' %
-                (self.type))
+            raise NotImplementedError("fixup type %x not yet supported" % (self.type))
 
 
 class FixupV70:
@@ -1069,24 +1077,23 @@ class FixupV70:
         self.offset = u.dd()  # strange this is not an offset
 
         if self.type != 0x8:
-            raise NotImplementedError(
-                'fixup type %x not yet supported' %
-                (self.type))
+            raise NotImplementedError("fixup type %x not yet supported" % (self.type))
 
     def get_fixup_length(self):
         if self.type == 0x8:
             return 0x4
         else:
-            raise NotImplementedError(
-                'fixup type %x not yet supported' %
-                (self.type))
+            raise NotImplementedError("fixup type %x not yet supported" % (self.type))
 
 
 # '$ fixups' maps from fixup start address to details about it.
-Fixups = Analysis('$ fixups', [
-    Field('fixups', 'S', ADDRESSES, as_cast(Fixup)),
-    Field('fixups', 'S', ADDRESSES, FixupV70, minver=700),
-])
+Fixups = Analysis(
+    "$ fixups",
+    [
+        Field("fixups", "S", ADDRESSES, as_cast(Fixup)),
+        Field("fixups", "S", ADDRESSES, FixupV70, minver=700),
+    ],
+)
 
 
 def parse_seg_strings(buf, wordsize=None):
@@ -1105,9 +1112,7 @@ def parse_seg_strings(buf, wordsize=None):
     return strings
 
 
-SegStrings = Analysis('$ segstrings', [
-    Field('strings', 'S', 0, parse_seg_strings),
-])
+SegStrings = Analysis("$ segstrings", [Field("strings", "S", 0, parse_seg_strings),])
 
 
 class Seg:
@@ -1160,35 +1165,39 @@ class Seg:
 #         2: size
 #         3: name index
 #         ...
-Segments = Analysis('$ segs', [
-    # we use `ALL` for the index type because `_is_address` above does not recognize
-    #  addresses not backed by flags/bytes in the IDB.
-    # there may be segments for the `.bss`, `extern`, etc sections here, and these
-    #  do not have associated flags/bytes.
-    # therefore, until we fix `is_address`, being slightly imprecise here works better.
-    # note: all indexes in the `$ segs` netnode are addresses, so this assumption works ok.
-    Field('segments', 'S', ALL, Seg),
-])
+Segments = Analysis(
+    "$ segs",
+    [
+        # we use `ALL` for the index type because `_is_address` above does not recognize
+        #  addresses not backed by flags/bytes in the IDB.
+        # there may be segments for the `.bss`, `extern`, etc sections here, and these
+        #  do not have associated flags/bytes.
+        # therefore, until we fix `is_address`, being slightly imprecise here works better.
+        # note: all indexes in the `$ segs` netnode are addresses, so this assumption works ok.
+        Field("segments", "S", ALL, Seg),
+    ],
+)
 
+Imports = Analysis(
+    "$ imports",
+    [
+        # index: entry number, value: node id
+        Field("lib_netnodes", "A", NUMBERS, idb.netnode.as_uint),
+        # index: entry number, value: dll name
+        Field("lib_names", "S", NUMBERS, idb.netnode.as_string),
+    ],
+)
 
-Imports = Analysis('$ imports', [
-    # index: entry number, value: node id
-    Field('lib_netnodes', 'A', NUMBERS, idb.netnode.as_uint),
-    # index: entry number, value: dll name
-    Field('lib_names', 'S', NUMBERS, idb.netnode.as_string),
-])
-
-
-Import = namedtuple('Import', ['library', 'function_name', 'function_address'])
+Import = namedtuple("Import", ["library", "function_name", "function_address"])
 
 
 def enumerate_imports(db):
-    '''
+    """
     enumerate the functions imported by the module in the given database.
 
     yields:
       Tuple[str, str, int]: library name, function name, function address
-    '''
+    """
     imps = Imports(db)
     for index, libname in imps.lib_names.items():
         if index == 0xFFFFFFFF:
@@ -1203,36 +1212,40 @@ def enumerate_imports(db):
                 funcname = nn.supstr(funcaddr)
                 yield Import(libname, funcname, funcaddr)
             except KeyError:
-                logger.warning('failed to find import supval: %x', funcaddr)
+                logger.warning("failed to find import supval: %x", funcaddr)
                 continue
 
 
-EntryPoints = Analysis('$ entry points', [
-    # index: ordinal, value: address, terminated by index: uint(-1)
-    Field('functions', 'A', NUMBERS, idb.netnode.as_uint),
-    # index: address, value: address, should be only one?
-    Field('main_entry', 'A', ADDRESSES, idb.netnode.as_uint),
-    # index: ordinal, value: ordinal
-    Field('ordinals', 'I', NUMBERS, idb.netnode.as_uint),
-    # index: ordinal, value: string like (NTDLL!Rtl...)
-    Field('forwarded_symbols', 'F', NUMBERS, idb.netnode.as_string),
-    # index: ordinal, value: string like (Rtl...)
-    Field('function_names', 'S', NUMBERS, idb.netnode.as_string),
-    # index: address, value: string like (Rtl...), should be only one?
-    Field('main_entry_name', 'S', ADDRESSES, idb.netnode.as_string),
-])
+EntryPoints = Analysis(
+    "$ entry points",
+    [
+        # index: ordinal, value: address, terminated by index: uint(-1)
+        Field("functions", "A", NUMBERS, idb.netnode.as_uint),
+        # index: address, value: address, should be only one?
+        Field("main_entry", "A", ADDRESSES, idb.netnode.as_uint),
+        # index: ordinal, value: ordinal
+        Field("ordinals", "I", NUMBERS, idb.netnode.as_uint),
+        # index: ordinal, value: string like (NTDLL!Rtl...)
+        Field("forwarded_symbols", "F", NUMBERS, idb.netnode.as_string),
+        # index: ordinal, value: string like (Rtl...)
+        Field("function_names", "S", NUMBERS, idb.netnode.as_string),
+        # index: address, value: string like (Rtl...), should be only one?
+        Field("main_entry_name", "S", ADDRESSES, idb.netnode.as_string),
+    ],
+)
 
-
-EntryPoint = namedtuple('EntryPoint', ['name', 'address', 'ordinal', 'forwarded_symbol'])
+EntryPoint = namedtuple(
+    "EntryPoint", ["name", "address", "ordinal", "forwarded_symbol"]
+)
 
 
 def enumerate_entrypoints(db):
-    '''
+    """
     enumerate the entry point functions in the given database.
 
     yields:
       Tuple[str, int, int, str]: function name, address, ordinal (optional), and forwarded symbol (optional)
-    '''
+    """
     ents = EntryPoints(db)
 
     ordinals = ents.ordinals
@@ -1243,37 +1256,41 @@ def enumerate_entrypoints(db):
     for index, addr in ents.functions.items():
         if index == db.uint(-1):
             break
-        yield EntryPoint(names.get(index), addr, ordinals.get(index), forwarded_symbols.get(index))
+        yield EntryPoint(
+            names.get(index), addr, ordinals.get(index), forwarded_symbols.get(index)
+        )
 
     for index, addr in ents.main_entry.items():
-        yield EntryPoint(names.get(index), addr, ordinals.get(index), forwarded_symbols.get(index))
+        yield EntryPoint(
+            names.get(index), addr, ordinals.get(index), forwarded_symbols.get(index)
+        )
 
 
+ScriptSnippets = Analysis(
+    "$ scriptsnippets",
+    [
+        # number of spaces per tab
+        Field("tabsize", "Y", 0x0, idb.netnode.as_uint),
+        # netnode references
+        Field("scripts", "A", NUMBERS, idb.netnode.as_uint),
+    ],
+)
 
-
-ScriptSnippets = Analysis('$ scriptsnippets', [
-    # number of spaces per tab
-    Field('tabsize', 'Y', 0x0,     idb.netnode.as_uint),
-    # netnode references
-    Field('scripts', 'A', NUMBERS, idb.netnode.as_uint),
-])
-
-
-ScriptSnippet = namedtuple('ScriptSnippet', ['name', 'language', 'code'])
+ScriptSnippet = namedtuple("ScriptSnippet", ["name", "language", "code"])
 
 
 def enumerate_script_snippets(db):
-    '''
+    """
     enumerate script snippets stored in the given database.
 
     yields:
       Tuple[str, str, str]: filename, language (Python or IDC), and source code
-    '''
+    """
     scripts = ScriptSnippets(db)
 
     for nnid in scripts.scripts.values():
         nn = idb.netnode.Netnode(db, nnid - 1)
-        name = nn.supstr(0x0, tag='S')
-        language = nn.supstr(0x1, tag='S')
-        code = nn.supstr(0x0, tag='X')
+        name = nn.supstr(0x0, tag="S")
+        language = nn.supstr(0x1, tag="S")
+        code = nn.supstr(0x0, tag="X")
         yield ScriptSnippet(name, language, code)

@@ -1,0 +1,4 @@
+#!/bin/sh
+python -m black .
+git add -u
+python -m flake8 .

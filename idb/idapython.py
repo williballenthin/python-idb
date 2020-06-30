@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-import re
-import logging
-import weakref
 import collections
+import logging
+import re
+import weakref
 
 import six
+
 if six.PY2:
     import functools32 as functools
 else:
@@ -13,9 +14,7 @@ else:
 import idb.netnode
 import idb.analysis
 
-
 logger = logging.getLogger(__name__)
-
 
 
 # via: https://stackoverflow.com/a/33672499/87207
@@ -26,13 +25,17 @@ def memoized_method(*lru_args, **lru_kwargs):
             # We're storing the wrapped method inside the instance. If we had
             # a strong reference to self the instance would never die.
             self_weak = weakref.ref(self)
+
             @functools.wraps(func)
             @functools.lru_cache(*lru_args, **lru_kwargs)
             def cached_method(*args, **kwargs):
                 return func(self_weak(), *args, **kwargs)
+
             setattr(self, func.__name__, cached_method)
             return cached_method(*args, **kwargs)
+
         return wrapped_func
+
     return decorator
 
 
@@ -564,23 +567,24 @@ class ida_ida:
         # max number of operands allowed for an instruction
         self.UA_MAXOP = 8
         self.MAXADDR = 4278190080
-        self.IDB_EXT32 = 'idb'
-        self.IDB_EXT64 = 'i64'
-        self.IDB_EXT = 'idb'
+        self.IDB_EXT32 = "idb"
+        self.IDB_EXT64 = "i64"
+        self.IDB_EXT = "idb"
 
 
 class idc:
-
-    SEGPERM_EXEC   = 1  # Execute
-    SEGPERM_WRITE  = 2  # Write
-    SEGPERM_READ   = 4  # Read
+    SEGPERM_EXEC = 1  # Execute
+    SEGPERM_WRITE = 2  # Write
+    SEGPERM_READ = 4  # Read
     SEGPERM_MAXVAL = 7  # (SEGPERM_EXEC + SEGPERM_WRITE + SEGPERM_READ)
 
-    SFL_COMORG   = 0x01  # IDP dependent field (IBM PC: if set, ORG directive is not commented out)
-    SFL_OBOK     = 0x02  # orgbase is present? (IDP dependent field)
-    SFL_HIDDEN   = 0x04  # is the segment hidden?
-    SFL_DEBUG    = 0x08  # is the segment created for the debugger?
-    SFL_LOADER   = 0x10  # is the segment created by the loader?
+    SFL_COMORG = (
+        0x01  # IDP dependent field (IBM PC: if set, ORG directive is not commented out)
+    )
+    SFL_OBOK = 0x02  # orgbase is present? (IDP dependent field)
+    SFL_HIDDEN = 0x04  # is the segment hidden?
+    SFL_DEBUG = 0x08  # is the segment created for the debugger?
+    SFL_LOADER = 0x10  # is the segment created by the loader?
     SFL_HIDETYPE = 0x20  # hide segment type (do not print it in the listing)
 
     def __init__(self, db, api):
@@ -607,94 +611,94 @@ class idc:
         # https://github.com/zachriggle/idapython/blob/37d2fd13b31fec8e6e53fbb9704fa3cd0cbd5b07/python/idc.py#L4149
         if self.idb.wordsize == 4:
             # function start address
-            self.FUNCATTR_START   = 0
+            self.FUNCATTR_START = 0
             # function end address
-            self.FUNCATTR_END     = 4
+            self.FUNCATTR_END = 4
             # function flags
-            self.FUNCATTR_FLAGS   = 8
+            self.FUNCATTR_FLAGS = 8
             # function frame id
-            self.FUNCATTR_FRAME   = 10
+            self.FUNCATTR_FRAME = 10
             # size of local variables
-            self.FUNCATTR_FRSIZE  = 14
+            self.FUNCATTR_FRSIZE = 14
             # size of saved registers area
-            self.FUNCATTR_FRREGS  = 18
+            self.FUNCATTR_FRREGS = 18
             # number of bytes purged from the stack
             self.FUNCATTR_ARGSIZE = 20
             # frame pointer delta
-            self.FUNCATTR_FPD     = 24
+            self.FUNCATTR_FPD = 24
             # function color code
-            self.FUNCATTR_COLOR   = 28
+            self.FUNCATTR_COLOR = 28
 
             # starting address
-            self.SEGATTR_START   =  0
+            self.SEGATTR_START = 0
             # ending address
-            self.SEGATTR_END     =  4
+            self.SEGATTR_END = 4
             self.SEGATTR_ORGBASE = 16
             # alignment
-            self.SEGATTR_ALIGN   = 20
+            self.SEGATTR_ALIGN = 20
             # combination
-            self.SEGATTR_COMB    = 21
+            self.SEGATTR_COMB = 21
             # permissions
-            self.SEGATTR_PERM    = 22
+            self.SEGATTR_PERM = 22
             # bitness (0: 16, 1: 32, 2: 64 bit segment)
             self.SEGATTR_BITNESS = 23
             # segment flags
-            self.SEGATTR_FLAGS   = 24
+            self.SEGATTR_FLAGS = 24
             # segment selector
-            self.SEGATTR_SEL     = 28
+            self.SEGATTR_SEL = 28
             # default ES value
-            self.SEGATTR_ES      = 32
+            self.SEGATTR_ES = 32
             # default CS value
-            self.SEGATTR_CS      = 36
+            self.SEGATTR_CS = 36
             # default SS value
-            self.SEGATTR_SS      = 40
+            self.SEGATTR_SS = 40
             # default DS value
-            self.SEGATTR_DS      = 44
+            self.SEGATTR_DS = 44
             # default FS value
-            self.SEGATTR_FS      = 48
+            self.SEGATTR_FS = 48
             # default GS value
-            self.SEGATTR_GS      = 52
+            self.SEGATTR_GS = 52
             # segment type
-            self.SEGATTR_TYPE    = 96
+            self.SEGATTR_TYPE = 96
             # segment color
-            self.SEGATTR_COLOR   = 100
+            self.SEGATTR_COLOR = 100
 
             self.BADADDR = 0xFFFFFFFF
 
         elif self.idb.wordsize == 8:
-            self.FUNCATTR_START   = 0
-            self.FUNCATTR_END     = 8
-            self.FUNCATTR_FLAGS   = 16
-            self.FUNCATTR_FRAME   = 18
-            self.FUNCATTR_FRSIZE  = 26
-            self.FUNCATTR_FRREGS  = 34
+            self.FUNCATTR_START = 0
+            self.FUNCATTR_END = 8
+            self.FUNCATTR_FLAGS = 16
+            self.FUNCATTR_FRAME = 18
+            self.FUNCATTR_FRSIZE = 26
+            self.FUNCATTR_FRREGS = 34
             self.FUNCATTR_ARGSIZE = 36
-            self.FUNCATTR_FPD     = 44
-            self.FUNCATTR_COLOR   = 52
-            self.FUNCATTR_OWNER   = 18
-            self.FUNCATTR_REFQTY  = 26
+            self.FUNCATTR_FPD = 44
+            self.FUNCATTR_COLOR = 52
+            self.FUNCATTR_OWNER = 18
+            self.FUNCATTR_REFQTY = 26
 
-            self.SEGATTR_START   =  0
-            self.SEGATTR_END     =  8
+            self.SEGATTR_START = 0
+            self.SEGATTR_END = 8
             self.SEGATTR_ORGBASE = 32
-            self.SEGATTR_ALIGN   = 40
-            self.SEGATTR_COMB    = 41
-            self.SEGATTR_PERM    = 42
+            self.SEGATTR_ALIGN = 40
+            self.SEGATTR_COMB = 41
+            self.SEGATTR_PERM = 42
             self.SEGATTR_BITNESS = 43
-            self.SEGATTR_FLAGS   = 44
-            self.SEGATTR_SEL     = 48
-            self.SEGATTR_ES      = 56
-            self.SEGATTR_CS      = 64
-            self.SEGATTR_SS      = 72
-            self.SEGATTR_DS      = 80
-            self.SEGATTR_FS      = 88
-            self.SEGATTR_GS      = 96
-            self.SEGATTR_TYPE    = 184
-            self.SEGATTR_COLOR   = 188
+            self.SEGATTR_FLAGS = 44
+            self.SEGATTR_SEL = 48
+            self.SEGATTR_ES = 56
+            self.SEGATTR_CS = 64
+            self.SEGATTR_SS = 72
+            self.SEGATTR_DS = 80
+            self.SEGATTR_FS = 88
+            self.SEGATTR_GS = 96
+            self.SEGATTR_TYPE = 184
+            self.SEGATTR_COLOR = 188
 
             self.BADADDR = 0xFFFFFFFFFFFFFFFF
         else:
-            raise RuntimeError('unexpected wordsize')
+            raise RuntimeError("unexpected wordsize")
 
     def ScreenEA(self):
         return self.api.ScreenEA
@@ -762,7 +766,9 @@ class idc:
         elif attr == self.SEGATTR_COLOR:
             return self._get_segment(ea).color
         else:
-            raise NotImplementedError('segment attribute %d not yet implemented' % (attr))
+            raise NotImplementedError(
+                "segment attribute %d not yet implemented" % (attr)
+            )
 
     def MinEA(self):
         segs = idb.analysis.Segments(self.idb).segments.values()
@@ -799,13 +805,13 @@ class idc:
         oea = ea
         flags = self.GetFlags(ea)
         if not self.api.ida_bytes.is_head(flags):
-            raise ValueError('ItemSize must only be called on a head address.')
+            raise ValueError("ItemSize must only be called on a head address.")
 
         ea += 1
         flags = self.GetFlags(ea)
-        while flags is not None \
-                and flags != 0 \
-                and not self.api.ida_bytes.is_head(flags):
+        while (
+            flags is not None and flags != 0 and not self.api.ida_bytes.is_head(flags)
+        ):
             ea += 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
@@ -814,9 +820,9 @@ class idc:
     def NextHead(self, ea):
         ea += 1
         flags = self.GetFlags(ea)
-        while flags is not None \
-                and flags != 0 \
-                and not self.api.ida_bytes.is_head(flags):
+        while (
+            flags is not None and flags != 0 and not self.api.ida_bytes.is_head(flags)
+        ):
             ea += 1
             # TODO: handle Index/KeyError here when we overrun a segment
             flags = self.GetFlags(ea)
@@ -828,11 +834,11 @@ class idc:
         return self.Head(ea)
 
     def GetManyBytes(self, ea, size, use_dbg=False):
-        '''
+        """
         Raises:
           IndexError: if the range extends beyond a segment.
           KeyError: if a byte is not defined.
-        '''
+        """
         if use_dbg:
             raise NotImplementedError()
 
@@ -854,15 +860,16 @@ class idc:
             # so, we pad the Segment with NULL bytes.
             # this is consistent with the IDAPython behavior.
             # see github issue #29.
-            ret.extend([0x0 for _ in  range(size - len(ret))])
+            ret.extend([0x0 for _ in range(size - len(ret))])
 
         if six.PY2:
-            return ''.join(map(chr, ret))
+            return "".join(map(chr, ret))
         else:
             return bytes(ret)
 
     def _load_dis(self, arch, mode):
         import capstone
+
         if self.bit_dis is None:
             self.bit_dis = {}
         if self.bit_dis.get((arch, mode)) is None:
@@ -870,14 +877,13 @@ class idc:
             self.bit_dis[(arch, mode)] = r
         return self.bit_dis[(arch, mode)]
 
-
     def _disassemble(self, ea):
         import capstone
 
         size = self.ItemSize(ea)
         inst_buf = self.GetManyBytes(ea, size)
         segment = self._get_segment(ea)
-        bitness = 16 << segment.bitness# 16, 32, 64
+        bitness = 16 << segment.bitness  # 16, 32, 64
         procname = self.api.idaapi.get_inf_structure().procName.lower()
 
         dis = None
@@ -888,7 +894,25 @@ class idc:
                 dis = self._load_dis(capstone.CS_ARCH_ARM, capstone.CS_MODE_THUMB)
             else:
                 dis = self._load_dis(capstone.CS_ARCH_ARM, capstone.CS_MODE_ARM)
-        elif procname in ['metapc', '8086', '80286r', '80286p', '80386r', '80386p','80486r', '80486p', '80586r', '80586p', '80686p', 'k62', 'p2', 'p3', 'athlon', 'p4', '8085']:
+        elif procname in [
+            "metapc",
+            "8086",
+            "80286r",
+            "80286p",
+            "80386r",
+            "80386p",
+            "80486r",
+            "80486p",
+            "80586r",
+            "80586p",
+            "80686p",
+            "k62",
+            "p2",
+            "p3",
+            "athlon",
+            "p4",
+            "8085",
+        ]:
             if bitness == 16:
                 dis = self._load_dis(capstone.CS_ARCH_X86, capstone.CS_MODE_16)
             elif bitness == 32:
@@ -897,23 +921,38 @@ class idc:
                 dis = self._load_dis(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
         elif procname == "mipsb":
             if bitness == 32:
-                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS32 | capstone.CS_MODE_BIG_ENDIAN)
+                dis = self._load_dis(
+                    capstone.CS_ARCH_MIPS,
+                    capstone.CS_MODE_MIPS32 | capstone.CS_MODE_BIG_ENDIAN,
+                )
             elif bitness == 64:
-                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS64 | capstone.CS_MODE_BIG_ENDIAN)
+                dis = self._load_dis(
+                    capstone.CS_ARCH_MIPS,
+                    capstone.CS_MODE_MIPS64 | capstone.CS_MODE_BIG_ENDIAN,
+                )
         elif procname == "mipsl":
             if bitness == 32:
-                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS32 | capstone.CS_MODE_LITTLE_ENDIAN)
+                dis = self._load_dis(
+                    capstone.CS_ARCH_MIPS,
+                    capstone.CS_MODE_MIPS32 | capstone.CS_MODE_LITTLE_ENDIAN,
+                )
             elif bitness == 64:
-                dis = self._load_dis(capstone.CS_ARCH_MIPS, capstone.CS_MODE_MIPS64 | capstone.CS_MODE_LITTLE_ENDIAN)
+                dis = self._load_dis(
+                    capstone.CS_ARCH_MIPS,
+                    capstone.CS_MODE_MIPS64 | capstone.CS_MODE_LITTLE_ENDIAN,
+                )
 
         if dis is None:
-            raise NotImplementedError("unknown arch %s bit:%s inst_len:%d" % (procname, bitness, len(inst_buf)))
+            raise NotImplementedError(
+                "unknown arch %s bit:%s inst_len:%d"
+                % (procname, bitness, len(inst_buf))
+            )
         dis.detail = True
 
         try:
             op = next(dis.disasm(inst_buf, ea))
         except StopIteration:
-            raise RuntimeError('failed to disassemble %s' % (hex(ea)))
+            raise RuntimeError("failed to disassemble %s" % (hex(ea)))
         else:
             return op
 
@@ -923,7 +962,7 @@ class idc:
 
     def GetDisasm(self, ea):
         op = self._disassemble(ea)
-        return '%s\t%s' % (op.mnemonic, op.op_str)
+        return "%s\t%s" % (op.mnemonic, op.op_str)
 
     # one instruction or data
     CIC_ITEM = 1
@@ -935,7 +974,7 @@ class idc:
     DEFCOLOR = 0xFFFFFFFF
 
     def GetColor(self, ea, what):
-        '''
+        """
         Args:
           ea (int): effective address of thing.
           what (int): one of:
@@ -945,7 +984,7 @@ class idc:
 
         Returns:
           int: the color in RGB. possibly idc.DEFCOLOR if not set.
-        '''
+        """
         if what != idc.CIC_ITEM:
             raise NotImplementedError()
 
@@ -954,7 +993,7 @@ class idc:
 
         nn = self.api.ida_netnode.netnode(ea)
         try:
-            return nn.altval(tag='A', index=0x14) - 1
+            return nn.altval(tag="A", index=0x14) - 1
         except KeyError:
             return idc.DEFCOLOR
 
@@ -984,14 +1023,14 @@ class idc:
         elif attr == self.FUNCATTR_COLOR:
             return func.color
         else:
-            raise ValueError('unknown attr: %x' % (attr))
+            raise ValueError("unknown attr: %x" % (attr))
 
     def GetFunctionName(self, ea):
         return self.api.ida_funcs.get_func_name(ea)
 
     def LocByName(self, name):
         try:
-            key = ("N" + name).encode('utf-8')
+            key = ("N" + name).encode("utf-8")
             cursor = self.idb.id0.find(key)
             return idb.netnode.as_uint(cursor.value)
         except KeyError:
@@ -1019,7 +1058,7 @@ class idc:
         try:
             f = idb.analysis.Function(self.idb, ea)
         except Exception as e:
-            logger.warning('failed to fetch function for GetType: %s', e)
+            logger.warning("failed to fetch function for GetType: %s", e)
             return None
 
         try:
@@ -1030,13 +1069,13 @@ class idc:
 
         params = []
         for param in sig.parameters:
-            params.append('%s %s' % (param.type, param.name))
+            params.append("%s %s" % (param.type, param.name))
 
-        return '{rtype:s} {cc:s} {name:s}({params:s})'.format(
+        return "{rtype:s} {cc:s} {name:s}({params:s})".format(
             rtype=sig.rtype,
             cc=sig.calling_convention,
             name=name,
-            params=', '.join(params),
+            params=", ".join(params),
         )
 
     @staticmethod
@@ -1118,18 +1157,22 @@ class idc:
     @staticmethod
     def isNum0(flags):
         t = flags & FLAGS.MS_0TYPE
-        return t == FLAGS.FF_0NUMB or \
-            t == FLAGS.FF_0NUMO or \
-            t == FLAGS.FF_0NUMD or \
-            t == FLAGS.FF_0NUMH
+        return (
+            t == FLAGS.FF_0NUMB
+            or t == FLAGS.FF_0NUMO
+            or t == FLAGS.FF_0NUMD
+            or t == FLAGS.FF_0NUMH
+        )
 
     @staticmethod
     def isNum1(flags):
         t = flags & FLAGS.MS_1TYPE
-        return t == FLAGS.FF_1NUMB or \
-            t == FLAGS.FF_1NUMO or \
-            t == FLAGS.FF_1NUMD or \
-            t == FLAGS.FF_1NUMH
+        return (
+            t == FLAGS.FF_1NUMB
+            or t == FLAGS.FF_1NUMO
+            or t == FLAGS.FF_1NUMD
+            or t == FLAGS.FF_1NUMH
+        )
 
     @staticmethod
     def get_optype_flags0(flags):
@@ -1144,16 +1187,16 @@ class idc:
         # 1000 looks like a magic number, and it sorta is.
         # S-1000, 1001, 1002, ... are where anterior lines are
         try:
-            return nn.supstr(tag='S', index=1000 + num)
+            return nn.supstr(tag="S", index=1000 + num)
         except KeyError:
-            return ''
+            return ""
 
     def LineB(self, ea, num):
         nn = self.api.ida_netnode.netnode(ea)
         try:
-            return nn.supstr(tag='S', index=2000 + num)
+            return nn.supstr(tag="S", index=2000 + num)
         except KeyError:
-            return ''
+            return ""
 
 
 class ida_bytes:
@@ -1164,16 +1207,16 @@ class ida_bytes:
     def get_cmt(self, ea, repeatable):
         flags = self.api.idc.GetFlags(ea)
         if not self.has_cmt(flags):
-            return ''
+            return ""
 
         try:
             nn = self.api.ida_netnode.netnode(ea)
             if repeatable:
-                return nn.supstr(tag='S', index=1)
+                return nn.supstr(tag="S", index=1)
             else:
-                return nn.supstr(tag='S', index=0)
+                return nn.supstr(tag="S", index=0)
         except KeyError:
-            return ''
+            return ""
 
     def get_flags(self, ea):
         return self.api.idc.GetFlags(ea)
@@ -1325,7 +1368,7 @@ class ida_bytes:
         return self.api.idc.GetManyBytes(ea, count)
 
     def next_that(self, ea, maxea, testf):
-        for i in range(ea+1, maxea):
+        for i in range(ea + 1, maxea):
             flags = self.get_flags(i)
             if testf(flags):
                 return i
@@ -1351,7 +1394,7 @@ class ida_nalt:
     def get_aflags(self, ea):
         nn = self.api.ida_netnode.netnode(ea)
         try:
-            return nn.altval(tag='A', index=0x8)
+            return nn.altval(tag="A", index=0x8)
         except KeyError:
             return 0
 
@@ -1514,15 +1557,15 @@ class ida_funcs:
         self.api = api
 
     def get_func(self, ea):
-        '''
+        """
         get the func_t associated with the given address.
         if the address is not the start of a function (or function tail), then searches
          for a function that contains the given address.
         note: the range search is pretty slow, since we parse everything on-demand.
-        '''
-        nn = self.api.ida_netnode.netnode('$ funcs')
+        """
+        nn = self.api.ida_netnode.netnode("$ funcs")
         try:
-            v = nn.supval(tag='S', index=ea)
+            v = nn.supval(tag="S", index=ea)
         except KeyError:
             # search for the given effective address in the function regions.
             # according to [1], `get_func` only searches the primary region, and not all chunks?
@@ -1565,17 +1608,17 @@ class ida_funcs:
 
         func = self.get_func(ea)
         if func is None:
-            return ''
+            return ""
 
-        nn = self.api.ida_netnode.netnode('$ funcs')
+        nn = self.api.ida_netnode.netnode("$ funcs")
         try:
             if repeatable:
-                tag = 'R'
+                tag = "R"
             else:
-                tag = 'C'
+                tag = "C"
             return nn.supstr(tag=tag, index=func.startEA)
         except KeyError:
-            return ''
+            return ""
 
     def get_func_name(self, ea):
         func = self.get_func(ea)
@@ -1595,17 +1638,17 @@ class ida_funcs:
             return nn.name()
         except:
             if self.idb.wordsize == 4:
-                return 'sub_%04x' % (ea)
+                return "sub_%04x" % (ea)
             elif self.idb.wordsize == 8:
-                return 'sub_%08x' % (ea)
+                return "sub_%08x" % (ea)
             else:
-                raise RuntimeError('unexpected wordsize')
+                raise RuntimeError("unexpected wordsize")
 
 
 class BasicBlock(object):
-    '''
+    """
     interface extracted from: https://raw.githubusercontent.com/gabtremblay/idabearclean/master/idaapi.py
-    '''
+    """
 
     def __init__(self, flowchart, startEA, lastInstEA, endEA):
         self.fc = flowchart
@@ -1627,7 +1670,7 @@ class BasicBlock(object):
             yield self.fc.bbs[succ]
 
     def __str__(self):
-        return 'BasicBlock(startEA: 0x%x, endEA: 0x%x)' % (self.startEA, self.endEA)
+        return "BasicBlock(startEA: 0x%x, endEA: 0x%x)" % (self.startEA, self.endEA)
 
 
 def is_empty(s):
@@ -1684,15 +1727,18 @@ class idaapi:
         self.api = api
 
     def _find_bb_end(self, ea):
-        '''
+        """
         Args:
           ea (int): address at which a basic block begins. behavior undefined if its not a block start.
 
         Returns:
           int: the address of the final instruction in the basic block. it may be the same as the start.
-        '''
-        if not is_empty(idb.analysis.get_crefs_from(self.idb, ea,
-                                                    types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F])):
+        """
+        if not is_empty(
+            idb.analysis.get_crefs_from(
+                self.idb, ea, types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]
+            )
+        ):
             return ea
 
         if not self.api.idc.GetFlags(ea):
@@ -1715,18 +1761,21 @@ class idaapi:
             if not self.api.ida_bytes.is_flow(flags):
                 return last_ea
 
-            if not is_empty(idb.analysis.get_crefs_from(self.idb, ea,
-                                                        types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F])):
+            if not is_empty(
+                idb.analysis.get_crefs_from(
+                    self.idb, ea, types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]
+                )
+            ):
                 return ea
 
     def _find_bb_start(self, ea):
-        '''
+        """
         Args:
           ea (int): address at which a basic block ends. behavior undefined if its not a block end.
 
         Returns:
           int: the address of the first instruction in the basic block. it may be the same as the end.
-        '''
+        """
         while True:
             flags = self.api.idc.GetFlags(ea)
             if self.api.ida_bytes.has_ref(flags):
@@ -1738,8 +1787,11 @@ class idaapi:
             last_ea = ea
             ea = self.api.idc.PrevHead(ea)
 
-            if not is_empty(idb.analysis.get_crefs_from(self.idb, ea,
-                                                        types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F])):
+            if not is_empty(
+                idb.analysis.get_crefs_from(
+                    self.idb, ea, types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]
+                )
+            ):
                 return last_ea
 
             if not self.api.ida_bytes.is_flow(flags):
@@ -1756,8 +1808,9 @@ class idaapi:
 
         # get all the flow xrefs to this instruction.
         # a flow xref is like a fallthrough or jump, not like a call.
-        for xref in idb.analysis.get_crefs_to(self.idb, ea,
-                                              types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]):
+        for xref in idb.analysis.get_crefs_to(
+            self.idb, ea, types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]
+        ):
             yield xref
 
     def _get_flow_succs(self, ea):
@@ -1772,12 +1825,13 @@ class idaapi:
 
         # get all the flow xrefs from this instruction.
         # a flow xref is like a fallthrough or jump, not like a call.
-        for xref in idb.analysis.get_crefs_from(self.idb, ea,
-                                                types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]):
+        for xref in idb.analysis.get_crefs_from(
+            self.idb, ea, types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]
+        ):
             yield xref
 
     def FlowChart(self, func):
-        '''
+        """
         Example::
 
             f = idaapi.FlowChart(idaapi.get_func(here()))
@@ -1793,7 +1847,7 @@ class idaapi:
                         print "  %x - %x [%d]:" % (pred_block.startEA, pred_block.endEA, pred_block.id)
 
         via: https://github.com/EiNSTeiN-/idapython/blob/master/examples/ex_gdl_qflow_chart.py
-        '''
+        """
 
         # i have no idea how this data is indexed in the idb.
         # is it even indexed?
@@ -1802,7 +1856,7 @@ class idaapi:
         class _FlowChart:
             def __init__(self, db, api, ea):
                 self.idb = db
-                logger.debug('creating flowchart for %x', ea)
+                logger.debug("creating flowchart for %x", ea)
 
                 # set of startEA
                 seen = set([])
@@ -1819,7 +1873,7 @@ class idaapi:
 
                 lastInstEA = api.idaapi._find_bb_end(ea)
 
-                logger.debug('found end. %x -> %x', ea, lastInstEA)
+                logger.debug("found end. %x -> %x", ea, lastInstEA)
                 block = BasicBlock(self, ea, lastInstEA, api.idc.NextHead(lastInstEA))
                 bbs_by_start[ea] = block
                 bbs_by_end[lastInstEA] = block
@@ -1827,30 +1881,32 @@ class idaapi:
                 q = [block]
 
                 while q:
-                    logger.debug('iteration')
-                    logger.debug('queue: [%s]', ', '.join(map(str, q)))
+                    logger.debug("iteration")
+                    logger.debug("queue: [%s]", ", ".join(map(str, q)))
 
                     block = q[0]
                     q = q[1:]
 
-                    logger.debug('exploring %s', block)
+                    logger.debug("exploring %s", block)
 
                     if block.startEA in seen:
-                        logger.debug('already seen!')
+                        logger.debug("already seen!")
                         continue
-                    logger.debug('new!')
+                    logger.debug("new!")
                     seen.add(block.startEA)
 
                     for xref in api.idaapi._get_flow_preds(block.startEA):
                         if xref.frm not in bbs_by_end:
                             pred_start = api.idaapi._find_bb_start(xref.frm)
-                            pred = BasicBlock(self, pred_start, xref.frm, api.idc.NextHead(xref.frm))
+                            pred = BasicBlock(
+                                self, pred_start, xref.frm, api.idc.NextHead(xref.frm)
+                            )
                             bbs_by_start[pred.startEA] = pred
                             bbs_by_end[pred.lastInstEA] = pred
                         else:
                             pred = bbs_by_end[xref.frm]
 
-                        logger.debug('pred: %s', pred)
+                        logger.debug("pred: %s", pred)
 
                         preds[block.startEA].add(pred.startEA)
                         succs[pred.startEA].add(block.startEA)
@@ -1859,13 +1915,15 @@ class idaapi:
                     for xref in api.idaapi._get_flow_succs(block.lastInstEA):
                         if xref.to not in bbs_by_start:
                             succ_end = api.idaapi._find_bb_end(xref.to)
-                            succ = BasicBlock(self, xref.to, succ_end, api.idc.NextHead(succ_end))
+                            succ = BasicBlock(
+                                self, xref.to, succ_end, api.idc.NextHead(succ_end)
+                            )
                             bbs_by_start[succ.startEA] = succ
                             bbs_by_end[succ.lastInstEA] = succ
                         else:
                             succ = bbs_by_start[xref.to]
 
-                        logger.debug('succ: %s', succ)
+                        logger.debug("succ: %s", succ)
 
                         succs[block.startEA].add(succ.startEA)
                         preds[succ.startEA].add(block.startEA)
@@ -1882,9 +1940,9 @@ class idaapi:
         return _FlowChart(self.idb, self.api, func.startEA)
 
     def get_next_fixup_ea(self, ea):
-        nn = self.api.ida_netnode.netnode('$ fixups')
+        nn = self.api.ida_netnode.netnode("$ fixups")
         # TODO: this is really bad algorithmically. we should cache.
-        for index in nn.sups(tag='S'):
+        for index in nn.sups(tag="S"):
             if ea <= index:
                 return index
         raise KeyError(ea)
@@ -1968,31 +2026,31 @@ class idaapi:
         return self.api.ida_nalt.get_imagebase()
 
     TYPE_NAMES = {
-         0  : 'MS DOS EXE File',  # (obsolete)
-         1  : 'MS DOS COM File',  # (obsolete)
-         2  : 'Binary file',
-         3  : 'MS DOS Driver',
-         4  : 'New Executable (NE)',
-         5  : 'Intel Hex Object File',
-         6  : 'MOS Technology Hex Object File',
-         7  : 'Linear Executable (LX)',
-         8  : 'Linear Executable (LE)',
-         9  : 'Netware Loadable Module (NLM)',
-         10 : 'Common Object File Format (COFF)',
-         11 : 'Portable Executable (PE)',
-         12 : 'Object Module Format',
-         13 : 'R-records',
-         14 : 'ZIP file',  # (this file is never loaded to IDA database)
-         15 : 'Library of OMF Modules',
-         16 : 'ar library',
-         17 : 'file is loaded using LOADER DLL',
-         18 : 'Executable and Linkable Format (ELF)',
-         19 : 'Watcom DOS32 Extender (W32RUN)',
-         20 : 'Linux a.out (AOUT)',
-         21 : 'PalmPilot program file',
-         22 : 'MS DOS EXE File',
-         23 : 'MS DOS COM File',
-         24 : 'AIX ar library',
+        0: "MS DOS EXE File",  # (obsolete)
+        1: "MS DOS COM File",  # (obsolete)
+        2: "Binary file",
+        3: "MS DOS Driver",
+        4: "New Executable (NE)",
+        5: "Intel Hex Object File",
+        6: "MOS Technology Hex Object File",
+        7: "Linear Executable (LX)",
+        8: "Linear Executable (LE)",
+        9: "Netware Loadable Module (NLM)",
+        10: "Common Object File Format (COFF)",
+        11: "Portable Executable (PE)",
+        12: "Object Module Format",
+        13: "R-records",
+        14: "ZIP file",  # (this file is never loaded to IDA database)
+        15: "Library of OMF Modules",
+        16: "ar library",
+        17: "file is loaded using LOADER DLL",
+        18: "Executable and Linkable Format (ELF)",
+        19: "Watcom DOS32 Extender (W32RUN)",
+        20: "Linux a.out (AOUT)",
+        21: "PalmPilot program file",
+        22: "MS DOS EXE File",
+        23: "MS DOS COM File",
+        24: "AIX ar library",
     }
 
     def get_file_type_name(self):
@@ -2018,10 +2076,13 @@ class _Strings:
     PASCAL_16 = 0x5
     LEN2 = 0x8
     LEN2_16 = 0x9
-    LEN4 =  0xC
+    LEN4 = 0xC
     LEN4_16 = 0xD
 
-    ASCII_BYTE = b" !\"#\$%&\'\(\)\*\+,-\./0123456789:;<=>\?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\[\]\^_`abcdefghijklmnopqrstuvwxyz\{\|\}\\\~\t"
+    ASCII_BYTE = (
+        b" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`"
+        b"abcdefghijklmnopqrstuvwxyz{|}\\~\t"
+    )
 
     def __init__(self, db, api):
         self.db = db
@@ -2051,7 +2112,7 @@ class _Strings:
         for i in range(start, end):
             try:
                 b = IdbByte(i)
-            except KeyError as e:
+            except KeyError:
                 break
             if b == 0:
                 flags = get_flags(i)
@@ -2060,7 +2121,7 @@ class _Strings:
             data.append(b)
 
         if six.PY2:
-            return ''.join(map(chr, data))
+            return "".join(map(chr, data))
         else:
             return bytes(data)
 
@@ -2068,7 +2129,7 @@ class _Strings:
         reg = b"([%s]{%d,})" % (_Strings.ASCII_BYTE, self.minlen)
         ascii_re = re.compile(reg)
         for match in ascii_re.finditer(buf):
-            s = match.group().decode('ascii')
+            s = match.group().decode("ascii")
             yield StringItem(va + match.start(), len(s), _Strings.C, s)
 
     def parse_C_16_strings(self, va, buf):
@@ -2076,7 +2137,7 @@ class _Strings:
         uni_re = re.compile(reg)
         for match in uni_re.finditer(buf):
             try:
-                s = match.group().decode('utf-16')
+                s = match.group().decode("utf-16")
             except UnicodeDecodeError:
                 continue
             else:
@@ -2087,57 +2148,61 @@ class _Strings:
         uni_re = re.compile(reg)
         for match in uni_re.finditer(buf):
             try:
-                s = match.group().decode('utf-32')
+                s = match.group().decode("utf-32")
             except UnicodeDecodeError:
                 continue
             else:
                 yield StringItem(va + match.start(), len(s), _Strings.C_32, s)
 
     def parse_PASCAL_strings(self, va, buf):
-        raise NotImplementedError('parse PASCAL strings')
+        raise NotImplementedError("parse PASCAL strings")
 
     def parse_PASCAL_16_strings(self, va, buf):
-        raise NotImplementedError('parse PASCAL_16 strings')
+        raise NotImplementedError("parse PASCAL_16 strings")
 
     def parse_LEN2_strings(self, va, buf):
-        raise NotImplementedError('parse LEN2 strings')
+        raise NotImplementedError("parse LEN2 strings")
 
     def parse_LEN2_16_strings(self, va, buf):
-        raise NotImplementedError('parse LEN2_16 strings')
+        raise NotImplementedError("parse LEN2_16 strings")
 
     def parse_LEN4_strings(self, va, buf):
-        raise NotImplementedError('parse LEN4 strings')
+        raise NotImplementedError("parse LEN4 strings")
 
     def parse_LEN4_16_strings(self, va, buf):
-        raise NotImplementedError('parse LEN4_16 strings')
+        raise NotImplementedError("parse LEN4_16 strings")
 
     def refresh(self):
         ret = []
         for seg in self.api.idautils.Segments():
             buf = self.get_seg_data(seg)
 
-            for parser in (self.parse_C_strings,
-                           self.parse_C_16_strings,
-                           self.parse_C_32_strings,
-                           self.parse_PASCAL_strings,
-                           self.parse_PASCAL_16_strings,
-                           self.parse_LEN2_strings,
-                           self.parse_LEN2_16_strings,
-                           self.parse_LEN4_strings,
-                           self.parse_LEN4_16_strings):
+            for parser in (
+                self.parse_C_strings,
+                self.parse_C_16_strings,
+                self.parse_C_32_strings,
+                self.parse_PASCAL_strings,
+                self.parse_PASCAL_16_strings,
+                self.parse_LEN2_strings,
+                self.parse_LEN2_16_strings,
+                self.parse_LEN4_strings,
+                self.parse_LEN4_16_strings,
+            ):
                 try:
                     ret.extend(list(parser(seg, buf)))
                 except NotImplementedError as e:
-                    logger.warning('warning: %s', e)
+                    logger.warning("warning: %s", e)
         self.cache = ret[:]
         return ret
 
-    def setup(self,
-              strtypes=[0],
-              minlen=5,
-              only_7bit=True,
-              ignore_instructions=False,
-              display_only_existing_strings=False):
+    def setup(
+        self,
+        strtypes=[0],
+        minlen=5,
+        only_7bit=True,
+        ignore_instructions=False,
+        display_only_existing_strings=False,
+    ):
         self.strtypes = strtypes
         self.minlen = minlen
         self.only_7bit = only_7bit
@@ -2186,7 +2251,7 @@ class idautils:
         try:
             func_t = idb.analysis.Functions(self.idb).functions[fva]
         except KeyError:
-            logger.debug('failed to fetch func_t: 0x%x', fva)
+            logger.debug("failed to fetch func_t: 0x%x", fva)
             return
 
         yield (func_t.startEA, func_t.endEA)
@@ -2194,12 +2259,12 @@ class idautils:
         try:
             f = idb.analysis.Function(self.idb, fva)
         except KeyError:
-            logger.debug('failed to fetch Function: 0x%x', fva)
+            logger.debug("failed to fetch Function: 0x%x", fva)
             return
 
         try:
             for start, size in f.get_chunks():
-                yield (start, start+size)
+                yield (start, start + size)
         except KeyError:
             return
 
@@ -2236,8 +2301,9 @@ class idautils:
 
         # get all the code xrefs to this instruction.
         # a code xref is like a fallthrough or jump, not like a call.
-        for xref in idb.analysis.get_crefs_to(self.idb, ea,
-                                              types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]):
+        for xref in idb.analysis.get_crefs_to(
+            self.idb, ea, types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]
+        ):
             yield xref.frm
 
     def _get_fallthrough_xref_from(self, ea):
@@ -2259,14 +2325,26 @@ class idautils:
 
         # get all the code xrefs from this instruction.
         # a code xref is like a fallthrough or jump, not like a call.
-        for xref in idb.analysis.get_crefs_from(self.idb, ea,
-                                                types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]):
+        for xref in idb.analysis.get_crefs_from(
+            self.idb, ea, types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]
+        ):
             yield xref.to
 
-    ALL_DREF_TYPES = (idaapi.dr_U, idaapi.dr_O, idaapi.dr_W,
-                      idaapi.dr_R, idaapi.dr_T, idaapi.dr_I)
-    ALL_CREF_TYPES = (idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F,
-                      idaapi.fl_CN, idaapi.fl_CF)
+    ALL_DREF_TYPES = (
+        idaapi.dr_U,
+        idaapi.dr_O,
+        idaapi.dr_W,
+        idaapi.dr_R,
+        idaapi.dr_T,
+        idaapi.dr_I,
+    )
+    ALL_CREF_TYPES = (
+        idaapi.fl_JN,
+        idaapi.fl_JF,
+        idaapi.fl_F,
+        idaapi.fl_CN,
+        idaapi.fl_CF,
+    )
 
     def DataRefsFrom(self, ea):
         # IDAPython docstring says this returns a list,
@@ -2274,7 +2352,9 @@ class idautils:
 
         # calls are not data references.
         # global variables are data references.
-        for xref in idb.analysis.get_drefs_from(self.idb, ea, types=self.ALL_DREF_TYPES):
+        for xref in idb.analysis.get_drefs_from(
+            self.idb, ea, types=self.ALL_DREF_TYPES
+        ):
             yield xref.to
 
     def DataRefsTo(self, ea):
@@ -2303,7 +2383,7 @@ class idautils:
             typed = self.ALL_DREF_TYPES
 
         else:
-            raise ValueError('unexpected flags value')
+            raise ValueError("unexpected flags value")
 
         if typef:
             for xref in idb.analysis.get_crefs_to(self.idb, ea, typef):
@@ -2341,7 +2421,7 @@ class idautils:
             typed = self.ALL_DREF_TYPES
 
         else:
-            raise ValueError('unexpected flags value')
+            raise ValueError("unexpected flags value")
 
         if typef:
             for xref in idb.analysis.get_crefs_from(self.idb, ea, typef):
@@ -2369,10 +2449,13 @@ class idautils:
     def Entries(self):
         for i in range(self.api.ida_entry.get_entry_qty()):
             ordinal = self.api.ida_entry.get_entry_ordinal(i)
-            yield (i,
-                   ordinal,
-                   self.api.ida_entry.get_entry(ordinal),
-                   self.api.ida_entry.get_entry_name(ordinal))
+            yield (
+                i,
+                ordinal,
+                self.api.ida_entry.get_entry(ordinal),
+                self.api.ida_entry.get_entry_name(ordinal),
+            )
+
 
 class ida_entry:
     def __init__(self, db, api):
@@ -2419,19 +2502,19 @@ class ida_name:
     def get_name(self, ea):
         flags = self.api.ida_bytes.get_flags(ea)
         if not self.api.ida_bytes.has_name(flags):
-            return ''
+            return ""
 
         try:
             nn = self.api.ida_netnode.netnode(ea)
             return nn.name()
         except KeyError:
-            return ''
+            return ""
 
     @memoized_method()
     def _get_name_ptrs(self):
-        '''
+        """
         a wrapper for the NAM section parser that caches the results on first access.
-        '''
+        """
         return self.idb.nam.names()
 
     def get_nlist_size(self):

@@ -1,12 +1,10 @@
-import pytest
+from fixtures import *
 
 import idb.analysis
 
-from fixtures import *
-
 
 def pluck(prop, s):
-    '''
+    """
     generate the values from the given attribute with name `prop` from the given sequence of items `s`.
 
     Args:
@@ -15,15 +13,15 @@ def pluck(prop, s):
 
     Yields:
       any: the values of the requested field across the sequence
-    '''
+    """
     for x in s:
         yield getattr(x, prop)
 
 
 def lpluck(prop, s):
-    '''
+    """
     like `pluck`, but returns the result in a single list.
-    '''
+    """
     return list(pluck(prop, s))
 
 
@@ -32,73 +30,73 @@ def test_root(kernel32_idb, version, bitness, expected):
     root = idb.analysis.Root(kernel32_idb)
 
     assert root.version in (695, 700)
-    assert root.get_field_tag('version') == 'A'
-    assert root.get_field_index('version') == -1
+    assert root.get_field_tag("version") == "A"
+    assert root.get_field_index("version") == -1
 
-    assert root.version_string in ('6.95', '7.00')
+    assert root.version_string in ("6.95", "7.00")
     assert root.open_count == 1
-    assert root.md5 == '00bf1bf1b779ce1af41371426821e0c2'
+    assert root.md5 == "00bf1bf1b779ce1af41371426821e0c2"
 
 
-@kern32_test([
-    (695, 32, '2017-06-20T22:31:34'),
-    (695, 64, '2017-07-10T01:36:23'),
-    (700, 32, '2017-07-10T18:28:22'),
-    (700, 64, '2017-07-10T21:37:15'),
-])
+@kern32_test(
+    [
+        (695, 32, "2017-06-20T22:31:34"),
+        (695, 64, "2017-07-10T01:36:23"),
+        (700, 32, "2017-07-10T18:28:22"),
+        (700, 64, "2017-07-10T21:37:15"),
+    ]
+)
 def test_root_timestamp(kernel32_idb, version, bitness, expected):
     root = idb.analysis.Root(kernel32_idb)
     assert root.created.isoformat() == expected
 
 
-@kern32_test([
-    (695, 32, 1),
-    (695, 64, 1),
-    (700, 32, 1),
-    (700, 64, 1),
-])
+@kern32_test(
+    [(695, 32, 1), (695, 64, 1), (700, 32, 1), (700, 64, 1),]
+)
 def test_root_open_count(kernel32_idb, version, bitness, expected):
     root = idb.analysis.Root(kernel32_idb)
     assert root.open_count == expected
 
 
-@kern32_test([
-    (695, 32, 'pe.ldw'),
-    (695, 64, 'pe64.l64'),
-    (700, 32, 'pe.dll'),
-    (700, 64, 'pe64.dll'),
-])
+@kern32_test(
+    [
+        (695, 32, "pe.ldw"),
+        (695, 64, "pe64.l64"),
+        (700, 32, "pe.dll"),
+        (700, 64, "pe64.dll"),
+    ]
+)
 def test_loader(kernel32_idb, version, bitness, expected):
     loader = idb.analysis.Loader(kernel32_idb)
 
-    assert loader.format.startswith('Portable executable') is True
+    assert loader.format.startswith("Portable executable") is True
     assert loader.plugin == expected
 
 
-@kern32_test([
-    (695, 32, 0x75),
-    (695, 64, 0x75),
-    (700, 32, 0x7A),  # not supported.
-    (700, 64, 0x7A),  # not supported.
-])
+@kern32_test(
+    [
+        (695, 32, 0x75),
+        (695, 64, 0x75),
+        (700, 32, 0x7A),  # not supported.
+        (700, 64, 0x7A),  # not supported.
+    ]
+)
 def test_fileregions(kernel32_idb, version, bitness, expected):
     fileregions = idb.analysis.FileRegions(kernel32_idb)
 
     regions = fileregions.regions
     assert len(regions) == 3
-    assert list(regions.keys()) == [0x68901000, 0x689db000, 0x689dd000]
+    assert list(regions.keys()) == [0x68901000, 0x689DB000, 0x689DD000]
 
     assert regions[0x68901000].start == 0x68901000
-    assert regions[0x68901000].end == 0x689db000
+    assert regions[0x68901000].end == 0x689DB000
     assert regions[0x68901000].rva == 0x1000
 
 
-@kern32_test([
-    (695, 32, 0x12a8),
-    (695, 64, 0x12a8),
-    (700, 32, 0x1290),
-    (700, 64, 0x1290),
-])
+@kern32_test(
+    [(695, 32, 0x12A8), (695, 64, 0x12A8), (700, 32, 0x1290), (700, 64, 0x1290),]
+)
 def test_functions(kernel32_idb, version, bitness, expected):
     functions = idb.analysis.Functions(kernel32_idb)
     funcs = functions.functions
@@ -107,12 +105,9 @@ def test_functions(kernel32_idb, version, bitness, expected):
     assert len(funcs) == expected
 
 
-@kern32_test([
-    (695, 32, 0x75),
-    (695, 64, 0x75),
-    (700, 32, 0x7A),
-    (700, 64, 0x7A),
-])
+@kern32_test(
+    [(695, 32, 0x75), (695, 64, 0x75), (700, 32, 0x7A), (700, 64, 0x7A),]
+)
 def test_function_frame(kernel32_idb, version, bitness, expected):
     DllEntryPoint = idb.analysis.Functions(kernel32_idb).functions[0x68901695]
     assert DllEntryPoint.startEA == 0x68901695
@@ -120,12 +115,9 @@ def test_function_frame(kernel32_idb, version, bitness, expected):
     assert DllEntryPoint.frame == expected
 
 
-@kern32_test([
-    (695, 32, None),
-    (695, 64, None),
-    (700, 32, None),
-    (700, 64, None),
-])
+@kern32_test(
+    [(695, 32, None), (695, 64, None), (700, 32, None), (700, 64, None),]
+)
 def test_struct(kernel32_idb, version, bitness, expected):
     # ; BOOL __stdcall DllEntryPoint(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
     # .text:68901695                                         public DllEntryPoint
@@ -139,13 +131,15 @@ def test_struct(kernel32_idb, version, bitness, expected):
 
     members = list(struc.get_members())
 
-    assert list(map(lambda m: m.get_name(), members)) == [' s',
-                                                          ' r',
-                                                          'hinstDLL',
-                                                          'fdwReason',
-                                                          'lpReserved', ]
+    assert list(map(lambda m: m.get_name(), members)) == [
+        " s",
+        " r",
+        "hinstDLL",
+        "fdwReason",
+        "lpReserved",
+    ]
 
-    assert members[2].get_type() == 'HINSTANCE'
+    assert members[2].get_type() == "HINSTANCE"
 
 
 @kern32_test()
@@ -175,18 +169,20 @@ def test_function(kernel32_idb, version, bitness, expected):
     # .text:689016B8 8B EC                                   mov     ebp, esp
     # .text:689016BA 81 EC 14 02 00 00                       sub     esp, 214h
     sub_689016B5 = idb.analysis.Function(kernel32_idb, 0x689016B5)
-    assert sub_689016B5.get_name() == 'sub_689016B5'
+    assert sub_689016B5.get_name() == "sub_689016B5"
 
     chunks = list(sub_689016B5.get_chunks())
-    assert chunks == [(0x689033D9, 0x17),
-                      (0x68904247, 0xA3),
-                      (0x689061B9, 0x25E),
-                      (0x689138B4, 0x1F),
-                      (0x6892BC20, 0x21),
-                      (0x6892F138, 0x15),
-                      (0x6892F267, 0x29),
-                      (0x68934D65, 0x3D),
-                      (0x68937707, 0x84)]
+    assert chunks == [
+        (0x689033D9, 0x17),
+        (0x68904247, 0xA3),
+        (0x689061B9, 0x25E),
+        (0x689138B4, 0x1F),
+        (0x6892BC20, 0x21),
+        (0x6892F138, 0x15),
+        (0x6892F267, 0x29),
+        (0x68934D65, 0x3D),
+        (0x68937707, 0x84),
+    ]
 
     # sub_689016B5.get_unk()
 
@@ -200,13 +196,19 @@ def test_function(kernel32_idb, version, bitness, expected):
     DllEntryPoint = idb.analysis.Function(kernel32_idb, 0x68901695)
 
     sig = DllEntryPoint.get_signature()
-    assert sig.calling_convention == '__stdcall'
-    assert sig.rtype == 'BOOL'
+    assert sig.calling_convention == "__stdcall"
+    assert sig.rtype == "BOOL"
     assert len(sig.parameters) == 3
     assert list(map(lambda p: p.type, sig.parameters)) == [
-        'HINSTANCE', 'DWORD', 'LPVOID']
+        "HINSTANCE",
+        "DWORD",
+        "LPVOID",
+    ]
     assert list(map(lambda p: p.name, sig.parameters)) == [
-        'hinstDLL', 'fdwReason', 'lpReserved']
+        "hinstDLL",
+        "fdwReason",
+        "lpReserved",
+    ]
 
 
 @kern32_test()
@@ -237,19 +239,21 @@ def test_stack_change_points(kernel32_idb, version, bitness, expected):
     # .text:68901B11 5D                                      pop     ebp
     # .text:68901B12 C2 18 00                                retn    18h
     # .text:68901B12                         CreateThread    endp
-    CreateThread = idb.analysis.Function(kernel32_idb, 0x68901aea)
+    CreateThread = idb.analysis.Function(kernel32_idb, 0x68901AEA)
     change_points = list(CreateThread.get_stack_change_points())
-    assert change_points == [(0x68901aed, -4),
-                             (0x68901af2, -4),
-                             (0x68901af7, -4),
-                             (0x68901afd, -4),
-                             (0x68901b00, -4),
-                             (0x68901b03, -4),
-                             (0x68901b06, -4),
-                             (0x68901b09, -4),
-                             (0x68901b0b, -4),
-                             (0x68901b11, 32),
-                             (0x68901b12, 4)]
+    assert change_points == [
+        (0x68901AED, -4),
+        (0x68901AF2, -4),
+        (0x68901AF7, -4),
+        (0x68901AFD, -4),
+        (0x68901B00, -4),
+        (0x68901B03, -4),
+        (0x68901B06, -4),
+        (0x68901B09, -4),
+        (0x68901B0B, -4),
+        (0x68901B11, 32),
+        (0x68901B12, 4),
+    ]
 
     # .text:68901493                         ; HANDLE __stdcall GetCurrentProcess()
     # .text:68901493                                         public GetCurrentProcess
@@ -264,29 +268,36 @@ def test_stack_change_points(kernel32_idb, version, bitness, expected):
 
 @kern32_test()
 def test_xrefs(kernel32_idb, version, bitness, expected):
-    assert lpluck('to', idb.analysis.get_crefs_from(kernel32_idb, 0x68901695)) == []
-    assert lpluck('to', idb.analysis.get_crefs_from(kernel32_idb, 0x6890169E)) == [0x68906156]
+    assert lpluck("to", idb.analysis.get_crefs_from(kernel32_idb, 0x68901695)) == []
+    assert lpluck("to", idb.analysis.get_crefs_from(kernel32_idb, 0x6890169E)) == [
+        0x68906156
+    ]
 
-    assert lpluck('frm', idb.analysis.get_crefs_to(kernel32_idb, 0x6890169E)) == []
-    assert lpluck('frm', idb.analysis.get_crefs_to(kernel32_idb, 0x68906156)) == [0x6890169E]
+    assert lpluck("frm", idb.analysis.get_crefs_to(kernel32_idb, 0x6890169E)) == []
+    assert lpluck("frm", idb.analysis.get_crefs_to(kernel32_idb, 0x68906156)) == [
+        0x6890169E
+    ]
 
     # .text:689016BA 004 81 EC 14 02 00 00                       sub     esp, 214h
     # .text:689016C0 218 A1 70 B3 9D 68                          mov     eax, ___security_cookie
     # .text:689016C5 218 33 C5                                   xor     eax, ebp
     security_cookie = 0x689DB370
-    assert lpluck('to', idb.analysis.get_drefs_from(kernel32_idb, 0x689016C0)) == [security_cookie]
-    assert lpluck('frm', idb.analysis.get_drefs_to(kernel32_idb, 0x689016C0)) == []
+    assert lpluck("to", idb.analysis.get_drefs_from(kernel32_idb, 0x689016C0)) == [
+        security_cookie
+    ]
+    assert lpluck("frm", idb.analysis.get_drefs_to(kernel32_idb, 0x689016C0)) == []
 
-    assert 0x689016C0 in pluck('frm', idb.analysis.get_drefs_to(kernel32_idb, security_cookie))
-    assert lpluck('to', idb.analysis.get_drefs_from(kernel32_idb, security_cookie)) == []
+    assert 0x689016C0 in pluck(
+        "frm", idb.analysis.get_drefs_to(kernel32_idb, security_cookie)
+    )
+    assert (
+        lpluck("to", idb.analysis.get_drefs_from(kernel32_idb, security_cookie)) == []
+    )
 
 
-@kern32_test([
-    (695, 32, None),
-    (695, 64, None),
-    (700, 32, None),
-    (700, 64, None),
-])
+@kern32_test(
+    [(695, 32, None), (695, 64, None), (700, 32, None), (700, 64, None),]
+)
 def test_fixups(kernel32_idb, version, bitness, expected):
     fixups = idb.analysis.Fixups(kernel32_idb).fixups
     assert len(fixups) == 31608
@@ -302,9 +313,15 @@ def test_fixups(kernel32_idb, version, bitness, expected):
 def test_segments(kernel32_idb, version, bitness, expected):
     segs = idb.analysis.Segments(kernel32_idb).segments
     assert list(sorted(map(lambda s: s.startEA, segs.values()))) == [
-        0x68901000, 0x689db000, 0x689dd000]
+        0x68901000,
+        0x689DB000,
+        0x689DD000,
+    ]
     assert list(sorted(map(lambda s: s.endEA, segs.values()))) == [
-        0x689db000, 0x689dd000, 0x689de230]
+        0x689DB000,
+        0x689DD000,
+        0x689DE230,
+    ]
 
 
 @kern32_test()
@@ -312,217 +329,218 @@ def test_segstrings(kernel32_idb, version, bitness, expected):
     strs = idb.analysis.SegStrings(kernel32_idb).strings
 
     # the first string is some binary data.
-    assert strs[1:] == ['.text', 'CODE', '.data', 'DATA', '.idata']
+    assert strs[1:] == [".text", "CODE", ".data", "DATA", ".idata"]
+
 
 def test_segments2(elf_idb):
     EXPECTED = {
-        '.init': {
-            'startEA': 0x80496ac,
-            'sclass': 0x2,
-            'orgbase': 0x0,
-            'align': 0x5,
-            'comb': 0x2,
-            'perm': 0x5,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0x1,
-            'type': 0x2,
-            'color': 0xffffffff,
+        ".init": {
+            "startEA": 0x80496AC,
+            "sclass": 0x2,
+            "orgbase": 0x0,
+            "align": 0x5,
+            "comb": 0x2,
+            "perm": 0x5,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0x1,
+            "type": 0x2,
+            "color": 0xFFFFFFFF,
         },
-        '.plt': {
-            'startEA': 0x80496d0,
-            'sclass': 0x2,
-            'orgbase': 0x0,
-            'align': 0x3,
-            'comb': 0x2,
-            'perm': 0x5,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0x2,
-            'type': 0x2,
-            'color': 0xffffffff,
+        ".plt": {
+            "startEA": 0x80496D0,
+            "sclass": 0x2,
+            "orgbase": 0x0,
+            "align": 0x3,
+            "comb": 0x2,
+            "perm": 0x5,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0x2,
+            "type": 0x2,
+            "color": 0xFFFFFFFF,
         },
-        '.plt.got': {
-            'startEA': 0x8049de0,
-            'sclass': 0x2,
-            'orgbase': 0x0,
-            'align': 0xa,
-            'comb': 0x2,
-            'perm': 0x5,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0x3,
-            'type': 0x2,
-            'color': 0xffffffff,
+        ".plt.got": {
+            "startEA": 0x8049DE0,
+            "sclass": 0x2,
+            "orgbase": 0x0,
+            "align": 0xA,
+            "comb": 0x2,
+            "perm": 0x5,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0x3,
+            "type": 0x2,
+            "color": 0xFFFFFFFF,
         },
-        '.text': {
-            'startEA': 0x8049df0,
-            'sclass': 0x2,
-            'orgbase': 0x0,
-            'align': 0x3,
-            'comb': 0x2,
-            'perm': 0x5,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0x4,
-            'type': 0x2,
-            'color': 0xffffffff,
+        ".text": {
+            "startEA": 0x8049DF0,
+            "sclass": 0x2,
+            "orgbase": 0x0,
+            "align": 0x3,
+            "comb": 0x2,
+            "perm": 0x5,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0x4,
+            "type": 0x2,
+            "color": 0xFFFFFFFF,
         },
-        '.fini': {
-            'startEA': 0x805b634,
-            'sclass': 0x2,
-            'orgbase': 0x0,
-            'align': 0x5,
-            'comb': 0x2,
-            'perm': 0x5,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0x5,
-            'type': 0x2,
-            'color': 0xffffffff,
+        ".fini": {
+            "startEA": 0x805B634,
+            "sclass": 0x2,
+            "orgbase": 0x0,
+            "align": 0x5,
+            "comb": 0x2,
+            "perm": 0x5,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0x5,
+            "type": 0x2,
+            "color": 0xFFFFFFFF,
         },
-        '.rodata': {
-            'startEA': 0x805b660,
-            'sclass': 0x8,
-            'orgbase': 0x0,
-            'align': 0x8,
-            'comb': 0x2,
-            'perm': 0x4,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0x6,
-            'type': 0x3,
-            'color': 0xffffffff,
+        ".rodata": {
+            "startEA": 0x805B660,
+            "sclass": 0x8,
+            "orgbase": 0x0,
+            "align": 0x8,
+            "comb": 0x2,
+            "perm": 0x4,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0x6,
+            "type": 0x3,
+            "color": 0xFFFFFFFF,
         },
-        '.eh_frame_hdr': {
-            'startEA': 0x8060c14,
-            'sclass': 0x8,
-            'orgbase': 0x0,
-            'align': 0x5,
-            'comb': 0x2,
-            'perm': 0x4,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0x7,
-            'type': 0x3,
-            'color': 0xffffffff,
+        ".eh_frame_hdr": {
+            "startEA": 0x8060C14,
+            "sclass": 0x8,
+            "orgbase": 0x0,
+            "align": 0x5,
+            "comb": 0x2,
+            "perm": 0x4,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0x7,
+            "type": 0x3,
+            "color": 0xFFFFFFFF,
         },
-        '.eh_frame': {
-            'startEA': 0x8061430,
-            'sclass': 0x8,
-            'orgbase': 0x0,
-            'align': 0x5,
-            'comb': 0x2,
-            'perm': 0x4,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0x8,
-            'type': 0x3,
-            'color': 0xffffffff,
+        ".eh_frame": {
+            "startEA": 0x8061430,
+            "sclass": 0x8,
+            "orgbase": 0x0,
+            "align": 0x5,
+            "comb": 0x2,
+            "perm": 0x4,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0x8,
+            "type": 0x3,
+            "color": 0xFFFFFFFF,
         },
-        '.init_array': {
-            'startEA': 0x8067f00,
-            'sclass': 0xc,
-            'orgbase': 0x0,
-            'align': 0x5,
-            'comb': 0x2,
-            'perm': 0x6,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0x9,
-            'type': 0x3,
-            'color': 0xffffffff,
+        ".init_array": {
+            "startEA": 0x8067F00,
+            "sclass": 0xC,
+            "orgbase": 0x0,
+            "align": 0x5,
+            "comb": 0x2,
+            "perm": 0x6,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0x9,
+            "type": 0x3,
+            "color": 0xFFFFFFFF,
         },
-        '.fini_array': {
-            'startEA': 0x8067f04,
-            'sclass': 0xc,
-            'orgbase': 0x0,
-            'align': 0x5,
-            'comb': 0x2,
-            'perm': 0x6,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0xa,
-            'type': 0x3,
-            'color': 0xffffffff,
+        ".fini_array": {
+            "startEA": 0x8067F04,
+            "sclass": 0xC,
+            "orgbase": 0x0,
+            "align": 0x5,
+            "comb": 0x2,
+            "perm": 0x6,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0xA,
+            "type": 0x3,
+            "color": 0xFFFFFFFF,
         },
-        '.jcr': {
-            'startEA': 0x8067f08,
-            'sclass': 0xc,
-            'orgbase': 0x0,
-            'align': 0x5,
-            'comb': 0x2,
-            'perm': 0x6,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0xb,
-            'type': 0x3,
-            'color': 0xffffffff,
+        ".jcr": {
+            "startEA": 0x8067F08,
+            "sclass": 0xC,
+            "orgbase": 0x0,
+            "align": 0x5,
+            "comb": 0x2,
+            "perm": 0x6,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0xB,
+            "type": 0x3,
+            "color": 0xFFFFFFFF,
         },
-        '.got': {
-            'startEA': 0x8067ffc,
-            'sclass': 0xc,
-            'orgbase': 0x0,
-            'align': 0x5,
-            'comb': 0x2,
-            'perm': 0x6,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0xc,
-            'type': 0x3,
-            'color': 0xffffffff,
+        ".got": {
+            "startEA": 0x8067FFC,
+            "sclass": 0xC,
+            "orgbase": 0x0,
+            "align": 0x5,
+            "comb": 0x2,
+            "perm": 0x6,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0xC,
+            "type": 0x3,
+            "color": 0xFFFFFFFF,
         },
-        '.got.plt': {
-            'startEA': 0x8068000,
-            'sclass': 0xc,
-            'orgbase': 0x0,
-            'align': 0x5,
-            'comb': 0x2,
-            'perm': 0x6,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0xd,
-            'type': 0x3,
-            'color': 0xffffffff,
+        ".got.plt": {
+            "startEA": 0x8068000,
+            "sclass": 0xC,
+            "orgbase": 0x0,
+            "align": 0x5,
+            "comb": 0x2,
+            "perm": 0x6,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0xD,
+            "type": 0x3,
+            "color": 0xFFFFFFFF,
         },
-        '.data': {
-            'startEA': 0x80681e0,
-            'sclass': 0xc,
-            'orgbase': 0x0,
-            'align': 0x8,
-            'comb': 0x2,
-            'perm': 0x6,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0xe,
-            'type': 0x3,
-            'color': 0xffffffff,
+        ".data": {
+            "startEA": 0x80681E0,
+            "sclass": 0xC,
+            "orgbase": 0x0,
+            "align": 0x8,
+            "comb": 0x2,
+            "perm": 0x6,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0xE,
+            "type": 0x3,
+            "color": 0xFFFFFFFF,
         },
-        '.bss': {
-            'startEA': 0x8068380,
-            'sclass': 0x13,
-            'orgbase': 0x0,
-            'align': 0x9,
-            'comb': 0x2,
-            'perm': 0x6,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0xf,
-            'type': 0x9,
-            'color': 0xffffffff,
+        ".bss": {
+            "startEA": 0x8068380,
+            "sclass": 0x13,
+            "orgbase": 0x0,
+            "align": 0x9,
+            "comb": 0x2,
+            "perm": 0x6,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0xF,
+            "type": 0x9,
+            "color": 0xFFFFFFFF,
         },
-        'extern': {
-            'startEA': 0x8068fb8,
-            'sclass': 0x0,
-            'orgbase': 0x0,
-            'align': 0x3,
-            'comb': 0x2,
-            'perm': 0x0,
-            'bitness': 0x1,
-            'flags': 0x10,
-            'sel': 0x10,
-            'type': 0x1,
-            'color': 0xffffffff,
+        "extern": {
+            "startEA": 0x8068FB8,
+            "sclass": 0x0,
+            "orgbase": 0x0,
+            "align": 0x3,
+            "comb": 0x2,
+            "perm": 0x0,
+            "bitness": 0x1,
+            "flags": 0x10,
+            "sel": 0x10,
+            "type": 0x1,
+            "color": 0xFFFFFFFF,
         },
     }
 
@@ -540,16 +558,18 @@ def test_segments2(elf_idb):
 def test_imports(kernel32_idb, version, bitness, expected):
     imports = list(idb.analysis.enumerate_imports(kernel32_idb))
     assert len(imports) == 1116
-    assert ('api-ms-win-core-rtlsupport-l1-2-0',
-            'RtlCaptureContext',
-            0x689dd000) in imports
+    assert (
+        "api-ms-win-core-rtlsupport-l1-2-0",
+        "RtlCaptureContext",
+        0x689DD000,
+    ) in imports
 
     libs = set([])
     for imp in imports:
         libs.add(imp.library)
 
-    assert 'KERNELBASE' in libs
-    assert 'ntdll' in libs
+    assert "KERNELBASE" in libs
+    assert "ntdll" in libs
 
 
 @kern32_test()
@@ -557,9 +577,14 @@ def test_entrypoints2(kernel32_idb, version, bitness, expected):
     entrypoints = list(idb.analysis.enumerate_entrypoints(kernel32_idb))
 
     assert len(entrypoints) == 1572
-    assert entrypoints[0] == ('BaseThreadInitThunk', 0x6890172d, 1, None)
-    assert entrypoints[-100] == ('WaitForThreadpoolWorkCallbacks', 0x689dab51, 1473, 'NTDLL.TpWaitForWork')
-    assert entrypoints[-1] == ('DllEntryPoint', 0x68901696, None, None)
+    assert entrypoints[0] == ("BaseThreadInitThunk", 0x6890172D, 1, None)
+    assert entrypoints[-100] == (
+        "WaitForThreadpoolWorkCallbacks",
+        0x689DAB51,
+        1473,
+        "NTDLL.TpWaitForWork",
+    )
+    assert entrypoints[-1] == ("DllEntryPoint", 0x68901696, None, None)
 
 
 @kern32_test()
@@ -567,17 +592,17 @@ def test_idainfo(kernel32_idb, version, bitness, expected):
     idainfo = idb.analysis.Root(kernel32_idb).idainfo
 
     if version == 695:
-        assert idainfo.tag == 'IDA'
+        assert idainfo.tag == "IDA"
     elif version == 700:
-        assert idainfo.tag == 'ida'
+        assert idainfo.tag == "ida"
     assert idainfo.version == version
-    assert idainfo.procname == 'metapc'
+    assert idainfo.procname == "metapc"
 
     # this was a 6.95 file upgraded to 7.0b
     cd = os.path.dirname(__file__)
-    idbpath = os.path.join(cd, 'data', 'multibitness', 'multibitness.idb')
+    idbpath = os.path.join(cd, "data", "multibitness", "multibitness.idb")
     with idb.from_file(idbpath) as db:
         idainfo = idb.analysis.Root(db).idainfo
-        assert idainfo.tag == 'IDA'    # like from 6.95
+        assert idainfo.tag == "IDA"  # like from 6.95
         assert idainfo.version == 700  # like from 7.00
-        assert idainfo.procname == 'metapc'  # actually stored as `| 0x06 m e t a p c |`
+        assert idainfo.procname == "metapc"  # actually stored as `| 0x06 m e t a p c |`

@@ -105,3 +105,8 @@ ENV/
 # mypy
 .mypy_cache/
 *.swp
+*.id0
+*.id1
+*.nam
+*.til
+.idea/

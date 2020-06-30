@@ -1,23 +1,22 @@
-'''
+"""
 lots of inspiration from: https://github.com/nlitsme/pyidbutil
-'''
+"""
 import abc
-import zlib
-import struct
-import logging
 import functools
+import logging
+import struct
+import zlib
 from collections import namedtuple
 
 import vstruct
 from vstruct.primitives import v_bytes
-from vstruct.primitives import v_uint8
 from vstruct.primitives import v_uint16
 from vstruct.primitives import v_uint32
 from vstruct.primitives import v_uint64
+from vstruct.primitives import v_uint8
 
 import idb
 import idb.netnode
-
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +51,7 @@ class FileHeader(vstruct.VStruct):
 
     def pcb_version(self):
         if self.version != 0x6:
-            raise NotImplementedError('unsupported version: %d' % (self.version))
+            raise NotImplementedError("unsupported version: %d" % (self.version))
 
     def pcb_offset6(self):
         self.offsets.append(self.offset1)
@@ -71,12 +70,12 @@ class FileHeader(vstruct.VStruct):
         self.checksums.append(self.checksum6)
 
     def validate(self):
-        if self.signature not in (b'IDA1', b'IDA2'):
-            raise ValueError('bad signature')
+        if self.signature not in (b"IDA1", b"IDA2"):
+            raise ValueError("bad signature")
         if self.sig2 != 0xAABBCCDD:
-            raise ValueError('bad sig2')
+            raise ValueError("bad sig2")
         if self.version != 0x6:
-            raise ValueError('unsupported version')
+            raise ValueError("unsupported version")
         return True
 
 
@@ -104,27 +103,29 @@ class Section(vstruct.VStruct):
         vstruct.VStruct.__init__(self)
         self.header = SectionHeader()
         self._contents = v_bytes()
-        self.contents = b''
+        self.contents = b""
 
     def vsEmit(self, **kwargs):
         if self.header.is_compressed:
-            raise NotImplementedError('Section may not be serialized because it was compressed')
+            raise NotImplementedError(
+                "Section may not be serialized because it was compressed"
+            )
 
         vstruct.VStruct.vsEmit(self, **kwargs)
 
     def pcb_header(self):
-        self['_contents'].vsSetLength(self.header.length)
+        self["_contents"].vsSetLength(self.header.length)
 
     def pcb__contents(self):
         if not self.header.is_compressed:
             self.contents = self._contents
         else:
             self.contents = zlib.decompress(self._contents)
-            logger.debug('decompressed parsed section.')
+            logger.debug("decompressed parsed section.")
 
     def validate(self):
         if self.header.length == 0:
-            raise ValueError('zero size')
+            raise ValueError("zero size")
         return True
 
 
@@ -152,10 +153,10 @@ class BranchEntry(vstruct.VStruct):
         self.value = v_bytes()
 
     def pcb_key_length(self):
-        self['key'].vsSetLength(self.key_length)
+        self["key"].vsSetLength(self.key_length)
 
     def pcb_value_length(self):
-        self['value'].vsSetLength(self.value_length)
+        self["value"].vsSetLength(self.value_length)
 
 
 class LeafEntryPointer(vstruct.VStruct):
@@ -180,17 +181,17 @@ class LeafEntry(vstruct.VStruct):
         self.key = None
 
     def pcb_key_length(self):
-        self['_key'].vsSetLength(self.key_length)
+        self["_key"].vsSetLength(self.key_length)
 
     def pcb_value_length(self):
-        self['value'].vsSetLength(self.value_length)
+        self["value"].vsSetLength(self.value_length)
 
     def pcb__key(self):
-        self.key = self.pkey[:self.common_prefix] + self._key
+        self.key = self.pkey[: self.common_prefix] + self._key
 
 
 class Page(vstruct.VStruct):
-    '''
+    """
     single node in the b-tree.
     has a bunch of key-value entries that may point to other pages.
     binary search these keys and traverse pointers to efficienty query the index.
@@ -221,7 +222,7 @@ class Page(vstruct.VStruct):
         | entryN.key | entryN.value   |
         +-----------------------------+
 
-    '''
+    """
 
     def __init__(self, page_size, page_number):
         vstruct.VStruct.__init__(self)
@@ -233,17 +234,17 @@ class Page(vstruct.VStruct):
         self._entries = []
 
     def is_leaf(self):
-        '''
+        """
         return True if this is a leaf node.
 
         Returns:
           bool: True if this is a leaf node.
-        '''
+        """
         return self.ppointer == 0
 
     def _load_entries(self):
         if not self._entries:
-            key = b''
+            key = b""
             for i in range(self.entry_count):
                 if self.is_leaf():
                     ptr = LeafEntryPointer()
@@ -261,7 +262,7 @@ class Page(vstruct.VStruct):
                 key = entry.key
 
     def get_entries(self):
-        '''
+        """
         generate the entries from this page in order.
         each entry is guaranteed to have the following fields:
           - key
@@ -269,16 +270,16 @@ class Page(vstruct.VStruct):
 
         Yields:
           Union[BranchEntry, LeafEntry]: the b-tree entries from this page.
-        '''
+        """
         self._load_entries()
         for entry in self._entries:
             yield entry
 
     def find_index(self, key):
-        '''
+        """
         find the index of the exact match, or in the case of a branch node,
          the index of the least-greater entry.
-        '''
+        """
         # implementation note:
         #  suprisingly, using a binary search here does not substantially improve performance.
         #  this is probably the the dominating operations are parsing and allocating entries.
@@ -300,7 +301,7 @@ class Page(vstruct.VStruct):
         raise KeyError(key)
 
     def get_entry(self, entry_number):
-        '''
+        """
         get the entry at the given index.
 
         Arguments:
@@ -311,7 +312,7 @@ class Page(vstruct.VStruct):
 
         Raises:
           KeyError: if the entry number is not in the range of entries.
-        '''
+        """
         self._load_entries()
         if entry_number >= len(self._entries):
             raise KeyError(entry_number)
@@ -324,19 +325,20 @@ class Page(vstruct.VStruct):
                 continue
 
             if last.key >= entry.key:
-                raise ValueError('bad page entry sort order')
+                raise ValueError("bad page entry sort order")
 
             last = entry
         return True
 
 
 class FindStrategy(object):
-    '''
+    """
     defines the interface for strategies of searching the btree.
 
     implementors will provide a `.find()` method that operates on a `Cursor` instance.
     the method will update the cursor as it navigates the btree.
-    '''
+    """
+
     __meta__ = abc.ABCMeta
 
     @abc.abstractmethod
@@ -345,10 +347,10 @@ class FindStrategy(object):
 
 
 class ExactMatchStrategy(FindStrategy):
-    '''
+    """
     strategy used to find the entry with exactly the key provided.
     if the exact key is not found, `KeyError` is raised.
-    '''
+    """
 
     def _find(self, cursor, page_number, key):
         page = cursor.index.get_page(page_number)
@@ -388,11 +390,11 @@ class ExactMatchStrategy(FindStrategy):
 
 
 class PrefixMatchStrategy(FindStrategy):
-    '''
+    """
     strategy used to find the first entry that begins with the given key.
     it may be an exact match, or an exact match does not exist, and the result starts with the given key.
     if no entries start with the given key, `KeyError` is raised.
-    '''
+    """
 
     def _find(self, cursor, page_number, key):
         page = cursor.index.get_page(page_number)
@@ -447,12 +449,12 @@ class PrefixMatchStrategy(FindStrategy):
 
 
 class RoundDownMatchStrategy(FindStrategy):
-    '''
+    """
     strategy used to find the matching key, or the key just less than the given key.
     it may be an exact match, or an exact match does not exist,
      and the result is less than the given key.
     if no entries are less than the given key, `KeyError` is raised.
-    '''
+    """
 
     def _find(self, cursor, page_number, key):
         page = cursor.index.get_page(page_number)
@@ -513,10 +515,10 @@ class RoundDownMatchStrategy(FindStrategy):
 
 
 class MinKeyStrategy(FindStrategy):
-    '''
+    """
     strategy used to find the minimum key in the index.
     note: this completely ignores the provided key.
-    '''
+    """
 
     def _find(self, cursor, page_number):
         page = cursor.index.get_page(page_number)
@@ -534,10 +536,10 @@ class MinKeyStrategy(FindStrategy):
 
 
 class MaxKeyStrategy(FindStrategy):
-    '''
+    """
     strategy used to find the maximum key in the index.
     note: this completely ignores the provided key.
-    '''
+    """
 
     def _find(self, cursor, page_number):
         page = cursor.index.get_page(page_number)
@@ -565,10 +567,10 @@ MAX_KEY = MaxKeyStrategy
 
 
 class Cursor(object):
-    '''
+    """
     represents a particular location in the b-tree.
     can be navigated "forward" and "backwards".
-    '''
+    """
 
     def __init__(self, index):
         super(Cursor, self).__init__()
@@ -584,13 +586,13 @@ class Cursor(object):
         self.entry_number = None
 
     def next(self):
-        '''
+        """
         traverse to the next entry.
         updates this current cursor instance.
 
         Raises:
           IndexError: if the entry does not exist. the cursor is in an unknown state afterwards.
-        '''
+        """
         current_page = self.path[-1]
         if current_page.is_leaf():
             if self.entry_number == current_page.entry_count - 1:
@@ -646,13 +648,13 @@ class Cursor(object):
             return
 
     def prev(self):
-        '''
+        """
         traverse to the previous entry.
         updates this current cursor instance.
 
         Raises:
           IndexError: if the entry does not exist. the cursor is in an unknown state afterwards.
-        '''
+        """
         current_page = self.path[-1]
         if current_page.is_leaf():
             if self.entry_number == 0:
@@ -711,7 +713,9 @@ class Cursor(object):
             next_page = self.index.get_page(next_page_number)
             while not next_page.is_leaf():
                 self.path.append(next_page)
-                next_page = self.index.get_page(next_page.get_entry(next_page.entry_count - 1).page)
+                next_page = self.index.get_page(
+                    next_page.get_entry(next_page.entry_count - 1).page
+                )
 
             self.path.append(next_page)
             self.entry = next_page.get_entry(next_page.entry_count - 1)
@@ -728,13 +732,13 @@ class Cursor(object):
 
 
 class ID0(vstruct.VStruct):
-    '''
+    """
     a b-tree index.
     keys and values are arbitrary byte strings.
 
     use `.find()` to identify a matching entry, and use the resulting cursor
      instance to access the value, or traverse to less/greater entries.
-    '''
+    """
 
     def __init__(self, buf, wordsize):
         vstruct.VStruct.__init__(self)
@@ -753,10 +757,10 @@ class ID0(vstruct.VStruct):
 
     def get_page_buffer(self, page_number):
         if page_number < 1:
-            logger.warning('unexpected page number requested: %d', page_number)
+            logger.warning("unexpected page number requested: %d", page_number)
 
         offset = self.page_size * page_number
-        return self.buf[offset:offset + self.page_size]
+        return self.buf[offset : offset + self.page_size]
 
     def get_page(self, page_number):
         page = self._page_cache.get(page_number, None)
@@ -771,7 +775,7 @@ class ID0(vstruct.VStruct):
         return page
 
     def find(self, key, strategy=EXACT_MATCH):
-        '''
+        """
         Args:
           key (bytes): the index key for which to search.
           strategy (Type[MatchStrategy]): the strategy to use to do the search.
@@ -784,46 +788,46 @@ class ID0(vstruct.VStruct):
 
         Raises:
           KeyError: if the match failes to find a result.
-        '''
+        """
         c = Cursor(self)
         s = strategy()
         s.find(c, key)
         return c
 
     def find_prefix(self, key):
-        '''
+        """
         convenience shortcut for prefix match search.
-        '''
+        """
         return self.find(key, strategy=PREFIX_MATCH)
 
     def get_min(self):
-        '''
+        """
         find the minimum entry in the index.
 
         Returns:
           cursor: the cursor that points to the match.
-        '''
+        """
         return self.find(None, strategy=MIN_KEY)
 
     def get_max(self):
-        '''
+        """
         find the maximum entry in the index.
 
         Returns:
           cursor: the cursor that points to the match.
-        '''
+        """
         return self.find(None, strategy=MAX_KEY)
 
     def validate(self):
-        if self.signature != b'B-tree v2':
-            raise ValueError('bad signature')
+        if self.signature != b"B-tree v2":
+            raise ValueError("bad signature")
         return True
 
 
 class SegmentBounds(vstruct.VStruct):
-    '''
+    """
     specifies the range of a segment.
-    '''
+    """
 
     def __init__(self, wordsize):
         vstruct.VStruct.__init__(self)
@@ -834,16 +838,17 @@ class SegmentBounds(vstruct.VStruct):
         elif wordsize == 8:
             self.v_word = v_uint64
         else:
-            raise RuntimeError('unexpected wordsize')
+            raise RuntimeError("unexpected wordsize")
 
         self.start = self.v_word()
         self.end = self.v_word()
 
 
 class ID1(vstruct.VStruct):
-    '''
+    """
     contains flags for each byte.
-    '''
+    """
+
     PAGE_SIZE = 0x2000
 
     def __init__(self, wordsize, buf=None):
@@ -855,12 +860,12 @@ class ID1(vstruct.VStruct):
         elif wordsize == 8:
             self.v_word = v_uint64
         else:
-            raise RuntimeError('unexpected wordsize')
+            raise RuntimeError("unexpected wordsize")
 
         self.signature = v_bytes(size=0x04)
-        self.unk04 = v_uint32()     # 0x3
+        self.unk04 = v_uint32()  # 0x3
         self.segment_count = v_uint32()
-        self.unk0C = v_uint32()     # 0x800
+        self.unk0C = v_uint32()  # 0x800
         self.page_count = v_uint32()
         # varrays are not actually very list-like,
         #  so the struct field will be ._segments
@@ -870,31 +875,32 @@ class ID1(vstruct.VStruct):
         self.padding = v_bytes()
         self.buffer = v_bytes()
 
-    SegmentDescriptor = namedtuple('SegmentDescriptor', ['bounds', 'offset'])
+    SegmentDescriptor = namedtuple("SegmentDescriptor", ["bounds", "offset"])
 
     def pcb_segment_count(self):
-        self['_segments'].vsAddElements(self.segment_count,
-                                        functools.partial(
-                                            SegmentBounds,
-                                            self.wordsize))
+        self["_segments"].vsAddElements(
+            self.segment_count, functools.partial(SegmentBounds, self.wordsize)
+        )
 
     def pcb__segments(self):
         offset = 0
         for i in range(self.segment_count):
             segment = self._segments[i]
             segment_byte_count = segment.end - segment.start
-            segment_length = 4 * segment_byte_count  # each flag entry is a uint32 on all platforms
+            segment_length = (
+                4 * segment_byte_count
+            )  # each flag entry is a uint32 on all platforms
             self.segments.append(ID1.SegmentDescriptor(segment, offset))
             offset += segment_length
         offset = 0x14 + (self.segment_count * (2 * self.wordsize))
         padsize = ID1.PAGE_SIZE - offset
-        self['padding'].vsSetLength(padsize)
+        self["padding"].vsSetLength(padsize)
 
     def pcb_page_count(self):
-        self['buffer'].vsSetLength(ID1.PAGE_SIZE * self.page_count)
+        self["buffer"].vsSetLength(ID1.PAGE_SIZE * self.page_count)
 
     def get_segment(self, ea):
-        '''
+        """
         find the segment that contains the given effective address.
 
         Returns:
@@ -902,14 +908,14 @@ class ID1(vstruct.VStruct):
 
         Raises:
           KeyError: if the given address is not in a segment.
-        '''
+        """
         for segment in self.segments:
             if segment.bounds.start <= ea < segment.bounds.end:
                 return segment
         raise KeyError(ea)
 
     def get_next_segment(self, ea):
-        '''
+        """
         Fetch the next segment.
 
         Arguments:
@@ -921,7 +927,7 @@ class ID1(vstruct.VStruct):
         Raises:
           IndexError: if no more segments are found after the given segment.
           KeyError: if the given effective address does not fall within a segment.
-        '''
+        """
         for i, segment in enumerate(self.segments):
             if segment.bounds.start <= ea < segment.bounds.end:
                 if i == len(self.segments):
@@ -933,7 +939,7 @@ class ID1(vstruct.VStruct):
         raise KeyError(ea)
 
     def get_flags(self, ea):
-        '''
+        """
         Fetch the flags for the given effective address.
 
         > Each byte of the program has 32-bit flags (low 8 bits keep the byte value).
@@ -948,28 +954,29 @@ class ID1(vstruct.VStruct):
 
         Raises:
           KeyError: if the given address does not fall within a segment.
-        '''
+        """
         seg = self.get_segment(ea)
         offset = seg.offset + 4 * (ea - seg.bounds.start)
-        return struct.unpack_from('<I', self.buffer, offset)[0]
+        return struct.unpack_from("<I", self.buffer, offset)[0]
 
     def validate(self):
-        if self.signature != b'VA*\x00':
-            raise ValueError('bad signature')
+        if self.signature != b"VA*\x00":
+            raise ValueError("bad signature")
         if self.unk04 != 0x3:
-            raise ValueError('unexpected unk04 value')
+            raise ValueError("unexpected unk04 value")
         if self.unk0C != 0x800:
-            raise ValueError('unexpected unk0C value')
+            raise ValueError("unexpected unk0C value")
         for segment in self.segments:
             if segment.bounds.start > segment.bounds.end:
-                raise ValueError('segment ends before it starts')
+                raise ValueError("segment ends before it starts")
         return True
 
 
 class NAM(vstruct.VStruct):
-    '''
+    """
     contains pointers to named items.
-    '''
+    """
+
     PAGE_SIZE = 0x2000
 
     def __init__(self, wordsize, buf=None):
@@ -983,14 +990,14 @@ class NAM(vstruct.VStruct):
             self.v_word = v_uint64
             self.word_fmt = "Q"
         else:
-            raise RuntimeError('unexpected wordsize')
+            raise RuntimeError("unexpected wordsize")
 
         self.signature = v_bytes(size=0x04)
-        self.unk04 = v_uint32()      # 0x3
+        self.unk04 = v_uint32()  # 0x3
         self.non_empty = v_uint32()  # (0x1 non-empty) or (0x0 empty)
-        self.unk0C = v_uint32()      # 0x800
+        self.unk0C = v_uint32()  # 0x800
         self.page_count = v_uint32()
-        self.unk14 = self.v_word()   # 0x0
+        self.unk14 = self.v_word()  # 0x0
         # this appears to actually be the number of dwords used by the names.
         # so for an .i64, this is 2x the name count.
         self.dword_count = v_uint32()
@@ -1000,7 +1007,7 @@ class NAM(vstruct.VStruct):
         self.buffer = v_bytes()
 
     def pcb_page_count(self):
-        self['buffer'].vsSetLength(self.page_count * NAM.PAGE_SIZE)
+        self["buffer"].vsSetLength(self.page_count * NAM.PAGE_SIZE)
 
     def pcb_dword_count(self):
         count = self.dword_count
@@ -1009,16 +1016,16 @@ class NAM(vstruct.VStruct):
         self.name_count = count
 
     def validate(self):
-        if self.signature != b'VA*\x00':
-            raise ValueError('bad signature')
+        if self.signature != b"VA*\x00":
+            raise ValueError("bad signature")
         if self.unk04 != 0x3:
-            raise ValueError('unexpected unk04 value')
+            raise ValueError("unexpected unk04 value")
         if self.non_empty not in (0x0, 0x1):
-            raise ValueError('unexpected non_empty value')
+            raise ValueError("unexpected non_empty value")
         if self.unk0C != 0x800:
-            raise ValueError('unexpected unk0C value')
+            raise ValueError("unexpected unk0C value")
         if self.unk14 != 0x0:
-            raise ValueError('unexpected unk14 value')
+            raise ValueError("unexpected unk14 value")
         return True
 
     def names(self):
@@ -1029,7 +1036,7 @@ class NAM(vstruct.VStruct):
         fmt = "<{count:d}{word_fmt:s}".format(count=count, word_fmt=self.word_fmt)
         size = struct.calcsize(fmt)
         if size > len(self.buffer):
-            raise ValueError('buffer too small')
+            raise ValueError("buffer too small")
         return struct.unpack(fmt, self.buffer[:size])
 
 
@@ -1040,12 +1047,12 @@ class TIL(vstruct.VStruct):
         self.signature = v_bytes(size=0x06)
 
     def validate(self):
-        if self.signature != b'IDATIL':
-            raise ValueError('bad signature')
+        if self.signature != b"IDATIL":
+            raise ValueError("bad signature")
         return True
 
 
-SectionDescriptor = namedtuple('SectionDescriptor', ['name', 'cls'])
+SectionDescriptor = namedtuple("SectionDescriptor", ["name", "cls"])
 
 # section order:
 #   - id0
@@ -1057,12 +1064,12 @@ SectionDescriptor = namedtuple('SectionDescriptor', ['name', 'cls'])
 #
 # via: https://github.com/williballenthin/pyidbutil/blob/master/idblib.py#L262
 SECTIONS = [
-    SectionDescriptor('id0', ID0),
-    SectionDescriptor('id1', ID1),
-    SectionDescriptor('nam', NAM),
-    SectionDescriptor('seg', None),
-    SectionDescriptor('til', TIL),
-    SectionDescriptor('id2', None),
+    SectionDescriptor("id0", ID0),
+    SectionDescriptor("id1", ID1),
+    SectionDescriptor("nam", NAM),
+    SectionDescriptor("seg", None),
+    SectionDescriptor("til", TIL),
+    SectionDescriptor("id2", None),
 ]
 
 
@@ -1093,14 +1100,16 @@ class IDB(vstruct.VStruct):
         self.uint = ValueError
 
     def pcb_header(self):
-        if self.header.signature == b'IDA1':
+        if self.header.signature == b"IDA1":
             self.wordsize = 4
             self.uint = idb.netnode.uint32
-        elif self.header.signature == b'IDA2':
+        elif self.header.signature == b"IDA2":
             self.wordsize = 8
             self.uint = idb.netnode.uint64
         else:
-            raise RuntimeError('unexpected file signature: %s' % (self.header.signature))
+            raise RuntimeError(
+                "unexpected file signature: %s" % (self.header.signature)
+            )
 
         # TODO: pass along checksum
         for offset in self.header.offsets:
@@ -1115,16 +1124,16 @@ class IDB(vstruct.VStruct):
 
         for i, sectiondef in enumerate(SECTIONS):
             if i > len(self.sections):
-                logger.debug('missing section: %s', sectiondef.name)
+                logger.debug("missing section: %s", sectiondef.name)
                 continue
 
             section = self.sections[i]
             if not section:
-                logger.debug('missing section: %s', sectiondef.name)
+                logger.debug("missing section: %s", sectiondef.name)
                 continue
 
             if not sectiondef.cls:
-                logger.warn('section class not implemented: %s', sectiondef.name)
+                logger.warn("section class not implemented: %s", sectiondef.name)
                 continue
 
             s = sectiondef.cls(buf=section.contents, wordsize=self.wordsize)
@@ -1133,7 +1142,7 @@ class IDB(vstruct.VStruct):
             #  attributes that are not part of the struct,
             # so we need to override and use the default object behavior.
             object.__setattr__(self, sectiondef.name, s)
-            logger.debug('parsed section: %s', sectiondef.name)
+            logger.debug("parsed section: %s", sectiondef.name)
 
     def validate(self):
         self.header.validate()
