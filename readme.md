@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/williballenthin/python-idb.svg?branch=master)](https://travis-ci.org/williballenthin/python-idb)
+![Python IDB](https://github.com/williballenthin/python-idb/workflows/Python%20IDB/badge.svg)
 
 # python-idb
 
