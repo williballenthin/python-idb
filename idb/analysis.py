@@ -457,76 +457,105 @@ class IdaInfo(vstruct.VStruct):
         self.genflags = v_uint16()
         self.lflags = v_uint32()
 
-        # self.demnames = v_uint8()
         # TODO: the exact layout, particularly across versions, of the below is unknown.
         # offsets to fields in <7.0 seem to be available here:
         # https://github.com/tmr232/idapython/blob/master/python/idc.py#L2591
-        # self.database_change_count = v_uint32()  # 4
-        # self.filetype = v_int16()
-        # self.ostype = v_int16()
-        # self.apptype = v_int16()
-        # self.asmtype = v_int8()
-        # self.specsegs = v_uint8()
-        # self.af = v_uint32()  # 10
-        # self.af2 = v_uint32()
-        #
-        # self.baseaddr = v_uval_t()
-        # self.start_ss = v_int32()
-        # self.start_cs = v_int32()
-        # self.start_ip = v_ea_t()
-        # self.start_ea = v_ea_t()
-        # self.start_sp = v_ea_t()
-        # self.main = v_ea_t()
-        # self.min_ea = v_ea_t()
-        # self.max_ea = v_ea_t()  # 20
-        # self.omin_ea = v_ea_t()
-        # self.omax_ea = v_ea_t()
-        # self.lowoff = v_ea_t()
-        # self.highoff = v_ea_t()
-        # self.maxref = v_uval_t()
-        # # TODO: No 26
-        # self.privrange_start_ea = v_uval_t()
-        # self.privrange_end_ea = v_uval_t()
-        # self.netdelta = v_sval_t()
-        # self.xrefnum = v_int8()  # 30
-        # self.type_xrefnum = v_int8()
-        # self.refcmtnum = v_uint8()
-        # self.xrefflag = v_int8()  # TODO: fix me
-        # self.max_autoname_len = v_uint8()
-        # self.nametype = v_int8()
-        # self.short_demnames = v_int32()
-        # self.long_demnames = v_int32()
-        # self.demnames = v_int32()
-        # self.listnames = v_uint8()
-        # self.indent = v_int8()  # 40
-        # self.comment = v_int8()
-        # self.margin = v_uint16()
-        # self.lenxref = v_uint16()
-        # self.outflags = v_uint32()
-        # self.cmtflg = v_int8()
-        # self.limiter = v_int8()
-        # self.bin_prefix_size = v_int16()
-        # self.prefflag = v_int8()
-        # self.strlit_flags = v_uint8()
-        # self.strlit_break = v_int8()  # 50
-        # self.strlit_zeroes = v_int8()
-        # self.strtype = v_int32()
-        # self.strlit_pref = v_str(0x10)
-        # self.strlit_sernum = v_uint32()
-        # self.datatypes = v_int32()
-        # # TODO: no 56
-        # self.cc_id = v_uint8()
-        # self.cc_cm = v_uint8()
-        # self.cc_size_i = v_uint8()
-        # self.cc_size_b = v_uint8()  # 60
-        # self.cc_size_e = v_uint8()
-        # self.cc_defalign = v_uint8()
-        # self.cc_size_s = v_uint8()
-        # self.cc_size_l = v_uint8()
-        # self.cc_size_ll = v_uint8()
-        # self.cc_size_ldbl = v_uint8()
-        # self.abibits = v_uint32()
-        # self.appcall_options = v_uint32()
+        self.database_change_count = v_uint32()  # 4
+        self.filetype = v_int16()
+        self.ostype = v_int16()
+        self.apptype = v_int16()
+        self.asmtype = v_int8()
+        self.specsegs = v_uint8()
+        # Analysis Kernel options1+2
+        self.af = v_uint32()  # 10
+        # unknown
+        self.af2 = v_uint32()
+
+        self.baseaddr = v_uval_t()
+        self.start_ss = v_int32()
+        self.start_cs = v_int32()
+        self.start_ip = v_ea_t()
+        self.start_ea = v_ea_t()
+        self.start_sp = v_ea_t()
+        self.main = v_ea_t()
+        self.min_ea = v_ea_t()
+        self.max_ea = v_ea_t()  # 20
+        self.omin_ea = v_ea_t()
+        self.omax_ea = v_ea_t()
+        self.lowoff = v_ea_t()
+        self.highoff = v_ea_t()
+        self.maxref = v_uval_t()
+        self.privrange_start_ea = v_uval_t()
+        self.privrange_end_ea = v_uval_t()
+        self.netdelta = v_sval_t()
+        self.xrefnum = v_int8()  # 30
+        self.type_xrefnum = v_int8()
+        self.refcmtnum = v_uint8()
+
+        # Cross-references Cross-references parts
+        # https://www.hex-rays.com/products/ida/support/sdkdoc/group___s_w___x.html
+        self.xrefflag = v_uint8()
+
+        # names
+        self.max_autoname_len = v_uint16()
+        self.nametype = v_int8()
+        self.short_demnames = v_uint32()
+        self.long_demnames = v_uint32()
+        self.demnames = v_uint8()
+        self.listnames = v_uint8()
+        self.indent = v_uint8()  # 40
+        self.comment = v_uint8()
+        self.margin = v_uint16()
+        self.lenxref = v_uint16()
+        self.outflags = v_uint32()
+        self.cmtflg = v_uint8()
+        self.limiter = v_uint8()
+        self.bin_prefix_size = v_int16()
+
+        # line prefix option.
+        # Disassembly ->
+        # https://www.hex-rays.com/products/ida/support/sdkdoc/group___p_r_e_f__.html
+        self.prefflag = v_uint8()
+
+        # string literal flags
+        # Strings ->
+        # https://www.hex-rays.com/products/ida/support/sdkdoc/group___s_t_r_f__.html
+        self.strlit_flags = v_uint8()
+        self.strlit_break = v_int8()  # 50
+        self.strlit_zeroes = v_int8()
+        self.strtype = v_int32()
+        self.strlit_pref = v_str(0x10)
+        self.strlit_sernum = v_uval_t()
+        self.datatypes = v_uval_t()
+
+        # COMP_UNK     = 0x00           # Unknown
+        # COMP_MS      = 0x01           # Visual C++
+        # COMP_BC      = 0x02           # Borland C++
+        # COMP_WATCOM  = 0x03           # Watcom C++
+        # COMP_GNU     = 0x06           # GNU C++
+        # COMP_VISAGE  = 0x07           # Visual Age C++
+        # COMP_BP      = 0x08           # Delphi
+        # COMP_UNSURE  = 0x80            # uncertain compiler id
+        self.cc_id = v_uint8()
+        self.cc_cm = v_uint8()
+        # sizeof(int)
+        self.cc_size_i = v_uint8()
+        # sizeof(bool)
+        self.cc_size_b = v_uint8()  # 60
+        # sizeof(enum)
+        self.cc_size_e = v_uint8()
+        self.cc_defalign = v_uint8()
+        # short
+        self.cc_size_s = v_uint8()
+        # long
+        self.cc_size_l = v_uint8()
+        # long long
+        self.cc_size_ll = v_uint8()
+        # long double
+        self.cc_size_ldbl = v_uint8()
+
+        self.abibits = v_uint32()
+        self.appcall_options = v_uint32()
 
     def pcb_tag(self):
         if self.tag == "IDA":

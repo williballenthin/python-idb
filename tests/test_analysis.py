@@ -607,3 +607,15 @@ def test_idainfo_multibitness():
         assert idainfo.tag == "IDA"  # like from 6.95
         assert idainfo.version == 700  # like from 7.00
         assert idainfo.procname == "metapc"  # actually stored as `| 0x06 m e t a p c |`
+
+
+def test_idainfo_700x32():
+    cd = os.path.dirname(__file__)
+    idbpath = os.path.join(cd, "data", "v7.0b", "x32", "kernel32.idb")
+    with idb.from_file(idbpath) as db:
+        idainfo = idb.analysis.Root(db).idainfo
+        assert idainfo.tag == "ida"
+        assert idainfo.version == 700
+        assert idainfo.procname == "metapc"
+        assert idainfo.af == 3758096375
+        assert idainfo.xrefflag == 15
