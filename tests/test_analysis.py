@@ -597,6 +597,14 @@ def test_idainfo(kernel32_idb, version, bitness, expected):
     assert idainfo.version == version
     assert idainfo.procname == "metapc"
 
+    # FT_PE          = 11           # Portable Executable (PE)
+    assert idainfo.filetype == 11
+    if version == 695:
+        assert idainfo.af == 0xFFFF
+        assert idainfo.ascii_break == ord("\n")
+    elif version == 700:
+        assert idainfo.af == 0xDFFFFFF7
+
 
 def test_idainfo_multibitness():
     # this was a 6.95 file upgraded to 7.0b
@@ -607,15 +615,3 @@ def test_idainfo_multibitness():
         assert idainfo.tag == "IDA"  # like from 6.95
         assert idainfo.version == 700  # like from 7.00
         assert idainfo.procname == "metapc"  # actually stored as `| 0x06 m e t a p c |`
-
-
-def test_idainfo_700x32():
-    cd = os.path.dirname(__file__)
-    idbpath = os.path.join(cd, "data", "v7.0b", "x32", "kernel32.idb")
-    with idb.from_file(idbpath) as db:
-        idainfo = idb.analysis.Root(db).idainfo
-        assert idainfo.tag == "ida"
-        assert idainfo.version == 700
-        assert idainfo.procname == "metapc"
-        assert idainfo.af == 3758096375
-        assert idainfo.xrefflag == 15
