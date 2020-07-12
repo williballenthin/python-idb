@@ -496,7 +496,7 @@ class IdaInfo(vstruct.VStruct):
             self.vsAddField("highoff", v_word())
             self.vsAddField("maxref", v_word())
 
-            self.vsAddField("ascii_break", v_int8())
+            self.vsAddField("ascii_break", v_int8())  # 71
             self.vsAddField("wide_high_byte_first", v_int8())
             self.vsAddField("indent", v_int8())
             self.vsAddField("comment", v_int8())
@@ -504,7 +504,10 @@ class IdaInfo(vstruct.VStruct):
             self.vsAddField("entab", v_int8())
             self.vsAddField("specsegs", v_int8())
             self.vsAddField("voids", v_int8())
-            self.vsAddField("showauto", v_int8())
+
+            self.vsAddField("unknown_0", v_bytes(size=1))
+
+            self.vsAddField("showauto", v_int8())  # 80
             self.vsAddField("auto", v_int8())
             self.vsAddField("border", v_int8())
             self.vsAddField("null", v_int8())
@@ -513,13 +516,13 @@ class IdaInfo(vstruct.VStruct):
             self.vsAddField("prefseg", v_int8())
             self.vsAddField("asmtype", v_int8())
 
-            self.vsAddField("base_addr", v_word())
+            self.vsAddField("base_addr", v_word())  # 88
 
             self.vsAddField("xrefs", v_int8())
 
             self.vsAddField("binpref", v_int16())
 
-            self.vsAddField("cmtflag", v_int8())
+            self.vsAddField("cmtflag", v_int8())  # 95
             self.vsAddField("nametype", v_int8())
             self.vsAddField("showbads", v_int8())
             self.vsAddField("prefflag", v_int8())
@@ -527,12 +530,13 @@ class IdaInfo(vstruct.VStruct):
             self.vsAddField("asciiflags", v_uint8())
             self.vsAddField("listnames", v_uint8())
 
-            self.vsAddField("asciipref", v_str(size=16))
+            self.vsAddField("asciipref", v_str(size=16))  # 102
 
             self.vsAddField("asciisernum", v_word())
 
             self.vsAddField("asciizeroes", v_int8())
-            self.vsAddField("unknow_0", v_bytes(size=3))
+
+            self.vsAddField("unknown_1", v_bytes(size=3))
 
             self.vsAddField("mf", v_uint8())
             self.vsAddField("org", v_int8())
