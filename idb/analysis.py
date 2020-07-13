@@ -461,7 +461,8 @@ class IdaInfo(vstruct.VStruct):
 
     def pcb_version(self):
         # offsets to fields in <7.0 seem to be available here:
-        # https://github.com/idapython/src/blob/build-1.7.2/python/idc.py#L2591
+        # 6.95
+        # https://github.com/idapython/src/blob/31c7776117/python/idc.py#L2613
         # offsets to fields in latest(>7.0):
         # https://github.com/idapython/src/blob/master/python/idc.py#L1812
         v_word = v_uint32 if self.wordsize == 4 else v_uint64
@@ -470,7 +471,7 @@ class IdaInfo(vstruct.VStruct):
         v_ea_t = v_uint32
         v_sel_t = v_uint32
 
-        if self.version < 700 and self.version >= 680:
+        if 700 > self.version >= 680:
             self.vsAddField("lflags", v_uint8())
             self.vsAddField("demnames", v_uint8())
 
@@ -532,11 +533,13 @@ class IdaInfo(vstruct.VStruct):
 
             self.vsAddField("asciipref", v_str(size=16))  # 102
 
-            self.vsAddField("asciisernum", v_word())
+            self.vsAddField("asciisernum", v_word())  # 118
 
-            self.vsAddField("asciizeroes", v_int8())
+            self.vsAddField("asciizeroes", v_int8())  # 122
 
-            self.vsAddField("unknown_1", v_bytes(size=3))
+            self.vsAddField("unknown_1", v_bytes(size=2))  # 123
+
+            self.vsAddField("tribyte_order", v_uint8())  # 125
 
             self.vsAddField("mf", v_uint8())
             self.vsAddField("org", v_int8())
@@ -572,6 +575,14 @@ class IdaInfo(vstruct.VStruct):
             self.vsAddField("change_counter", v_uint32())
 
             self.vsAddField("sizeof_ldbl", v_uint8())
+
+            self.vsAddField("unknown_2", v_bytes(size=4))
+
+            self.vsAddField("abiname", v_str(size=16))
+
+            self.vsAddField("abibits", v_uint32())
+            self.vsAddField("refcmts", v_uint8())
+
         elif self.version >= 700:
             self.vsAddField("genflags", v_uint16())
             self.vsAddField("lflags", v_uint32())
