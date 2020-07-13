@@ -468,8 +468,8 @@ class IdaInfo(vstruct.VStruct):
         v_word = v_uint32 if self.wordsize == 4 else v_uint64
         v_uval_t = v_uint32 if self.wordsize == 4 else v_uint64
         v_sval_t = v_int32 if self.wordsize == 4 else v_int64
-        v_ea_t = v_uint32
-        v_sel_t = v_uint32
+        v_ea_t = v_word
+        v_sel_t = v_word
 
         if 700 > self.version >= 680:
             self.vsAddField("lflags", v_uint8())
@@ -596,9 +596,9 @@ class IdaInfo(vstruct.VStruct):
             self.vsAddField("specsegs", v_uint8())
 
             self.vsAddField("af", v_uint32())  # Analysis Kernel options1+2
-            self.vsAddField("af2", v_uint32())  # unknown
+            self.vsAddField("af2", v_uint32())
 
-            self.vsAddField("baseaddr", v_uval_t())
+            self.vsAddField("baseaddr", v_uval_t())  # 48
 
             self.vsAddField("start_ss", v_sel_t())
             self.vsAddField("start_cs", v_sel_t())
@@ -620,44 +620,49 @@ class IdaInfo(vstruct.VStruct):
 
             self.vsAddField("netdelta", v_sval_t())
 
-            self.vsAddField("xrefnum", v_int8())
+            self.vsAddField("xrefnum", v_int8())  # 116
             self.vsAddField("type_xrefnum", v_int8())
             self.vsAddField("refcmtnum", v_uint8())
             # Cross-references Cross-references parts
             # https://www.hex-rays.com/products/ida/support/sdkdoc/group___s_w___x.html
             self.vsAddField("xrefflag", v_uint8())
 
-            self.vsAddField("max_autoname_len", v_uint16())
+            self.vsAddField("max_autoname_len", v_uint16())  # 120
 
             self.vsAddField("nametype", v_int8())
 
-            self.vsAddField("short_demnames", v_uint32())
+            self.vsAddField("unknown_0", v_bytes(size=1))
+
+            self.vsAddField("short_demnames", v_uint32())  # 124
             self.vsAddField("long_demnames", v_uint32())
 
-            self.vsAddField("demnames", v_uint8())
+            self.vsAddField("demnames", v_uint8())  # 132
             self.vsAddField("listnames", v_uint8())
             self.vsAddField("indent", v_uint8())
             self.vsAddField("comment", v_uint8())
 
-            self.vsAddField("margin", v_uint16())
+            self.vsAddField("margin", v_uint16())  # 136
             self.vsAddField("lenxref", v_uint16())
 
-            self.vsAddField("outflags", v_uint32())
+            self.vsAddField("outflags", v_uint32())  # 140
 
-            self.vsAddField("cmtflg", v_uint8())
+            self.vsAddField("cmtflg", v_uint8())  # 144
             self.vsAddField("limiter", v_uint8())
 
-            self.vsAddField("bin_prefix_size", v_int16())
+            self.vsAddField("bin_prefix_size", v_int16())  # 146
+
+            # TODO: I guess there has a 16bytes offset here, because the back is right, but I am not sure if it is here
+            self.vsAddField("unknown_1", v_bytes(size=16))
 
             # line prefix option.
             # Disassembly ->
             # https://www.hex-rays.com/products/ida/support/sdkdoc/group___p_r_e_f__.html
-            self.vsAddField("prefflag", v_uint8())
+            self.vsAddField("prefflag", v_uint8())  # 148
 
             # string literal flags
             # Strings ->
             # https://www.hex-rays.com/products/ida/support/sdkdoc/group___s_t_r_f__.html
-            self.vsAddField("strlit_flags", v_uint8())
+            self.vsAddField("strlit_flags", v_uint8())  # 149->(149+16)=165
             self.vsAddField("strlit_break", v_uint8())
             self.vsAddField("strlit_zeroes", v_int8())
 
@@ -665,10 +670,12 @@ class IdaInfo(vstruct.VStruct):
 
             self.vsAddField("strlit_pref", v_str(16))
 
+            self.vsAddField("unknown_2", v_bytes(size=1))
+
             self.vsAddField("strlit_sernum", v_uval_t())
             self.vsAddField("datatypes", v_uval_t())
 
-            self.vsAddField("cc_id", v_uint8())
+            self.vsAddField("cc_id", v_uint8())  # 180->197
             self.vsAddField("cc_cm", v_uint8())
             self.vsAddField("cc_size_i", v_uint8())
             self.vsAddField("cc_size_b", v_uint8())
@@ -679,8 +686,10 @@ class IdaInfo(vstruct.VStruct):
             self.vsAddField("cc_size_ll", v_uint8())
             self.vsAddField("cc_size_ldbl", v_uint8())
 
+            self.vsAddField("unknown_3", v_bytes(size=2))  # 190->207
+
             self.vsAddField("abibits", v_uint32())
-            self.vsAddField("appcall_options", v_uint32())
+            # self.vsAddField("appcall_options", v_uint32())  # 213, but overflow(There are only 215 bytes)
 
         # 6.95 database upgraded to v7.0b
         # we have a single byte that describes how long the procname is.

@@ -611,6 +611,19 @@ def test_idainfo(kernel32_idb, version, bitness, expected):
         assert idainfo.sizeof_ldbl == 8
     elif version == 700:
         assert idainfo.af == 0xDFFFFFF7
+        assert idainfo.strlit_break == ord("\n")
+
+        assert idainfo.maxref == 16
+        assert idainfo.netdelta == 0
+        assert idainfo.xrefnum == 0
+        assert idainfo.xrefflag == 0xF
+        # Visual C++
+        assert idainfo.cc_id == 0x01
+        assert idainfo.cc_size_i == 4
+        assert idainfo.cc_size_b == 1
+        assert idainfo.cc_size_l == 4
+        assert idainfo.cc_size_ll == 8
+        assert idainfo.cc_size_ldbl == 8
 
 
 def test_idainfo_multibitness():
