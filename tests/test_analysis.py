@@ -1,6 +1,5 @@
-from fixtures import *
-
 import idb.analysis
+from fixtures import *
 
 
 def pluck(prop, s):
@@ -598,6 +597,23 @@ def test_idainfo(kernel32_idb, version, bitness, expected):
     assert idainfo.version == version
     assert idainfo.procname == "metapc"
 
+    # Portable Executable (PE)
+    assert idainfo.filetype == 11
+    if version == 695:
+        assert idainfo.af == 0xFFFF
+        assert idainfo.ascii_break == ord("\n")
+        # Visual C++
+        assert idainfo.compiler == 0x01
+        assert idainfo.sizeof_int == 4
+        assert idainfo.sizeof_bool == 1
+        assert idainfo.sizeof_long == 4
+        assert idainfo.sizeof_llong == 8
+        assert idainfo.sizeof_ldbl == 8
+    elif version == 700:
+        assert idainfo.af == 0xDFFFFFF7
+
+
+def test_idainfo_multibitness():
     # this was a 6.95 file upgraded to 7.0b
     cd = os.path.dirname(__file__)
     idbpath = os.path.join(cd, "data", "multibitness", "multibitness.idb")
