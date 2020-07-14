@@ -125,7 +125,12 @@ def kern32_test(specs=None):
         bitness = spec[1]
         expected = spec[2]
 
-        sversion = {500: "v5.0", 695: "v6.95", 700: "v7.0b",}[version]
+        version_map = {
+            500: "v5.0",
+            695: "v6.95",
+            700: "v7.0b",
+        }
+        sversion = version_map[version] if version in version_map else str(version)
 
         sbitness, filename = {
             32: ("x32", "kernel32.idb"),
