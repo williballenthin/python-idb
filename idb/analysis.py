@@ -473,8 +473,6 @@ class IdaInfo(vstruct.VStruct):
         v_ea_t = v_word
         v_sel_t = v_word
 
-        print(f"\n{self.len_sbytes=}\n")
-
         if 680 <= self.version < 700:
             self.vsAddField("lflags", v_uint8())  # 0x0d
             self.vsAddField("demnames", v_uint8())
@@ -510,7 +508,7 @@ class IdaInfo(vstruct.VStruct):
             self.vsAddField("specsegs", v_int8())
             self.vsAddField("voids", v_int8())
 
-            self.vsAddField("unknown_0", v_bytes(size=1))
+            self.vsAddField("unknown0", v_bytes(size=1))
 
             self.vsAddField("showauto", v_int8())  # 80
             self.vsAddField("auto", v_int8())
@@ -541,7 +539,7 @@ class IdaInfo(vstruct.VStruct):
 
             self.vsAddField("asciizeroes", v_int8())  # 122
 
-            self.vsAddField("unknown_1", v_bytes(size=2))  # 123
+            self.vsAddField("unknown1", v_bytes(size=2))  # 123
 
             self.vsAddField("tribyte_order", v_uint8())  # 125
 
@@ -580,7 +578,7 @@ class IdaInfo(vstruct.VStruct):
 
             self.vsAddField("sizeof_ldbl", v_uint8())
 
-            self.vsAddField("unknown_2", v_bytes(size=4))
+            self.vsAddField("unknown2", v_bytes(size=4))
 
             self.vsAddField("abiname", v_str(size=16))
 
@@ -596,31 +594,42 @@ class IdaInfo(vstruct.VStruct):
                     pass
                 # 7.20 <= ver <= 7.50?
                 elif self.len_sbytes in (141, 172):
-                    self.vsAddField("unknown_0", v_bytes(size=3))  # 0x0c
+                    jump_size = 1 if self.wordsize == 4 else 2
+                    jump_size2 = 0 if self.wordsize == 4 else 1
+
+                    self.vsAddField("genflags", v_uint8())  # 0x0c
+                    self.vsAddField("lflags", v_uint16(bigend=True))
                     self.vsAddField("database_change_count", v_uint8())
                     self.vsAddField("filetype", v_uint8())
 
-                    jump_size = 1 if self.wordsize == 4 else 2
+                    self.vsAddField("ostype", v_int8())
+                    self.vsAddField("apptype", v_int8())
+                    self.vsAddField("asmtype", v_int8())
+                    self.vsAddField("specsegs", v_uint8())
 
-                    self.vsAddField("unknown_1", v_uint32())  # 0x11
-                    self.vsAddField("unknown_2", v_uint32())
-                    self.vsAddField("unknown_3", v_bytes(size=2))
+                    self.vsAddField("unknown0", v_bytes(size=1))
+
+                    self.vsAddField("af", v_uint32(bigend=True))
+                    self.vsAddField("af2", v_uint8())
+
+                    self.vsAddField("unknown1", v_bytes(size=jump_size2))
+                    self.vsAddField("baseaddr", v_uint8())
+
+                    self.vsAddField("start_ss", v_word())
                     self.vsAddField("filler_0", v_bytes(size=jump_size))
-                    self.vsAddField("unknown_4", v_word())
-                    self.vsAddField("filler_01", v_bytes(size=jump_size))
-                    self.vsAddField("unknown_5", v_uint8())
+
+                    self.vsAddField("start_cs", v_uint8())
                     self.vsAddField("filler_1", v_bytes(size=jump_size))
 
                     # maybe it's just confusion, fill 1 byte 0xff
                     self.vsAddField("start_ip", v_uint32(bigend=True))  # 0x23
-                    self.vsAddField("filler_2", v_bytes(size=jump_size))  # 0x23
+                    self.vsAddField("filler_2", v_bytes(size=jump_size))
                     self.vsAddField("begin_ea", v_uint32(bigend=True))
                     self.vsAddField("filler_3", v_bytes(size=jump_size))
-
-                    self.vsAddField(
-                        "unknown_10", v_bytes(size=10 if self.wordsize == 4 else 20)
-                    )
-
+                    self.vsAddField("start_sp", v_word(bigend=True))
+                    self.vsAddField("filler_3", v_bytes(size=jump_size))
+                    self.vsAddField("main", v_word(bigend=True))
+                    self.vsAddField("filler_3", v_bytes(size=jump_size))
                     self.vsAddField("min_ea", v_uint32(bigend=True))  # 0x37
                     self.vsAddField("filler_4", v_bytes(size=jump_size))
                     self.vsAddField("max_ea", v_uint32(bigend=True))
@@ -633,23 +642,42 @@ class IdaInfo(vstruct.VStruct):
                     self.vsAddField("filler_8", v_bytes(size=jump_size))
                     self.vsAddField("highoff", v_uint32(bigend=True))
 
-                    if self.wordsize == 8:
-                        self.vsAddField("unknown_6", v_uint8())
-
+                    self.vsAddField("unknown2", v_bytes(size=jump_size2))
                     self.vsAddField("maxref", v_uint8())
 
-                    if self.wordsize == 4:
-                        self.vsAddField("unknown_7", v_bytes(size=0x10))
-                    elif self.wordsize == 8:
-                        self.vsAddField("unknown_8", v_bytes(size=0x14))
+                    self.vsAddField("unknown3", v_bytes(size=jump_size2))
+                    self.vsAddField("unknown4", v_bytes(size=jump_size))
 
-                    self.vsAddField("short_demnames", v_uint32(bigend=True))  # 0x65
+                    self.vsAddField("privrange_start_ea", v_uint32(bigend=True))
+                    self.vsAddField("privrange_end_ea", v_uint32(bigend=True))
+
+                    self.vsAddField("unknown5", v_bytes(size=jump_size2))
+                    self.vsAddField("unknown6", v_bytes(size=jump_size2))
+
+                    self.vsAddField("netdelta", v_uint8())
+
+                    self.vsAddField("xrefnum", v_int8())
+                    self.vsAddField("type_xrefnum", v_int8())
+                    self.vsAddField("refcmtnum", v_uint8())
+                    self.vsAddField("xrefflag", v_uint8())
+                    self.vsAddField("max_autoname_len", v_uint8())
+                    self.vsAddField("nametype", v_uint8())
+
+                    self.vsAddField("short_demnames", v_uint32(bigend=True))
                     self.vsAddField("long_demnames", v_uint32(bigend=True))
 
-                    self.vsAddField("demnames", v_uint16(bigend=True))
+                    self.vsAddField("demnames", v_uint8())  # 0x6d
+                    self.vsAddField("listnames", v_uint8())
+                    self.vsAddField("indent", v_uint8())
+                    self.vsAddField("comments", v_uint8())
+                    self.vsAddField("margin", v_uint8())
+                    self.vsAddField("lenxref", v_uint8())
 
-                    self.vsAddField("unknown_9", v_bytes(size=9))
+                    self.vsAddField("outflags", v_uint16(bigend=True))
 
+                    self.vsAddField("cmtflg", v_uint8())
+                    self.vsAddField("limiter", v_uint8())
+                    self.vsAddField("bin_prefix_size", v_uint8())
                     self.vsAddField("prefflag", v_uint8())
 
                     self.vsAddField("strlit_flags", v_uint8())
@@ -660,12 +688,10 @@ class IdaInfo(vstruct.VStruct):
                     self.vsAddField("strlit_pref_size", v_uint8())
                     self.vsAddField("strlit_pref", v_str(16))
 
-                    if self.wordsize == 4:
-                        self.vsAddField("strlit_sernum", v_uint8())
-                        self.vsAddField("datatypes", v_uint8())
-                    elif self.wordsize == 8:
-                        self.vsAddField("strlit_sernum", v_uint16(bigend=True))
-                        self.vsAddField("datatypes", v_uint16(bigend=True))
+                    self.vsAddField("unknown7", v_bytes(size=jump_size2))
+                    self.vsAddField("strlit_sernum", v_uint8())
+                    self.vsAddField("unknown8", v_bytes(size=jump_size2))
+                    self.vsAddField("datatypes", v_uint8())
 
                     self.vsAddField("cc_id", v_uint8())
                     self.vsAddField("cc_cm", v_uint8())
@@ -677,6 +703,9 @@ class IdaInfo(vstruct.VStruct):
                     self.vsAddField("cc_size_l", v_uint8())
                     self.vsAddField("cc_size_ll", v_uint8())
                     self.vsAddField("cc_size_ldbl", v_uint8())
+
+                    self.vsAddField("abibits", v_uint8())
+                    self.vsAddField("appcall_options", v_uint8())
 
             # just for 7.0b
             elif self.tag == "ida":
@@ -727,7 +756,7 @@ class IdaInfo(vstruct.VStruct):
 
                 self.vsAddField("nametype", v_int8())
 
-                self.vsAddField("unknown_0", v_bytes(size=1))
+                self.vsAddField("unknown0", v_bytes(size=1))
 
                 self.vsAddField("short_demnames", v_uint32())  # 124
                 self.vsAddField("long_demnames", v_uint32())
@@ -748,7 +777,7 @@ class IdaInfo(vstruct.VStruct):
                 self.vsAddField("bin_prefix_size", v_int16())  # 146
 
                 # TODO: I guess there has a 16bytes offset here, because the back is right, but I am not sure if it is here
-                self.vsAddField("unknown_1", v_bytes(size=16))
+                self.vsAddField("unknown1", v_bytes(size=16))
 
                 # line prefix option.
                 # Disassembly ->
@@ -769,7 +798,7 @@ class IdaInfo(vstruct.VStruct):
                 self.vsAddField("strlit_sernum", v_uval_t())
                 self.vsAddField("datatypes", v_uval_t())
 
-                self.vsAddField("unknown_2", v_bytes(size=1))
+                self.vsAddField("unknown2", v_bytes(size=1))
 
                 self.vsAddField("cc_id", v_uint8())  # 180->197
                 self.vsAddField("cc_cm", v_uint8())
@@ -782,7 +811,7 @@ class IdaInfo(vstruct.VStruct):
                 self.vsAddField("cc_size_ll", v_uint8())
                 self.vsAddField("cc_size_ldbl", v_uint8())
 
-                self.vsAddField("unknown_3", v_bytes(size=2))  # 190->207
+                self.vsAddField("unknown3", v_bytes(size=2))  # 190->207
 
                 self.vsAddField("abibits", v_uint32())
                 # self.vsAddField("appcall_options", v_uint32())  # 213, but overflow(There are only 215 bytes)

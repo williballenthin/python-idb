@@ -70,6 +70,10 @@ def skip(*spec):
     return ("skip", spec)
 
 
+def if_exists(*spec):
+    return ("if_exists", spec)
+
+
 COMMON_FIXTURES = {
     (695, 32): load_idb(os.path.join(CD, "data", "v6.95", "x32", "kernel32.idb")),
     (695, 64): load_idb(os.path.join(CD, "data", "v6.95", "x64", "kernel32.i64")),
@@ -112,18 +116,11 @@ def kern32_test(specs=None):
     params = []
 
     for spec in specs:
-        if spec[0] == "xfail":
-            marks = pytest.mark.xfail
-            spec = spec[1]
-        elif spec[0] == "skip":
-            marks = pytest.mark.skip
-            spec = spec[1]
-        else:
-            marks = None
-
-        version = spec[0]
-        bitness = spec[1]
-        expected = spec[2]
+        print(spec)
+        print("\n")
+        version, bitness, expected = (
+            spec if isinstance(spec[0], float) or isinstance(spec[0], int) else spec[1]
+        )
 
         version_map = {
             500: "v5.0",
@@ -137,11 +134,29 @@ def kern32_test(specs=None):
             64: ("x64", "kernel32.i64"),
         }[bitness]
 
-        if (version, bitness) in COMMON_FIXTURES:
-            db = COMMON_FIXTURES[(version, bitness)]
+        path = os.path.join(CD, "data", sversion, sbitness, filename)
+        skipped = False
+
+        if spec[0] == "xfail":
+            marks = pytest.mark.xfail
+        elif spec[0] == "skip":
+            skipped = True
+            marks = pytest.mark.skip
+        elif spec[0] == "if_exists":
+            skipped = not os.path.exists(path)
+            marks = pytest.mark.skipif(
+                condition=skipped, reason="not exists idb file: " + path
+            )
         else:
-            path = os.path.join(CD, "data", sversion, sbitness, filename)
-            db = load_idb(path)
+            marks = None
+
+        if not skipped:
+            if (version, bitness) in COMMON_FIXTURES:
+                db = COMMON_FIXTURES[(version, bitness)]
+            else:
+                db = load_idb(path)
+        else:
+            db = None
 
         if marks:
             params.append(pytest.param(db, version, bitness, expected, marks=marks))

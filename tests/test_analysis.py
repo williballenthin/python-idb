@@ -627,9 +627,18 @@ def test_idainfo(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test(
-    [(720, 32, None), (720, 64, None),]
+    [
+        if_exists(720, 32, None),
+        if_exists(720, 64, None),
+        if_exists(730, 32, None),
+        if_exists(730, 64, None),
+        if_exists(740, 32, None),
+        if_exists(740, 64, None),
+        if_exists(750, 32, None),
+        if_exists(750, 64, None),
+    ]
 )
-def test_idainfo720(kernel32_idb, version, bitness, expected):
+def test_idainfo720plus(kernel32_idb, version, bitness, expected):
     idainfo = idb.analysis.Root(kernel32_idb).idainfo
 
     assert idainfo.tag == "IDA"
@@ -638,41 +647,13 @@ def test_idainfo720(kernel32_idb, version, bitness, expected):
 
     # Portable Executable (PE)
     assert idainfo.filetype == 11
-    # assert idainfo.af == 0xDFFFFFF7
+    assert idainfo.af in (0xFFFFFFF7, 0xDFFFFFF7)
     assert idainfo.strlit_break == ord("\n")
 
     assert idainfo.maxref == 16
-    # assert idainfo.netdelta == 0
-    # assert idainfo.xrefnum == 0
-    # assert idainfo.xrefflag == 0xF
-    # Visual C++
-    assert idainfo.cc_id == 0x01
-    assert idainfo.cc_size_i == 4
-    assert idainfo.cc_size_b == 1
-    assert idainfo.cc_size_l == 4
-    assert idainfo.cc_size_ll == 8
-    assert idainfo.cc_size_ldbl == 8
-
-
-@kern32_test(
-    [(730, 32, None), (730, 64, None),]
-)
-def test_idainfo730(kernel32_idb, version, bitness, expected):
-    idainfo = idb.analysis.Root(kernel32_idb).idainfo
-
-    assert idainfo.tag == "IDA"
-    assert idainfo.version == 700
-    assert idainfo.procname == "metapc"
-
-    # Portable Executable (PE)
-    assert idainfo.filetype == 11
-    # assert idainfo.af == 0xDFFFFFF7
-    assert idainfo.strlit_break == ord("\n")
-
-    assert idainfo.maxref == 16
-    # assert idainfo.netdelta == 0
-    # assert idainfo.xrefnum == 0
-    # assert idainfo.xrefflag == 0xF
+    assert idainfo.netdelta == 0
+    assert idainfo.xrefnum == 2
+    assert idainfo.xrefflag == 0xF
     # Visual C++
     assert idainfo.cc_id == 0x01
     assert idainfo.cc_size_i == 4
