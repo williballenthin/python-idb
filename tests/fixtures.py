@@ -116,8 +116,6 @@ def kern32_test(specs=None):
     params = []
 
     for spec in specs:
-        print(spec)
-        print("\n")
         version, bitness, expected = (
             spec if isinstance(spec[0], float) or isinstance(spec[0], int) else spec[1]
         )

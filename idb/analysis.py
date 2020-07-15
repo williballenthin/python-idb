@@ -621,7 +621,7 @@ class IdaInfo(vstruct.VStruct):
                     self.vsAddField("start_cs", v_uint8())
                     self.vsAddField("filler_1", v_bytes(size=jump_size))
 
-                    # maybe it's just confusion, fill 1 byte 0xff
+                    # maybe it's just confusion, fill 1 byte 0xff or 2 bytes b"\x00\xff"
                     self.vsAddField("start_ip", v_uint32(bigend=True))  # 0x23
                     self.vsAddField("filler_2", v_bytes(size=jump_size))
                     self.vsAddField("begin_ea", v_uint32(bigend=True))
