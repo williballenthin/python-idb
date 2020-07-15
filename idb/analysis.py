@@ -748,15 +748,14 @@ class IdaInfo(vstruct.VStruct):
                 self.vsAddField("xrefnum", v_int8())  # 116
                 self.vsAddField("type_xrefnum", v_int8())
                 self.vsAddField("refcmtnum", v_uint8())
-                # Cross-references Cross-references parts
-                # https://www.hex-rays.com/products/ida/support/sdkdoc/group___s_w___x.html
                 self.vsAddField("xrefflag", v_uint8())
 
                 self.vsAddField("max_autoname_len", v_uint16())  # 120
 
-                self.vsAddField("nametype", v_int8())
+                # maybe just ignore this
+                self.vsAddField("unknown1", v_bytes(size=17))
 
-                self.vsAddField("unknown0", v_bytes(size=1))
+                self.vsAddField("nametype", v_int8())
 
                 self.vsAddField("short_demnames", v_uint32())  # 124
                 self.vsAddField("long_demnames", v_uint32())
@@ -776,17 +775,8 @@ class IdaInfo(vstruct.VStruct):
 
                 self.vsAddField("bin_prefix_size", v_int16())  # 146
 
-                # TODO: I guess there has a 16bytes offset here, because the back is right, but I am not sure if it is here
-                self.vsAddField("unknown1", v_bytes(size=16))
-
-                # line prefix option.
-                # Disassembly ->
-                # https://www.hex-rays.com/products/ida/support/sdkdoc/group___p_r_e_f__.html
                 self.vsAddField("prefflag", v_uint8())  # 148
 
-                # string literal flags
-                # Strings ->
-                # https://www.hex-rays.com/products/ida/support/sdkdoc/group___s_t_r_f__.html
                 self.vsAddField("strlit_flags", v_uint8())  # 149->(149+16)=165
                 self.vsAddField("strlit_break", v_uint8())
                 self.vsAddField("strlit_zeroes", v_int8())
@@ -811,10 +801,10 @@ class IdaInfo(vstruct.VStruct):
                 self.vsAddField("cc_size_ll", v_uint8())
                 self.vsAddField("cc_size_ldbl", v_uint8())
 
-                self.vsAddField("unknown3", v_bytes(size=2))  # 190->207
+                self.vsAddField("unknown3", v_bytes(size=1))  # 190->207
 
                 self.vsAddField("abibits", v_uint32())
-                # self.vsAddField("appcall_options", v_uint32())  # 213, but overflow(There are only 215 bytes)
+                self.vsAddField("appcall_options", v_uint32())
 
     def pcb_procname_size(self):
         # 6.95 database upgraded to v7.0b
