@@ -403,6 +403,8 @@ class IdaInfo(vstruct.VStruct):
             self.wordsize = wordsize
         else:
             raise ValueError("unexpected wordsize")
+        self.sbytes = None
+        self.len_sbytes = 0
 
         """
         v7.0:
@@ -461,32 +463,33 @@ class IdaInfo(vstruct.VStruct):
 
     def pcb_version(self):
         # offsets to fields in <7.0 seem to be available here:
-        # https://github.com/idapython/src/blob/build-1.7.2/python/idc.py#L2591
+        # 6.95
+        # https://github.com/idapython/src/blob/31c7776117/python/idc.py#L2613
         # offsets to fields in latest(>7.0):
         # https://github.com/idapython/src/blob/master/python/idc.py#L1812
         v_word = v_uint32 if self.wordsize == 4 else v_uint64
         v_uval_t = v_uint32 if self.wordsize == 4 else v_uint64
         v_sval_t = v_int32 if self.wordsize == 4 else v_int64
-        v_ea_t = v_uint32
-        v_sel_t = v_uint32
+        v_ea_t = v_word
+        v_sel_t = v_word
 
-        if self.version < 700 and self.version >= 680:
-            self.vsAddField("lflags", v_uint8())
+        if 680 <= self.version < 700:
+            self.vsAddField("lflags", v_uint8())  # 0x0d
             self.vsAddField("demnames", v_uint8())
 
             self.vsAddField("filetype", v_int16())
 
-            self.vsAddField("fcoresize", v_word())
+            self.vsAddField("fcoresize", v_word())  # 0x11
             self.vsAddField("corestart", v_word())
 
-            self.vsAddField("ostype", v_int16())
+            self.vsAddField("ostype", v_int16())  # 0x19
             self.vsAddField("apptype", v_int16())
 
-            self.vsAddField("start_sp", v_word())
+            self.vsAddField("start_sp", v_word())  # 0x1d
 
-            self.vsAddField("af", v_uint16())  # Analysis Kernel options1+2
+            self.vsAddField("af", v_uint16())  # 0x21 Analysis Kernel options1+2
 
-            self.vsAddField("start_ip", v_word())
+            self.vsAddField("start_ip", v_word())  # 0x23
             self.vsAddField("begin_ea", v_word())
             self.vsAddField("min_ea", v_word())
             self.vsAddField("max_ea", v_word())
@@ -505,7 +508,7 @@ class IdaInfo(vstruct.VStruct):
             self.vsAddField("specsegs", v_int8())
             self.vsAddField("voids", v_int8())
 
-            self.vsAddField("unknown_0", v_bytes(size=1))
+            self.vsAddField("unknown0", v_bytes(size=1))
 
             self.vsAddField("showauto", v_int8())  # 80
             self.vsAddField("auto", v_int8())
@@ -532,26 +535,28 @@ class IdaInfo(vstruct.VStruct):
 
             self.vsAddField("asciipref", v_str(size=16))  # 102
 
-            self.vsAddField("asciisernum", v_word())
+            self.vsAddField("asciisernum", v_word())  # 118
 
-            self.vsAddField("asciizeroes", v_int8())
+            self.vsAddField("asciizeroes", v_int8())  # 122
 
-            self.vsAddField("unknown_1", v_bytes(size=3))
+            self.vsAddField("unknown1", v_bytes(size=2))  # 123
+
+            self.vsAddField("tribyte_order", v_uint8())  # 125
 
             self.vsAddField("mf", v_uint8())
             self.vsAddField("org", v_int8())
             self.vsAddField("assume", v_int8())
             self.vsAddField("checkarg", v_int8())
 
-            self.vsAddField("start_ss", v_word())
+            self.vsAddField("start_ss", v_word())  # 131
             self.vsAddField("start_cs", v_word())
             self.vsAddField("main", v_word())
-            self.vsAddField("short_dn", v_word())
+            self.vsAddField("short_dn", v_word())  # 143
             self.vsAddField("long_dn", v_word())
             self.vsAddField("datatypes", v_word())
             self.vsAddField("strtype", v_word())
 
-            self.vsAddField("af2", v_uint16())
+            self.vsAddField("af2", v_uint16())  # 159
             self.vsAddField("namelen", v_uint16())
             self.vsAddField("margin", v_uint16())
             self.vsAddField("lenxref", v_uint16())
@@ -572,109 +577,234 @@ class IdaInfo(vstruct.VStruct):
             self.vsAddField("change_counter", v_uint32())
 
             self.vsAddField("sizeof_ldbl", v_uint8())
-        elif self.version >= 700:
-            self.vsAddField("genflags", v_uint16())
-            self.vsAddField("lflags", v_uint32())
-            self.vsAddField("database_change_count", v_uint32())
 
-            self.vsAddField("filetype", v_int16())
-            self.vsAddField("ostype", v_int16())
-            self.vsAddField("apptype", v_int16())
+            self.vsAddField("unknown2", v_bytes(size=4))
 
-            self.vsAddField("asmtype", v_int8())
-            self.vsAddField("specsegs", v_uint8())
-
-            self.vsAddField("af", v_uint32())  # Analysis Kernel options1+2
-            self.vsAddField("af2", v_uint32())  # unknown
-
-            self.vsAddField("baseaddr", v_uval_t())
-
-            self.vsAddField("start_ss", v_sel_t())
-            self.vsAddField("start_cs", v_sel_t())
-
-            self.vsAddField("start_ip", v_ea_t())
-            self.vsAddField("start_ea", v_ea_t())
-            self.vsAddField("start_sp", v_ea_t())
-            self.vsAddField("main", v_ea_t())
-            self.vsAddField("min_ea", v_ea_t())
-            self.vsAddField("max_ea", v_ea_t())
-            self.vsAddField("omin_ea", v_ea_t())
-            self.vsAddField("omax_ea", v_ea_t())
-            self.vsAddField("lowoff", v_ea_t())
-            self.vsAddField("highoff", v_ea_t())
-
-            self.vsAddField("maxref", v_uval_t())
-            self.vsAddField("privrange_start_ea", v_uval_t())
-            self.vsAddField("privrange_end_ea", v_uval_t())
-
-            self.vsAddField("netdelta", v_sval_t())
-
-            self.vsAddField("xrefnum", v_int8())
-            self.vsAddField("type_xrefnum", v_int8())
-            self.vsAddField("refcmtnum", v_uint8())
-            # Cross-references Cross-references parts
-            # https://www.hex-rays.com/products/ida/support/sdkdoc/group___s_w___x.html
-            self.vsAddField("xrefflag", v_uint8())
-
-            self.vsAddField("max_autoname_len", v_uint16())
-
-            self.vsAddField("nametype", v_int8())
-
-            self.vsAddField("short_demnames", v_uint32())
-            self.vsAddField("long_demnames", v_uint32())
-
-            self.vsAddField("demnames", v_uint8())
-            self.vsAddField("listnames", v_uint8())
-            self.vsAddField("indent", v_uint8())
-            self.vsAddField("comment", v_uint8())
-
-            self.vsAddField("margin", v_uint16())
-            self.vsAddField("lenxref", v_uint16())
-
-            self.vsAddField("outflags", v_uint32())
-
-            self.vsAddField("cmtflg", v_uint8())
-            self.vsAddField("limiter", v_uint8())
-
-            self.vsAddField("bin_prefix_size", v_int16())
-
-            # line prefix option.
-            # Disassembly ->
-            # https://www.hex-rays.com/products/ida/support/sdkdoc/group___p_r_e_f__.html
-            self.vsAddField("prefflag", v_uint8())
-
-            # string literal flags
-            # Strings ->
-            # https://www.hex-rays.com/products/ida/support/sdkdoc/group___s_t_r_f__.html
-            self.vsAddField("strlit_flags", v_uint8())
-            self.vsAddField("strlit_break", v_uint8())
-            self.vsAddField("strlit_zeroes", v_int8())
-
-            self.vsAddField("strtype", v_int32())
-
-            self.vsAddField("strlit_pref", v_str(16))
-
-            self.vsAddField("strlit_sernum", v_uval_t())
-            self.vsAddField("datatypes", v_uval_t())
-
-            self.vsAddField("cc_id", v_uint8())
-            self.vsAddField("cc_cm", v_uint8())
-            self.vsAddField("cc_size_i", v_uint8())
-            self.vsAddField("cc_size_b", v_uint8())
-            self.vsAddField("cc_size_e", v_uint8())
-            self.vsAddField("cc_defalign", v_uint8())
-            self.vsAddField("cc_size_s", v_uint8())
-            self.vsAddField("cc_size_l", v_uint8())
-            self.vsAddField("cc_size_ll", v_uint8())
-            self.vsAddField("cc_size_ldbl", v_uint8())
+            self.vsAddField("abiname", v_str(size=16))
 
             self.vsAddField("abibits", v_uint32())
-            self.vsAddField("appcall_options", v_uint32())
+            self.vsAddField("refcmts", v_uint8())
+        elif self.version == 700:
+            if self.tag == "IDA":
+                # we have a single byte that describes how long the procname is.
+                self["procname_size"].vsSetLength(0x1)
 
-        # 6.95 database upgraded to v7.0b
-        # we have a single byte that describes how long the procname is.
-        if self.tag == "IDA" and self.version == 700:
-            self["procname_size"].vsSetLength(0x1)
+                # multibitness.idb
+                if self.len_sbytes == 119:
+                    pass
+                # 7.20 <= ver <= 7.50?
+                elif self.len_sbytes in (141, 172):
+                    jump_size = 1 if self.wordsize == 4 else 2
+                    jump_size2 = 0 if self.wordsize == 4 else 1
+
+                    self.vsAddField("genflags", v_uint8())  # 0x0c
+                    self.vsAddField("lflags", v_uint16(bigend=True))
+                    self.vsAddField("database_change_count", v_uint8())
+                    self.vsAddField("filetype", v_uint8())
+
+                    self.vsAddField("ostype", v_int8())
+                    self.vsAddField("apptype", v_int8())
+                    self.vsAddField("asmtype", v_int8())
+                    self.vsAddField("specsegs", v_uint8())
+
+                    self.vsAddField("unknown0", v_bytes(size=1))
+
+                    self.vsAddField("af", v_uint32(bigend=True))
+                    self.vsAddField("af2", v_uint8())
+
+                    self.vsAddField("unknown1", v_bytes(size=jump_size2))
+                    self.vsAddField("baseaddr", v_uint8())
+
+                    self.vsAddField("start_ss", v_word())
+                    self.vsAddField("filler_0", v_bytes(size=jump_size))
+
+                    self.vsAddField("start_cs", v_uint8())
+                    self.vsAddField("filler_1", v_bytes(size=jump_size))
+
+                    # maybe it's just confusion, fill 1 byte 0xff or 2 bytes b"\x00\xff"
+                    self.vsAddField("start_ip", v_uint32(bigend=True))  # 0x23
+                    self.vsAddField("filler_2", v_bytes(size=jump_size))
+                    self.vsAddField("begin_ea", v_uint32(bigend=True))
+                    self.vsAddField("filler_3", v_bytes(size=jump_size))
+                    self.vsAddField("start_sp", v_word(bigend=True))
+                    self.vsAddField("filler_3", v_bytes(size=jump_size))
+                    self.vsAddField("main", v_word(bigend=True))
+                    self.vsAddField("filler_3", v_bytes(size=jump_size))
+                    self.vsAddField("min_ea", v_uint32(bigend=True))  # 0x37
+                    self.vsAddField("filler_4", v_bytes(size=jump_size))
+                    self.vsAddField("max_ea", v_uint32(bigend=True))
+                    self.vsAddField("filler_5", v_bytes(size=jump_size))
+                    self.vsAddField("omin_ea", v_uint32(bigend=True))
+                    self.vsAddField("filler_6", v_bytes(size=jump_size))
+                    self.vsAddField("omax_ea", v_uint32(bigend=True))
+                    self.vsAddField("filler_7", v_bytes(size=jump_size))
+                    self.vsAddField("lowoff", v_uint32(bigend=True))
+                    self.vsAddField("filler_8", v_bytes(size=jump_size))
+                    self.vsAddField("highoff", v_uint32(bigend=True))
+
+                    self.vsAddField("unknown2", v_bytes(size=jump_size2))
+                    self.vsAddField("maxref", v_uint8())
+
+                    self.vsAddField("unknown3", v_bytes(size=jump_size2))
+                    self.vsAddField("unknown4", v_bytes(size=jump_size))
+
+                    self.vsAddField("privrange_start_ea", v_uint32(bigend=True))
+                    self.vsAddField("privrange_end_ea", v_uint32(bigend=True))
+
+                    self.vsAddField("unknown5", v_bytes(size=jump_size2))
+                    self.vsAddField("unknown6", v_bytes(size=jump_size2))
+
+                    self.vsAddField("netdelta", v_uint8())
+
+                    self.vsAddField("xrefnum", v_int8())
+                    self.vsAddField("type_xrefnum", v_int8())
+                    self.vsAddField("refcmtnum", v_uint8())
+                    self.vsAddField("xrefflag", v_uint8())
+                    self.vsAddField("max_autoname_len", v_uint8())
+                    self.vsAddField("nametype", v_uint8())
+
+                    self.vsAddField("short_demnames", v_uint32(bigend=True))
+                    self.vsAddField("long_demnames", v_uint32(bigend=True))
+
+                    self.vsAddField("demnames", v_uint8())  # 0x6d
+                    self.vsAddField("listnames", v_uint8())
+                    self.vsAddField("indent", v_uint8())
+                    self.vsAddField("comments", v_uint8())
+                    self.vsAddField("margin", v_uint8())
+                    self.vsAddField("lenxref", v_uint8())
+
+                    self.vsAddField("outflags", v_uint16(bigend=True))
+
+                    self.vsAddField("cmtflg", v_uint8())
+                    self.vsAddField("limiter", v_uint8())
+                    self.vsAddField("bin_prefix_size", v_uint8())
+                    self.vsAddField("prefflag", v_uint8())
+
+                    self.vsAddField("strlit_flags", v_uint8())
+                    self.vsAddField("strlit_break", v_uint8())
+                    self.vsAddField("strlit_zeroes", v_int8())
+
+                    self.vsAddField("strtype", v_uint8())
+                    self.vsAddField("strlit_pref_size", v_uint8())
+                    self.vsAddField("strlit_pref", v_str(16))
+
+                    self.vsAddField("unknown7", v_bytes(size=jump_size2))
+                    self.vsAddField("strlit_sernum", v_uint8())
+                    self.vsAddField("unknown8", v_bytes(size=jump_size2))
+                    self.vsAddField("datatypes", v_uint8())
+
+                    self.vsAddField("cc_id", v_uint8())
+                    self.vsAddField("cc_cm", v_uint8())
+                    self.vsAddField("cc_size_i", v_uint8())
+                    self.vsAddField("cc_size_b", v_uint8())
+                    self.vsAddField("cc_size_e", v_uint8())
+                    self.vsAddField("cc_defalign", v_uint8())
+                    self.vsAddField("cc_size_s", v_uint8())
+                    self.vsAddField("cc_size_l", v_uint8())
+                    self.vsAddField("cc_size_ll", v_uint8())
+                    self.vsAddField("cc_size_ldbl", v_uint8())
+
+                    self.vsAddField("abibits", v_uint8())
+                    self.vsAddField("appcall_options", v_uint8())
+
+            # just for 7.0b
+            elif self.tag == "ida":
+                self.vsAddField("genflags", v_uint16())
+                self.vsAddField("lflags", v_uint32())
+                self.vsAddField("database_change_count", v_uint32())
+
+                self.vsAddField("filetype", v_int16())
+                self.vsAddField("ostype", v_int16())
+                self.vsAddField("apptype", v_int16())
+
+                self.vsAddField("asmtype", v_int8())
+                self.vsAddField("specsegs", v_uint8())
+
+                self.vsAddField("af", v_uint32())  # Analysis Kernel options1+2
+                self.vsAddField("af2", v_uint32())
+
+                self.vsAddField("baseaddr", v_uval_t())  # 48
+
+                self.vsAddField("start_ss", v_sel_t())
+                self.vsAddField("start_cs", v_sel_t())
+
+                self.vsAddField("start_ip", v_ea_t())
+                self.vsAddField("start_ea", v_ea_t())
+                self.vsAddField("start_sp", v_ea_t())
+                self.vsAddField("main", v_ea_t())
+                self.vsAddField("min_ea", v_ea_t())
+                self.vsAddField("max_ea", v_ea_t())
+                self.vsAddField("omin_ea", v_ea_t())
+                self.vsAddField("omax_ea", v_ea_t())
+                self.vsAddField("lowoff", v_ea_t())
+                self.vsAddField("highoff", v_ea_t())
+
+                self.vsAddField("maxref", v_uval_t())
+                self.vsAddField("privrange_start_ea", v_uval_t())
+                self.vsAddField("privrange_end_ea", v_uval_t())
+
+                self.vsAddField("netdelta", v_sval_t())
+
+                self.vsAddField("xrefnum", v_int8())  # 116
+                self.vsAddField("type_xrefnum", v_int8())
+                self.vsAddField("refcmtnum", v_uint8())
+                self.vsAddField("xrefflag", v_uint8())
+
+                self.vsAddField("max_autoname_len", v_uint16())  # 120
+
+                # maybe just ignore this
+                self.vsAddField("unknown1", v_bytes(size=17))
+
+                self.vsAddField("nametype", v_int8())
+
+                self.vsAddField("short_demnames", v_uint32())  # 124
+                self.vsAddField("long_demnames", v_uint32())
+
+                self.vsAddField("demnames", v_uint8())  # 132
+                self.vsAddField("listnames", v_uint8())
+                self.vsAddField("indent", v_uint8())
+                self.vsAddField("comment", v_uint8())
+
+                self.vsAddField("margin", v_uint16())  # 136
+                self.vsAddField("lenxref", v_uint16())
+
+                self.vsAddField("outflags", v_uint32())  # 140
+
+                self.vsAddField("cmtflg", v_uint8())  # 144
+                self.vsAddField("limiter", v_uint8())
+
+                self.vsAddField("bin_prefix_size", v_int16())  # 146
+
+                self.vsAddField("prefflag", v_uint8())  # 148
+
+                self.vsAddField("strlit_flags", v_uint8())  # 149->(149+16)=165
+                self.vsAddField("strlit_break", v_uint8())
+                self.vsAddField("strlit_zeroes", v_int8())
+
+                self.vsAddField("strtype", v_int32())
+
+                self.vsAddField("strlit_pref", v_str(16))
+
+                self.vsAddField("strlit_sernum", v_uval_t())
+                self.vsAddField("datatypes", v_uval_t())
+
+                self.vsAddField("unknown2", v_bytes(size=1))
+
+                self.vsAddField("cc_id", v_uint8())  # 180->197
+                self.vsAddField("cc_cm", v_uint8())
+                self.vsAddField("cc_size_i", v_uint8())
+                self.vsAddField("cc_size_b", v_uint8())
+                self.vsAddField("cc_size_e", v_uint8())
+                self.vsAddField("cc_defalign", v_uint8())
+                self.vsAddField("cc_size_s", v_uint8())
+                self.vsAddField("cc_size_l", v_uint8())
+                self.vsAddField("cc_size_ll", v_uint8())
+                self.vsAddField("cc_size_ldbl", v_uint8())
+
+                self.vsAddField("unknown3", v_bytes(size=1))  # 190->207
+
+                self.vsAddField("abibits", v_uint32())
+                self.vsAddField("appcall_options", v_uint32())
 
     def pcb_procname_size(self):
         # 6.95 database upgraded to v7.0b
@@ -689,9 +819,17 @@ class IdaInfo(vstruct.VStruct):
         else:
             self["procname"].vsSetLength(16)
 
+    def pcb_strlit_pref_size(self):
+        self["strlit_pref"].vsSetLength(self.strlit_pref_size)
+
     @property
     def procName(self):
         return self.procname
+
+    def vsParse(self, sbytes, offset=0, fast=False):
+        self.sbytes = sbytes
+        self.len_sbytes = len(sbytes)
+        return super().vsParse(sbytes, offset, fast)
 
 
 Root = Analysis(
