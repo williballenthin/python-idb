@@ -4,16 +4,11 @@ lots of inspiration from: https://github.com/nlitsme/pyidbutil
 import abc
 import functools
 import logging
-import struct
 import zlib
 from collections import namedtuple
 
 import vstruct
-from vstruct.primitives import v_bytes
-from vstruct.primitives import v_uint16
-from vstruct.primitives import v_uint32
-from vstruct.primitives import v_uint64
-from vstruct.primitives import v_uint8
+from vstruct.primitives import *
 
 import idb
 import idb.netnode
@@ -1040,11 +1035,82 @@ class NAM(vstruct.VStruct):
         return struct.unpack(fmt, self.buffer[:size])
 
 
+class TILBucket(vstruct.VStruct):
+    def __init__(self, flags):
+        vstruct.VStruct.__init__(self)
+        self.ndefs = v_uint32()
+        self.size = v_uint32()
+
+        if flags & 0x1:
+            self.csize = v_uint32()
+        else:
+            self.csize = None
+
+        self.buf = v_bytes()
+
+    def pcb_size(self):
+        self["buf"].vsSetLength(self.size)
+
+    def pcb_csize(self):
+        if self.csize is not None:
+            self["buf"].vsSetLength(self.csize)
+
+    def pcb_buf(self):
+        if self.csize is not None:
+            self.vsSetField("buf", zlib.decompress(self.buf))
+
+
 class TIL(vstruct.VStruct):
     def __init__(self, buf=None, wordsize=4):
         vstruct.VStruct.__init__(self)
         self.wordsize = wordsize
         self.signature = v_bytes(size=0x06)
+
+        # https://github.com/aerosoul94/tilutil/blob/master/distil.py#L545
+
+        self.format = v_uint32()
+        self.flags = v_uint32()
+
+        self.title_len = v_uint8()
+        self.title = v_bytes()
+
+        self.base_len = v_uint8()
+        self.base = v_bytes()
+
+        self.id = v_uint8()
+        self.cm = v_uint8()
+        self.size_i = v_uint8()
+        self.size_b = v_uint8()
+        self.size_e = v_uint8()
+        self.def_align = v_uint8()
+
+        # self.size_s = None
+        # self.size_l = None
+        # self.size_ll = None
+        # self.size_ldbl = None
+        #
+        # self.syms_bucket = None
+        # self.types_bucket = None
+        # self.macros_bucket = None
+
+    def pcb_flags(self):
+        if self.flags & 0x4:
+            self.vsAddField("size_s", v_uint8())
+            self.vsAddField("size_l", v_uint8())
+            self.vsAddField("size_ll", v_uint8())
+
+        if self.flags & 0x100:
+            self.vsAddField("size_ldbl", v_uint8())
+
+        self.vsAddField("syms_bucket", TILBucket(flags=self.flags))
+        self.vsAddField("types_bucket", TILBucket(flags=self.flags))
+        self.vsAddField("macros_bucket", TILBucket(flags=self.flags))
+
+    def pcb_title_len(self):
+        self["title"].vsSetLength(self.title_len)
+
+    def pcb_base_len(self):
+        self["base"].vsSetLength(self.base_len)
 
     def validate(self):
         if self.signature != b"IDATIL":

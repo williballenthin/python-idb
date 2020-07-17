@@ -1,10 +1,8 @@
 import binascii
 
-import pytest
-from fixtures import *
-
 import idb.fileformat
 import idb.netnode
+from fixtures import *
 
 
 def h2b(somehex):
@@ -558,3 +556,16 @@ def test_nam_names(kernel32_idb, version, bitness, expected):
     assert len(names) == expected
     assert names[0] == 0x68901010
     assert names[-1] == 0x689DE228
+
+
+@kern32_test(
+    [(695, 32, None), (695, 64, None), (700, 32, None), (700, 64, None),]
+)
+def test_til(kernel32_idb, version, bitness, expected):
+    til = kernel32_idb.til
+
+    assert til.signature == b"IDATIL"
+
+    assert til.size_i == 4
+    assert til.size_b == 1
+    assert til.size_e == 4
