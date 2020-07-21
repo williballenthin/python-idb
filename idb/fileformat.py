@@ -1035,17 +1035,6 @@ class NAM(vstruct.VStruct):
         return struct.unpack(fmt, self.buffer[:size])
 
 
-TIL_ZIP = 0x0001  # pack buckets using zip
-TIL_MAC = 0x0002  # til has macro table
-TIL_ESI = 0x0004  # extended sizeof info (short, long, longlong)
-TIL_UNI = 0x0008  # universal til for any compiler
-TIL_ORD = 0x0010  # type ordinal numbers are present
-TIL_ALI = 0x0020  # type aliases are present (this bit is used only on the disk)
-TIL_MOD = 0x0040  # til has been modified, should be saved
-TIL_STM = 0x0080  # til has extra streams
-TIL_SLD = 0x0100  # sizeof(long double)
-
-
 class TILTypeInfo(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
@@ -1065,7 +1054,7 @@ class TILTypeInfo(vstruct.VStruct):
         if self.flags >> 31:
             self.vsSetField("ordinal", v_uint64())
         if self.flags not in (0x7FFFFFFF, 0xFFFFFFFF):
-            raise Exception("unsupported format")
+            raise Exception("unsupported format {}".format(self.flags))
 
 
 class TILBucket(vstruct.VStruct):
@@ -1073,7 +1062,6 @@ class TILBucket(vstruct.VStruct):
         vstruct.VStruct.__init__(self)
 
         self.flags = flags
-        self.defs = None
 
         self.ndefs = v_uint32()
         self.size = v_uint32()
@@ -1108,6 +1096,17 @@ class TILBucket(vstruct.VStruct):
             defs.append(_def)
 
         self.defs = defs
+
+
+TIL_ZIP = 0x0001  # pack buckets using zip
+TIL_MAC = 0x0002  # til has macro table
+TIL_ESI = 0x0004  # extended sizeof info (short, long, longlong)
+TIL_UNI = 0x0008  # universal til for any compiler
+TIL_ORD = 0x0010  # type ordinal numbers are present
+TIL_ALI = 0x0020  # type aliases are present (this bit is used only on the disk)
+TIL_MOD = 0x0040  # til has been modified, should be saved
+TIL_STM = 0x0080  # til has extra streams
+TIL_SLD = 0x0100  # sizeof(long double)
 
 
 class TIL(vstruct.VStruct):
@@ -1153,8 +1152,9 @@ class TIL(vstruct.VStruct):
             self.vsAddField("size_ldbl", v_uint8())
 
         self.vsAddField("syms", TILBucket(flags=self.flags))
-        # self.vsAddField("types", TILBucket(flags=self.flags))
-        # self.vsAddField("macros", TILBucket(flags=self.flags))
+        self.vsAddField("unknown0", v_uint32())
+        self.vsAddField("types", TILBucket(flags=self.flags))
+        self.vsAddField("macros", TILBucket(flags=self.flags))
 
     def pcb_title_len(self):
         self["title"].vsSetLength(self.title_len)
