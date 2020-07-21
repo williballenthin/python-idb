@@ -1062,6 +1062,7 @@ class TILBucket(vstruct.VStruct):
         vstruct.VStruct.__init__(self)
 
         self.flags = flags
+        self.defs = None
 
         self.ndefs = v_uint32()
         self.size = v_uint32()
@@ -1095,7 +1096,7 @@ class TILBucket(vstruct.VStruct):
             offset = _def.vsParse(buf, offset=offset)
             defs.append(_def)
 
-        self.vsAddField("defs", defs)
+        self.defs = defs
 
 
 TIL_ZIP = 0x0001  # pack buckets using zip
