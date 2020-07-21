@@ -34,7 +34,7 @@ else:
 
 setup(
     name="python-idb",
-    version="0.5.0",
+    version="0.6.0",
     description="Pure Python parser for IDA Pro databases (.idb files)",
     author="Willi Ballenthin",
     author_email="willi.ballenthin@gmail.com",
