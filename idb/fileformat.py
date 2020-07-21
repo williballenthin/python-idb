@@ -1035,13 +1035,50 @@ class NAM(vstruct.VStruct):
         return struct.unpack(fmt, self.buffer[:size])
 
 
+TIL_ZIP = 0x0001  # pack buckets using zip
+TIL_MAC = 0x0002  # til has macro table
+TIL_ESI = 0x0004  # extended sizeof info (short, long, longlong)
+TIL_UNI = 0x0008  # universal til for any compiler
+TIL_ORD = 0x0010  # type ordinal numbers are present
+TIL_ALI = 0x0020  # type aliases are present (this bit is used only on the disk)
+TIL_MOD = 0x0040  # til has been modified, should be saved
+TIL_STM = 0x0080  # til has extra streams
+TIL_SLD = 0x0100  # sizeof(long double)
+
+
+class TILTypeInfo(vstruct.VStruct):
+    def __init__(self):
+        vstruct.VStruct.__init__(self)
+
+        self.flags = v_uint32()
+        self.name = v_zstr()
+
+        self.ordinal = v_uint32()
+
+        self.type_info = v_zstr()
+        self.cmt = v_zstr()
+        self.fields = v_zstr()
+        self.fieldscmts = v_zstr()
+        self.sclass = v_zstr()
+
+    def pcb_flags(self):
+        if self.flags >> 31:
+            self.vsSetField("ordinal", v_uint64())
+        if self.flags not in (0x7FFFFFFF, 0xFFFFFFFF):
+            raise Exception("unsupported format")
+
+
 class TILBucket(vstruct.VStruct):
     def __init__(self, flags):
         vstruct.VStruct.__init__(self)
+
+        self.flags = flags
+        self.defs = None
+
         self.ndefs = v_uint32()
         self.size = v_uint32()
 
-        if flags & 0x1:
+        if self.flags & TIL_ZIP:
             self.csize = v_uint32()
         else:
             self.csize = None
@@ -1057,7 +1094,20 @@ class TILBucket(vstruct.VStruct):
 
     def pcb_buf(self):
         if self.csize is not None:
-            self.vsSetField("buf", zlib.decompress(self.buf))
+            buf = zlib.decompress(self.buf)
+            self.vsSetField("buf", buf)
+        else:
+            buf = self.buf.tobytes() if isinstance(self.buf, memoryview) else self.buf
+
+        defs = []
+        offset = 0
+
+        for _ in range(self.ndefs):
+            _def = TILTypeInfo()
+            offset = _def.vsParse(buf, offset=offset)
+            defs.append(_def)
+
+        self.defs = defs
 
 
 class TIL(vstruct.VStruct):
@@ -1094,17 +1144,17 @@ class TIL(vstruct.VStruct):
         # self.macros_bucket = None
 
     def pcb_flags(self):
-        if self.flags & 0x4:
+        if self.flags & TIL_ESI:
             self.vsAddField("size_s", v_uint8())
             self.vsAddField("size_l", v_uint8())
             self.vsAddField("size_ll", v_uint8())
 
-        if self.flags & 0x100:
+        if self.flags & TIL_SLD:
             self.vsAddField("size_ldbl", v_uint8())
 
-        self.vsAddField("syms_bucket", TILBucket(flags=self.flags))
-        self.vsAddField("types_bucket", TILBucket(flags=self.flags))
-        self.vsAddField("macros_bucket", TILBucket(flags=self.flags))
+        self.vsAddField("syms", TILBucket(flags=self.flags))
+        # self.vsAddField("types", TILBucket(flags=self.flags))
+        # self.vsAddField("macros", TILBucket(flags=self.flags))
 
     def pcb_title_len(self):
         self["title"].vsSetLength(self.title_len)
