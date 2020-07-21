@@ -6,8 +6,6 @@ from fixtures import *
 import idb.fileformat
 import idb.netnode
 
-slow = pytest.mark.skipif(not runslow, reason="need --runslow option to run")
-
 
 def h2b(somehex):
     """
@@ -449,7 +447,7 @@ def test_cursor_complex_leaf_prev(kernel32_idb, version, bitness, expected):
     assert b2h(cursor.key) == "2eff00002253689bea8e"
 
 
-@slow
+@pytest.mark.slow
 @kern32_test()
 def test_cursor_enum_all_asc(kernel32_idb, version, bitness, expected):
     minkey = kernel32_idb.id0.get_min().key
@@ -465,7 +463,7 @@ def test_cursor_enum_all_asc(kernel32_idb, version, bitness, expected):
     assert kernel32_idb.id0.record_count == count
 
 
-@slow
+@pytest.mark.slow
 @kern32_test()
 def test_cursor_enum_all_desc(kernel32_idb, version, bitness, expected):
     maxkey = kernel32_idb.id0.get_max().key

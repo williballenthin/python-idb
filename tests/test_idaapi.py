@@ -5,8 +5,6 @@ from fixtures import *
 
 import idb
 
-slow = pytest.mark.skipif(not runslow, reason="need --runslow option to run")
-
 
 def pluck(prop, s):
     """
@@ -545,7 +543,7 @@ def test_function_names(kernel32_idb, version, bitness, expected):
         _ = api.idc.GetFunctionName(0x689018E5)
 
 
-@slow
+@pytest.mark.slow
 @kern32_test()
 def test_all_function_names(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
@@ -573,7 +571,7 @@ def test_comments(kernel32_idb, version, bitness, expected):
     assert api.idc.GetCommentEx(0x689023B4, True) == "jumptable 6892FF97 default case"
 
 
-@slow
+@pytest.mark.slow
 @kern32_test(
     [
         (695, 32, (13369, 283)),

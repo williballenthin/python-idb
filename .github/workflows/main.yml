@@ -33,5 +33,9 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
+          set -e
           find . -name \*.py -exec pycodestyle --ignore=E501 {} \;
-          find . -name test\*py -exec py.test {} -v --cov=idb \;
+          for f in $(find . -name test\*py)
+          do
+            py.test -v --cov=idb $f
+          done

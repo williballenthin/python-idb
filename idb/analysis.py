@@ -829,7 +829,7 @@ class IdaInfo(vstruct.VStruct):
     def vsParse(self, sbytes, offset=0, fast=False):
         self.sbytes = sbytes
         self.len_sbytes = len(sbytes)
-        return super().vsParse(sbytes, offset, fast)
+        return vstruct.VStruct.vsParse(self, sbytes, offset, fast)
 
 
 Root = Analysis(
