@@ -1095,7 +1095,7 @@ class TILBucket(vstruct.VStruct):
             offset = _def.vsParse(buf, offset=offset)
             defs.append(_def)
 
-        self.defs = defs
+        self.vsAddField("defs", defs)
 
 
 TIL_ZIP = 0x0001  # pack buckets using zip
@@ -1132,15 +1132,6 @@ class TIL(vstruct.VStruct):
         self.size_b = v_uint8()
         self.size_e = v_uint8()
         self.def_align = v_uint8()
-
-        # self.size_s = None
-        # self.size_l = None
-        # self.size_ll = None
-        # self.size_ldbl = None
-        #
-        # self.syms_bucket = None
-        # self.types_bucket = None
-        # self.macros_bucket = None
 
     def pcb_flags(self):
         if self.flags & TIL_ESI:
