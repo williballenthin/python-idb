@@ -1,4 +1,5 @@
 import binascii
+import re
 
 import idb.fileformat
 import idb.netnode
@@ -569,3 +570,74 @@ def test_til(kernel32_idb, version, bitness, expected):
     assert til.size_i == 4
     assert til.size_b == 1
     assert til.size_e == 4
+
+    # kernel32.idc from "dump typeinfo to idc file"
+
+    # enum
+    enums = til.syms.defs
+    assert len(enums) == 61
+    # id = add_enum(-1, "JOBOBJECTINFOCLASS", 0x1100000);
+    # add_enum_member(id, "JobObjectBasicAccountingInformation", 0X1, -1);
+    # add_enum_member(id, "JobObjectBasicLimitInformation", 0X2, -1);
+    # add_enum_member(id, "JobObjectBasicProcessIdList", 0X3, -1);
+    # add_enum_member(id, "JobObjectBasicUIRestrictions", 0X4, -1);
+    # add_enum_member(id, "JobObjectSecurityLimitInformation", 0X5, -1);
+    # add_enum_member(id, "JobObjectEndOfJobTimeInformation", 0X6, -1);
+    # add_enum_member(id, "JobObjectAssociateCompletionPortInformation", 0X7, -1);
+    # add_enum_member(id, "MaxJobObjectInfoClass", 0X8, -1);
+    assert enums[0].name == "JobObjectBasicAccountingInformation"
+    assert enums[1].name == "JobObjectBasicLimitInformation"
+    assert enums[2].name == "JobObjectBasicProcessIdList"
+    assert enums[3].name == "JobObjectBasicUIRestrictions"
+    assert enums[4].name == "JobObjectSecurityLimitInformation"
+    assert enums[5].name == "JobObjectEndOfJobTimeInformation"
+    assert enums[6].name == "JobObjectAssociateCompletionPortInformation"
+    assert enums[7].name == "MaxJobObjectInfoClass"
+
+    assert enums[0].ordinal == 0x1
+    assert enums[1].ordinal == 0x2
+    assert enums[2].ordinal == 0x3
+    assert enums[3].ordinal == 0x4
+    assert enums[4].ordinal == 0x5
+    assert enums[5].ordinal == 0x6
+    assert enums[6].ordinal == 0x7
+    assert enums[7].ordinal == 0x8
+
+    assert enums[0].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert enums[1].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert enums[2].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert enums[3].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert enums[4].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert enums[5].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert enums[6].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert enums[7].type_info == "=\x14_JOBOBJECTINFOCLASS"
+
+    # struct
+    structs = til.types.defs
+    assert len(structs) == 106
+
+    def get_struct_fields(struct):
+        return re.split(r"\W", struct.fields)[1:]
+
+    # id = get_struc_id("GUID");
+    # mid = add_struc_member(id, "Data1", 0, 0x20000400, -1, 4);
+    # mid = add_struc_member(id, "Data2", 0X4, 0x10000400, -1, 2);
+    # mid = add_struc_member(id, "Data3", 0X6, 0x10000400, -1, 2);
+    # mid = add_struc_member(id, "Data4", 0X8, 0x000400, -1, 8);
+    # set_struc_align(id, 2);
+    assert structs[0].name == "_GUID"
+    assert get_struct_fields(structs[0]) == ["Data1", "Data2", "Data3", "Data4"]
+    # TODO: don't known how to use the type_info field
+    # assert structs[0].type_info == '\x0d!$##\x1b\x09"'
+
+    # id = get_struc_id("_EH4_SCOPETABLE_RECORD");
+    # mid = add_struc_member(id, "EnclosingLevel", 0, 0x20000400, -1, 4);
+    # mid = add_struc_member(id, "FilterFunc", 0X4, 0x25500400, 0XFFFFFFFF, 4, 0XFFFFFFFF, 0, 0x000002);
+    # mid = add_struc_member(id, "HandlerFunc", 0X8, 0x25500400, 0XFFFFFFFF, 4, 0XFFFFFFFF, 0, 0x000002);
+    # set_struc_align(id, 2);
+    assert structs[2].name == "_EH4_SCOPETABLE_RECORD"
+    assert get_struct_fields(structs[2]) == [
+        "EnclosingLevel",
+        "FilterFunc",
+        "HandlerFunc",
+    ]
