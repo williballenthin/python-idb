@@ -1,5 +1,4 @@
 import binascii
-import re
 
 import idb.fileformat
 import idb.netnode
@@ -571,18 +570,14 @@ def test_til(kernel32_idb, version, bitness, expected):
     assert til.size_b == 1
     assert til.size_e == 4
 
-    types = til.types.defs
     syms = til.syms.defs
+    types = til.types.sorted_defs_by_ordinal
 
     assert len(types) == 106
     assert len(syms) == 61
 
-    def get_struct_fields(struct):
-        parts = re.split(r"\W", struct.fields)
-        return list(filter(lambda x: x != "", parts))
-
     # 1	GUID	typedef _GUID
-    assert types[1].name == "GUID"
+    assert types[0].name == "GUID"
     # 2
     # struct _GUID
     # {
@@ -591,13 +586,13 @@ def test_til(kernel32_idb, version, bitness, expected):
     #   unsigned __int16 Data3;
     #   unsigned __int8 Data4[8];
     # };
-    assert types[0].name == "_GUID"
-    assert get_struct_fields(types[0]) == ["Data1", "Data2", "Data3", "Data4"]
+    assert types[1].name == "_GUID"
+    assert types[1].parsed_fields == ["Data1", "Data2", "Data3", "Data4"]
     # TODO: don't known how to use the type_info field
-    # assert structs[0].type_info == '\x0d!$##\x1b\x09"'
+    # assert types[0].type_info == '\x0d!$##\x1b\x09"'
 
     # 5	JOBOBJECTINFOCLASS	typedef _JOBOBJECTINFOCLASS
-    assert types[5].name == "JOBOBJECTINFOCLASS"
+    assert types[4].name == "JOBOBJECTINFOCLASS"
     # 6
     # enum _JOBOBJECTINFOCLASS
     # {
@@ -610,8 +605,8 @@ def test_til(kernel32_idb, version, bitness, expected):
     #   JobObjectAssociateCompletionPortInformation = 0x7,
     #   MaxJobObjectInfoClass = 0x8,
     # };
-    assert types[4].name == "_JOBOBJECTINFOCLASS"
-    assert get_struct_fields(types[4]) == [
+    assert types[5].name == "_JOBOBJECTINFOCLASS"
+    assert types[5].parsed_fields == [
         "JobObjectBasicAccountingInformation",
         "JobObjectBasicLimitInformation",
         "JobObjectBasicProcessIdList",
@@ -650,7 +645,7 @@ def test_til(kernel32_idb, version, bitness, expected):
     assert syms[7].type_info == "=\x14_JOBOBJECTINFOCLASS"
 
     # 59	ULARGE_INTEGER	typedef _ULARGE_INTEGER
-    assert types[61].name == "ULARGE_INTEGER"
+    assert types[58].name == "ULARGE_INTEGER"
     # 60
     # union _ULARGE_INTEGER
     # {
@@ -662,8 +657,8 @@ def test_til(kernel32_idb, version, bitness, expected):
     #   _ULARGE_INTEGER::$0354AA9C204208F00D0965D07BBE7FAC u;
     #   ULONGLONG QuadPart;
     # };
-    assert types[60].name == "_ULARGE_INTEGER"
-    assert get_struct_fields(types[60]) == [
+    assert types[59].name == "_ULARGE_INTEGER"
+    assert types[59].parsed_fields == [
         "u",
         "QuadPart",
     ]
@@ -673,8 +668,105 @@ def test_til(kernel32_idb, version, bitness, expected):
     #   DWORD LowPart;
     #   DWORD HighPart;
     # };
-    assert types[58].name == "_ULARGE_INTEGER::$0354AA9C204208F00D0965D07BBE7FAC"
-    assert get_struct_fields(types[58]) == [
+    assert types[60].name == "_ULARGE_INTEGER::$0354AA9C204208F00D0965D07BBE7FAC"
+    assert types[60].parsed_fields == [
         "LowPart",
         "HighPart",
     ]
+
+
+def test_til_affix():
+    cd = os.path.dirname(__file__)
+    idbpath = os.path.join(cd, "data", "til", "TILTest.dll.i64")
+    with idb.from_file(idbpath) as db:
+        til = db.til
+        assert til.signature == b"IDATIL"
+        assert til.size_i == 4
+        assert til.size_b == 1
+        assert til.size_e == 4
+
+        syms = til.syms.defs
+        types = til.types.sorted_defs_by_ordinal
+
+        # 24
+        # class Base {
+        # public:
+        #     Base(const int32_t field0, const int32_t field1, const int32_t field2)
+        #             : field0_{field0},
+        #               field1_{field1},
+        #               field2_{field2} {
+        #     }
+        #
+        #     int32_t field0_, field1_, field2_;
+        #
+        #     int32_t foo() const { return field0_ + field1_; }
+        #
+        #     int32_t bar() const { return field1_ + field2_; }
+        # };
+        assert types[23].name == "Base"
+        assert types[23].parsed_fields == [
+            "field0_",
+            "field1_",
+            "field2_",
+        ]
+
+        # 25
+        # class Derive : Base {
+        # public:
+        #     Derive(const int32_t field0, const int32_t field1, const int32_t field2, int32_t field3, int32_t field4,
+        #            int32_t field5) : Base(field0, field1, field2), field3_(field3), field4_(field4), field5_(field5) {}
+        #
+        #     int32_t field3_, field4_, field5_;
+        # };
+        assert types[24].name == "Derive"
+        assert types[24].parsed_fields == [
+            "field3_",
+            "field4_",
+            "field5_",
+        ]
+
+        # struct Outside {
+        #     struct {
+        #         std::string field0, field1, field2;
+        #     } inside;
+        #
+        #     std::string foo;
+        #     std::string bar;
+        # };
+
+        # 34
+        assert types[33].name == "Outside::<unnamed_type_inside>"
+        assert types[33].parsed_fields == [
+            "field0",
+            "field1",
+            "field2",
+        ]
+        # 35
+        assert types[34].name == "Outside"
+        assert types[34].parsed_fields == [
+            "inside",
+            "foo",
+            "bar",
+        ]
+
+        # class Sorter {
+        # public:
+        #     virtual int compare(const void *first, const void *second) = 0;
+        # };
+
+        # 52
+        assert types[51].name == "Sorter"
+        assert types[51].parsed_fields == [
+            "__vftable",
+        ]
+        # 53
+        assert types[52].name == "Sorter_vtbl"
+        assert types[52].parsed_fields == [
+            "compare",
+            "this",
+        ]
+
+        # 209
+        # PTP_CLEANUP_GROUP_CANCEL_CALLBACK typedef void (__fastcall *)(void *, void *)
+        #
+        assert types[208].name == "PTP_CLEANUP_GROUP_CANCEL_CALLBACK"

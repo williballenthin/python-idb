@@ -4,8 +4,10 @@ lots of inspiration from: https://github.com/nlitsme/pyidbutil
 import abc
 import functools
 import logging
+import re
 import zlib
 from collections import namedtuple
+from functools import cached_property
 
 import vstruct
 from vstruct.primitives import *
@@ -1056,6 +1058,11 @@ class TILTypeInfo(vstruct.VStruct):
         if self.flags not in (0x7FFFFFFF, 0xFFFFFFFF):
             raise Exception("unsupported format {}".format(self.flags))
 
+    @cached_property
+    def parsed_fields(self):
+        parts = re.split(r"\W", self.fields)
+        return list(filter(lambda x: x != "", parts))
+
 
 class TILBucket(vstruct.VStruct):
     def __init__(self, flags):
@@ -1097,6 +1104,10 @@ class TILBucket(vstruct.VStruct):
             defs.append(_def)
 
         self.defs = defs
+
+    @cached_property
+    def sorted_defs_by_ordinal(self):
+        return sorted(self.defs, key=lambda x: x.ordinal)
 
 
 TIL_ZIP = 0x0001  # pack buckets using zip
