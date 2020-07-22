@@ -1,3 +1,4 @@
 six
 hexdump
 vivisect-vstruct-wb
+cached-property==1.5.1

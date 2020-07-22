@@ -7,9 +7,9 @@ import logging
 import re
 import zlib
 from collections import namedtuple
-from functools import cached_property
 
 import vstruct
+from cached_property import cached_property
 from vstruct.primitives import *
 
 import idb
