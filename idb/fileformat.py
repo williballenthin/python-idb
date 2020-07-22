@@ -1037,6 +1037,43 @@ class NAM(vstruct.VStruct):
         return struct.unpack(fmt, self.buffer[:size])
 
 
+class v_zbytes(v_prim):
+    """
+    A v_zbytes placeholder class which will automatically return
+    up to a null terminator bytes dynamically.
+    """
+
+    _vs_builder = True
+
+    def __init__(self, val=b""):
+        v_prim.__init__(self)
+        self.vsParse(val + b"\x00")
+
+    def vsParse(self, fbytes, offset=0):
+        nulloff = fbytes.find(b"\x00", offset)
+        if nulloff == -1:
+            raise Exception(self.__class__.__name__ + " found no NULL terminator!")
+
+        self._vs_value = fbytes[offset:nulloff]
+        self._vs_length = len(self._vs_value)
+        return nulloff + 1
+
+    def vsEmit(self):
+        return self._vs_value
+
+    def vsGetValue(self):
+        return self._vs_value
+
+    def vsSetValue(self, val):
+        self._vs_value = val
+        self._vs_length = len(self._vs_value)
+
+    def vsSetLength(self, size):
+        raise Exception(
+            "Cannot vsSetLength on {}! (its dynamic)".format(self.__class__.__name__)
+        )
+
+
 class TILTypeInfo(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
@@ -1046,7 +1083,7 @@ class TILTypeInfo(vstruct.VStruct):
 
         self.ordinal = v_uint32()
 
-        self.type_info = v_zstr()
+        self.type_info = v_zbytes()
         self.cmt = v_zstr()
         self.fields = v_zstr()
         self.fieldscmts = v_zstr()
@@ -1125,7 +1162,7 @@ class TIL(vstruct.VStruct):
     def __init__(self, buf=None, wordsize=4):
         vstruct.VStruct.__init__(self)
         self.wordsize = wordsize
-        self.signature = v_bytes(size=0x06)
+        self.signature = v_str(size=0x06)
 
         # https://github.com/aerosoul94/tilutil/blob/master/distil.py#L545
 
@@ -1133,10 +1170,10 @@ class TIL(vstruct.VStruct):
         self.flags = v_uint32()
 
         self.title_len = v_uint8()
-        self.title = v_bytes()
+        self.title = v_str()
 
         self.base_len = v_uint8()
-        self.base = v_bytes()
+        self.base = v_str()
 
         self.id = v_uint8()
         self.cm = v_uint8()
@@ -1165,8 +1202,12 @@ class TIL(vstruct.VStruct):
     def pcb_base_len(self):
         self["base"].vsSetLength(self.base_len)
 
+    def vsParse(self, sbytes, offset=0, fast=False):
+        sbytes = sbytes.tobytes() if isinstance(sbytes, memoryview) else sbytes
+        return vstruct.VStruct.vsParse(self, sbytes, offset, fast)
+
     def validate(self):
-        if self.signature != b"IDATIL":
+        if self.signature != "IDATIL":
             raise ValueError("bad signature")
         return True
 
