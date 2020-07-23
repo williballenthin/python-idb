@@ -635,14 +635,14 @@ def test_til(kernel32_idb, version, bitness, expected):
     assert syms[6].ordinal == 0x7
     assert syms[7].ordinal == 0x8
 
-    assert syms[0].type_info == b"=\x14_JOBOBJECTINFOCLASS"
-    assert syms[1].type_info == b"=\x14_JOBOBJECTINFOCLASS"
-    assert syms[2].type_info == b"=\x14_JOBOBJECTINFOCLASS"
-    assert syms[3].type_info == b"=\x14_JOBOBJECTINFOCLASS"
-    assert syms[4].type_info == b"=\x14_JOBOBJECTINFOCLASS"
-    assert syms[5].type_info == b"=\x14_JOBOBJECTINFOCLASS"
-    assert syms[6].type_info == b"=\x14_JOBOBJECTINFOCLASS"
-    assert syms[7].type_info == b"=\x14_JOBOBJECTINFOCLASS"
+    assert syms[0].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert syms[1].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert syms[2].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert syms[3].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert syms[4].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert syms[5].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert syms[6].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert syms[7].type_info == "=\x14_JOBOBJECTINFOCLASS"
 
     # 59	ULARGE_INTEGER	typedef _ULARGE_INTEGER
     assert types[58].name == "ULARGE_INTEGER"

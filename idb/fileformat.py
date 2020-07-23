@@ -1037,57 +1037,20 @@ class NAM(vstruct.VStruct):
         return struct.unpack(fmt, self.buffer[:size])
 
 
-class v_zbytes(v_prim):
-    """
-    A v_zbytes placeholder class which will automatically return
-    up to a null terminator bytes dynamically.
-    """
-
-    _vs_builder = True
-
-    def __init__(self, val=b""):
-        v_prim.__init__(self)
-        self.vsParse(val + b"\x00")
-
-    def vsParse(self, fbytes, offset=0):
-        nulloff = fbytes.find(b"\x00", offset)
-        if nulloff == -1:
-            raise Exception(self.__class__.__name__ + " found no NULL terminator!")
-
-        self._vs_value = fbytes[offset:nulloff]
-        self._vs_length = len(self._vs_value)
-        return nulloff + 1
-
-    def vsEmit(self):
-        return self._vs_value
-
-    def vsGetValue(self):
-        return self._vs_value
-
-    def vsSetValue(self, val):
-        self._vs_value = val
-        self._vs_length = len(self._vs_value)
-
-    def vsSetLength(self, size):
-        raise Exception(
-            "Cannot vsSetLength on {}! (its dynamic)".format(self.__class__.__name__)
-        )
-
-
 class TILTypeInfo(vstruct.VStruct):
     def __init__(self):
         vstruct.VStruct.__init__(self)
 
         self.flags = v_uint32()
-        self.name = v_zstr()
+        self.name = v_zstr_utf8()
 
         self.ordinal = v_uint32()
 
-        self.type_info = v_zbytes()
-        self.cmt = v_zstr()
-        self.fields = v_zstr()
-        self.fieldscmts = v_zstr()
-        self.sclass = v_zstr()
+        self.type_info = v_zstr_utf8()
+        self.cmt = v_zstr_utf8()
+        self.fields = v_zstr_utf8()
+        self.fieldscmts = v_zstr_utf8()
+        self.sclass = v_zstr_utf8()
 
     def pcb_flags(self):
         if self.flags >> 31:
@@ -1192,7 +1155,10 @@ class TIL(vstruct.VStruct):
             self.vsAddField("size_ldbl", v_uint8())
 
         self.vsAddField("syms", TILBucket(flags=self.flags))
-        self.vsAddField("unknown0", v_uint32())
+
+        if self.flags & TIL_ORD:
+            self.vsAddField("type_ordinal_numbers", v_uint32())
+
         self.vsAddField("types", TILBucket(flags=self.flags))
         self.vsAddField("macros", TILBucket(flags=self.flags))
 
