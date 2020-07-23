@@ -587,7 +587,7 @@ def test_til(kernel32_idb, version, bitness, expected):
     #   unsigned __int8 Data4[8];
     # };
     assert types[1].name == "_GUID"
-    assert types[1].parsed_fields == ["Data1", "Data2", "Data3", "Data4"]
+    assert types[1].fields == ["Data1", "Data2", "Data3", "Data4"]
     # TODO: don't known how to use the type_info field
     # assert types[0].type_info == '\x0d!$##\x1b\x09"'
 
@@ -606,7 +606,7 @@ def test_til(kernel32_idb, version, bitness, expected):
     #   MaxJobObjectInfoClass = 0x8,
     # };
     assert types[5].name == "_JOBOBJECTINFOCLASS"
-    assert types[5].parsed_fields == [
+    assert types[5].fields == [
         "JobObjectBasicAccountingInformation",
         "JobObjectBasicLimitInformation",
         "JobObjectBasicProcessIdList",
@@ -635,14 +635,14 @@ def test_til(kernel32_idb, version, bitness, expected):
     assert syms[6].ordinal == 0x7
     assert syms[7].ordinal == 0x8
 
-    assert syms[0].type_info == "=\x14_JOBOBJECTINFOCLASS"
-    assert syms[1].type_info == "=\x14_JOBOBJECTINFOCLASS"
-    assert syms[2].type_info == "=\x14_JOBOBJECTINFOCLASS"
-    assert syms[3].type_info == "=\x14_JOBOBJECTINFOCLASS"
-    assert syms[4].type_info == "=\x14_JOBOBJECTINFOCLASS"
-    assert syms[5].type_info == "=\x14_JOBOBJECTINFOCLASS"
-    assert syms[6].type_info == "=\x14_JOBOBJECTINFOCLASS"
-    assert syms[7].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert syms[0].type_info == b"=\x14_JOBOBJECTINFOCLASS"
+    assert syms[1].type_info == b"=\x14_JOBOBJECTINFOCLASS"
+    assert syms[2].type_info == b"=\x14_JOBOBJECTINFOCLASS"
+    assert syms[3].type_info == b"=\x14_JOBOBJECTINFOCLASS"
+    assert syms[4].type_info == b"=\x14_JOBOBJECTINFOCLASS"
+    assert syms[5].type_info == b"=\x14_JOBOBJECTINFOCLASS"
+    assert syms[6].type_info == b"=\x14_JOBOBJECTINFOCLASS"
+    assert syms[7].type_info == b"=\x14_JOBOBJECTINFOCLASS"
 
     # 59	ULARGE_INTEGER	typedef _ULARGE_INTEGER
     assert types[58].name == "ULARGE_INTEGER"
@@ -658,7 +658,7 @@ def test_til(kernel32_idb, version, bitness, expected):
     #   ULONGLONG QuadPart;
     # };
     assert types[59].name == "_ULARGE_INTEGER"
-    assert types[59].parsed_fields == [
+    assert types[59].fields == [
         "u",
         "QuadPart",
     ]
@@ -669,7 +669,7 @@ def test_til(kernel32_idb, version, bitness, expected):
     #   DWORD HighPart;
     # };
     assert types[60].name == "_ULARGE_INTEGER::$0354AA9C204208F00D0965D07BBE7FAC"
-    assert types[60].parsed_fields == [
+    assert types[60].fields == [
         "LowPart",
         "HighPart",
     ]
@@ -704,7 +704,7 @@ def test_til_affix():
         #     int32_t bar() const { return field1_ + field2_; }
         # };
         assert types[23].name == "Base"
-        assert types[23].parsed_fields == [
+        assert types[23].fields == [
             "field0_",
             "field1_",
             "field2_",
@@ -719,7 +719,7 @@ def test_til_affix():
         #     int32_t field3_, field4_, field5_;
         # };
         assert types[24].name == "Derive"
-        assert types[24].parsed_fields == [
+        assert types[24].fields == [
             "field3_",
             "field4_",
             "field5_",
@@ -736,14 +736,14 @@ def test_til_affix():
 
         # 34
         assert types[33].name == "Outside::<unnamed_type_inside>"
-        assert types[33].parsed_fields == [
+        assert types[33].fields == [
             "field0",
             "field1",
             "field2",
         ]
         # 35
         assert types[34].name == "Outside"
-        assert types[34].parsed_fields == [
+        assert types[34].fields == [
             "inside",
             "foo",
             "bar",
@@ -756,12 +756,12 @@ def test_til_affix():
 
         # 52
         assert types[51].name == "Sorter"
-        assert types[51].parsed_fields == [
+        assert types[51].fields == [
             "__vftable",
         ]
         # 53
         assert types[52].name == "Sorter_vtbl"
-        assert types[52].parsed_fields == [
+        assert types[52].fields == [
             "compare",
             "this",
         ]

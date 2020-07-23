@@ -6,7 +6,7 @@ from vstruct import VStruct
 from vstruct.primitives import v_prim
 
 import idb
-from idb.fileformat import TILBucket
+from idb.typeinf import TILBucket, TILTypeInfo
 
 
 class TILEncoder(json.JSONEncoder):
@@ -14,6 +14,10 @@ class TILEncoder(json.JSONEncoder):
         if isinstance(obj, TILBucket):
             _dict = {k: v for k, v in obj if k != "buf"}
             _dict["defs"] = obj.sorted_defs_by_ordinal
+            return _dict
+        elif isinstance(obj, TILTypeInfo):
+            _dict = {k: v for k, v in obj if k != "fields_buf"}
+            _dict["fields"] = obj.fields
             return _dict
         elif isinstance(obj, VStruct):
             return {k: v for k, v in obj}
