@@ -1,5 +1,5 @@
 import zlib
-from abc import ABC
+from abc import ABCMeta
 
 from cached_property import cached_property
 from vstruct import VStruct
@@ -415,14 +415,17 @@ def is_sdacl_byte(t):
     return ((t & ~TYPE_FLAGS_MASK) ^ TYPE_MODIF_MASK) <= BT_VOID
 
 
-class BaseTypeData(ABC, VStruct):
-    pass
+class BaseTypeData(VStruct):
+    __metaclass__ = ABCMeta
+
+    def __init__(self):
+        VStruct.__init__(self)
+        self.typ = v_uint8()
 
 
 class TypeData(BaseTypeData):
     def __init__(self):
-        VStruct.__init__(self)
-        self.typ = v_uint8()
+        BaseTypeData.__init__(self)
 
     def vsParse(self, sbytes, offset=0, fast=False):
         offset = VStruct.vsParse(self, sbytes, offset, fast)
@@ -609,13 +612,14 @@ class TILTypeInfo(VStruct):
 
     @cached_property
     def fields(self):
-        p_list = []
+        fields = []
         pos = 0
         while pos < len(self.fields_buf):
-            length = int.from_bytes(self.fields_buf[pos : pos + 1], byteorder="little")
-            p_list.append(self.fields_buf[pos + 1 : pos + length].decode("ascii"))
+            length = struct.unpack("<B", self.fields_buf[pos : pos + 1])[0]
+            fields.append(self.fields_buf[pos + 1 : pos + length].decode("ascii"))
             pos += length
-        return list(filter(lambda x: x != "", p_list))
+        fields = list(filter(lambda x: x != "", fields))
+        return fields
 
 
 class TILBucket(VStruct):
