@@ -1,5 +1,5 @@
 import zlib
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 
 from cached_property import cached_property
 from vstruct import VStruct
@@ -415,73 +415,220 @@ def is_sdacl_byte(t):
     return ((t & ~TYPE_FLAGS_MASK) ^ TYPE_MODIF_MASK) <= BT_VOID
 
 
-class BaseTypeData(VStruct):
+def is_type_closure(t):
+    return get_type_flags(t) & BTMT_CLOSURE
+
+
+class TypeString:
+    def __init__(self, buf, pos=0, parent=None):
+        self.buf = buf
+        self.pos = pos
+        self.parent = parent
+
+    def seek(self, n):
+        self.pos += n
+        if self.parent is not None:
+            self.parent.seek(n)
+        if self.pos > len(self.buf) or self.pos < 0:
+            raise OverflowError
+
+    def read(self, n):
+        val = self.buf[self.pos : self.pos + n]
+        self.seek(n)
+        return val
+
+    def unpack(self, unpack_fn, size=0):
+        ret = unpack_fn(self.buf[self.pos :])
+        if isinstance(ret, tuple):
+            ret, _size = ret
+            self.seek(_size if size == 0 else size)
+        else:
+            self.seek(size)
+        return ret
+
+    def peek_u8(self):
+        return struct.unpack("<B", self.buf[self.pos : self.pos + 1])[0]
+
+    def u8(self):
+        return struct.unpack("<B", self.read(1))[0]
+
+    def dt(self):
+        val = self.u8()
+        if val & 0x80:
+            val = val & 0x7F | self.u8() << 7
+        return val - 1
+
+    def de(self):
+        val = 0
+        while True:
+            b = self.u8()
+            hi = val << 6
+            sign = b & 0x80
+            if not sign:
+                lo = b & 0x3F
+            else:
+                lo = 2 * hi
+                hi = b & 0x7F
+            val = lo | hi
+            if not sign:
+                break
+        n = val & 0xFFFFFFFF
+        return n | (-(n & 0x80000000))
+
+    def da(self):
+        # TODO: da
+        return 0, 0, 0
+
+    def complex_n(self):
+        n = self.dt()
+        if n == 0x7FFE:
+            n = self.de()
+        return n
+
+    def pstring(self):
+        length = self.dt()
+        buf = self.read(length)
+        try:
+            return buf.decode("ascii")
+        except UnicodeDecodeError:
+            return buf
+
+    def type_attr(self):
+        val = 0
+        tah = self.u8()
+        tmp = ((tah & 1) | ((tah >> 3) & 6)) + 1
+        if is_tah_byte(tah) or tmp == 8:
+            if tmp == 8:
+                val = tmp
+            next_byte = self.u8()
+            shift = 0
+            while True:
+                val |= (next_byte & 0x7F) << shift
+                if next_byte & 0x80 == 0:
+                    break
+                shift += 7
+                next_byte = self.u8()
+                if next_byte == 0:
+                    raise ValueError("type_attr(): failed to parse")
+        unk = []
+        if val & TAH_HASATTRS:
+            val = self.dt()
+            for _ in range(val):
+                string = self.pstring()
+                self.dt()
+                unk.append(string)
+        return val
+
+    def tah_attr(self):
+        if is_tah_byte(self.peek_u8()):
+            return self.type_attr()
+
+    def sdacl_attr(self):
+        if is_sdacl_byte(self.peek_u8()):
+            return self.type_attr()
+
+    def get(self):
+        return TypeString(self.rest())
+
+    def ref(self):
+        return TypeString(self.rest(), parent=self)
+
+    def rest(self):
+        return self.buf[self.pos :]
+
+
+class TypeData:
     __metaclass__ = ABCMeta
 
-    def __init__(self):
-        VStruct.__init__(self)
-        self.typ = v_uint8()
-
-
-class TypeData(BaseTypeData):
-    def __init__(self):
-        BaseTypeData.__init__(self)
-
-    def vsParse(self, sbytes, offset=0, fast=False):
-        offset = VStruct.vsParse(self, sbytes, offset, fast)
-
-        impl = None
-        if is_typeid_last(self.typ):
-            impl = BasicTypeData()
-            impl.vsParse(sbytes)
-        elif is_type_ptr(self.typ):
-            impl = PointerTypeData()
-            impl.vsParse(sbytes)
-        elif is_type_func(self.typ):
-            impl = FuncTypeData()
-            impl.vsParse(sbytes)
-        elif is_type_array(self.typ):
-            impl = ArrayTypeData()
-            impl.vsParse(sbytes)
-        elif is_type_typedef(self.typ):
-            impl = TypedefTypeData()
-            impl.vsParse(sbytes)
-        elif is_type_struni(self.typ):
-            impl = UdtTypeData()
-            impl.vsParse(sbytes)
-        elif is_type_enum(self.typ):
-            impl = EnumTypeData()
-            impl.vsParse(sbytes)
-        elif is_type_bitfld(self.typ):
-            impl = BitfieldTypeData()
-            impl.vsParse(sbytes)
-        object.__setattr__(self, "impl", impl)
-        return offset
-
-
-class BasicTypeData(BaseTypeData):
-    def __init__(self):
-        BaseTypeData.__init__(self)
+    @abstractmethod
+    def deserialize(self, til, type_string, fields, fieldcmts):
         pass
 
+    @classmethod
+    def create_type_data(cls, til, type_info, fields=None, fieldcmts=None):
+        type_string = (
+            type_info if isinstance(type_info, TypeString) else TypeString(type_info)
+        )
+        typ = type_string.peek_u8()
+        type_data = None
+        if is_typeid_last(typ):
+            type_string.seek(1)
+            return BasicTypeData(typ)
 
-class PointerTypeData(BaseTypeData):
+        elif is_type_ptr(typ):
+            type_data = PointerTypeData()
+        elif is_type_func(typ):
+            type_data = FuncTypeData()
+        elif is_type_array(typ):
+            type_data = ArrayTypeData()
+        elif is_type_typedef(typ):
+            type_data = TypedefTypeData()
+        elif is_type_struni(typ):
+            type_data = UdtTypeData()
+        elif is_type_enum(typ):
+            type_data = EnumTypeData()
+        elif is_type_bitfld(typ):
+            type_data = BitfieldTypeData()
+        else:  # BT_RESERVED 0xF
+            return BasicTypeData(typ)
+        type_data.deserialize(til, type_string, fields, fieldcmts)
+        return type_data
+
+
+class BasicTypeData(TypeData):
+    def __init__(self, base_type=BT_UNK, type_details=0):
+        TypeData.__init__(self)
+        self.base_type = base_type
+        self.flags = 0
+        self.type_details = type_details
+
+    def deserialize(self, til, type_string, fields, fieldcmts):
+        raise NotImplementedError
+
+
+class PointerTypeData(TypeData):
     """Representation of ptr_type_data_t"""
 
     def __init__(self):
-        BaseTypeData.__init__(self)
+        TypeData.__init__(self)
         self.obj_type = None
         self.closure = None
         self.based_ptr_size = 0
         self.taptr_bits = 0
 
+    def deserialize(self, til, type_string, fields, fieldcmts):
+        typ = type_string.u8()
+        if is_type_closure(typ):
+            ptr_size = type_string.u8()
+            if ptr_size == RESERVED_BYTE:
+                self.closure = TypeData.create_type_data(til, type_string.ref())
+            else:
+                self.based_ptr_size = type_string.u8()
+        self.taptr_bits = type_string.tah_attr()
+        self.obj_type = TypeData.create_type_data(
+            til, type_string.ref(), fields, fieldcmts
+        )
+        return self
 
-class ArrayTypeData(BaseTypeData):
+
+class ArrayTypeData(TypeData):
     def __init__(self):
-        BaseTypeData.__init__(self)
+        TypeData.__init__(self)
         self.elem_type = None  # tinfo_t
         self.base = None
         self.n_elems = 0
+
+    def deserialize(self, til, type_string, fields, fieldcmts):
+        typ = type_string.u8()
+        if get_type_flags(typ) & BTMT_NONBASED:
+            self.base = 0
+            self.n_elems = type_string.dt()
+        else:
+            self.n_elems, self.base = type_string.da()
+        self.elem_type = TypeData.create_type_data(
+            til, type_string.get(), fields, fieldcmts
+        )
+        return self
 
 
 class FuncArg:
@@ -493,9 +640,9 @@ class FuncArg:
         self.flags = 0
 
 
-class FuncTypeData(BaseTypeData):
+class FuncTypeData(TypeData):
     def __init__(self):
-        BaseTypeData.__init__(self)
+        TypeData.__init__(self)
         self.args = []
         self.flags = 0
         self.rettype = None  # tinfo_t
@@ -503,6 +650,56 @@ class FuncTypeData(BaseTypeData):
         self.stkargs = None  # uval_t
         self.spoiled = None  # reginfovec_t
         self.cc = 0
+
+    def deserialize(self, til, type_string, fields, fieldcmts):
+        typ = type_string.u8()
+        cm = type_string.u8()
+        if (cm & CM_CC_MASK) == CM_CC_SPOILED:
+            pass
+        else:
+            self.flags = 0
+        self.cc = cm
+        self.flags |= 4 * get_type_flags(typ)
+        if type_string.peek_u8() == TAH_BYTE:
+            type_string.type_attr()
+        self.rettype = TypeData.create_type_data(
+            til, type_string.ref(), fields, fieldcmts
+        )
+        # TODO: fixme
+        # if (
+        #     self.cc == CM_CC_SPECIALE
+        #     or self.cc == CM_CC_SPECIALP
+        #     or self.cc == CM_CC_SPECIAL
+        # ):
+        #     if (self.rettype.base_type() & TYPE_FULL_MASK) == 1:
+        #         self.retloc = self.deserialize_argloc(type_string.get())
+        # if self.cc != CM_CC_VOIDARG:
+        #     n = type_string.dt()
+        #     if n > 256:
+        #         raise ValueError("invalid arg count!")
+        #     if n > 0:
+        #         for n in range(n):
+        #             arg = FuncArg()
+        #             if fields is not None:
+        #                 if n < len(fields):
+        #                     arg.name = fields[n]
+        #             fah = type_string.peek_u8()
+        #             if fah == FAH_BYTE:
+        #                 type_string.seek(1)
+        #                 arg.flags = type_string.de()
+        #             arg.type = TypeData.create_type_data(
+        #                 til, type_string.ref(), fields, fieldcmts
+        #             )
+        #             if (
+        #                 self.cc == CM_CC_SPECIALE
+        #                 or self.cc == CM_CC_SPECIALP
+        #                 or self.cc == CM_CC_SPECIAL
+        #             ):
+        #                 arg.argloc = self.deserialize_argloc(type_string.get())
+        return self
+
+    def deserialize_argloc(self, type_string):
+        raise NotImplementedError("extract_argloc() not implemented.")
 
 
 class UdtMember:
@@ -517,11 +714,11 @@ class UdtMember:
         self.fda = 0
 
 
-class UdtTypeData(BaseTypeData):
+class UdtTypeData(TypeData):
     """An object to represent struct or union types"""
 
     def __init__(self):
-        BaseTypeData.__init__(self)
+        TypeData.__init__(self)
         self.members = []
         self.total_size = 0
         self.unpadded_size = 0
@@ -531,6 +728,30 @@ class UdtTypeData(BaseTypeData):
         self.pack = 0
         self.is_union = False
 
+    def deserialize(self, til, type_string, fields, fieldcmts):
+        typ = type_string.u8()
+        n = type_string.complex_n()
+        if n == 0:
+            pass
+            # string = type_string.pstring()
+            # if len(string) > 1 and string[0] == "#":
+            #     return self
+            # TODO: Need to implement struct references
+        else:
+            alpow = n & 7
+            mcnt = n >> 3
+            self.pack = alpow
+            type_string.sdacl_attr()
+            for n in range(mcnt):
+                member = UdtMember()
+                member.type = TypeData.create_type_data(
+                    til, type_string.ref(), fields, fieldcmts
+                )
+                # TODO: fixme
+                # member.tafld_bits = type_string.sdacl_attr()
+                self.members.append(member)
+        return self
+
 
 class EnumMember:
     def __init__(self):
@@ -539,37 +760,53 @@ class EnumMember:
         self.value = 0
 
 
-class EnumTypeData(BaseTypeData):
+class EnumTypeData(TypeData):
     """Representation of enum_type_data_t"""
 
     def __init__(self):
-        BaseTypeData.__init__(self)
+        TypeData.__init__(self)
         self.group_sizes = None  # intvec_t
         self.taenum_bits = 0
         self.bte = 0
         self.members = []
 
+    def deserialize(self, til, type_string, fields, fieldcmts):
+        pass
+        # TODO: fixme
 
-class TypedefTypeData(BaseTypeData):
+
+class TypedefTypeData(TypeData):
     """Representation of typedef_type_data_t"""
 
     def __init__(self):
-        BaseTypeData.__init__(self)
+        TypeData.__init__(self)
         self.til = None
         self.name = None
         self.ordinal = 0
         self.is_ordref = False
         self.resolve = False
 
+    def deserialize(self, til, type_string, fields, fieldcmts):
+        self.til = til
+        typ = type_string.u8()
+        self.name = type_string.pstring()
+        if len(self.name) > 1 and self.name[0] == "#":
+            self.is_ordref = True
+        return self
 
-class BitfieldTypeData(BaseTypeData):
+
+class BitfieldTypeData(TypeData):
     """Representation of bitfield_type_data_t"""
 
     def __init__(self):
-        BaseTypeData.__init__(self)
+        TypeData.__init__(self)
         self.nbytes = 0
         self.width = 0
         self.is_unsigned = False
+
+    def deserialize(self, til, type_string, fields, fieldcmts):
+        pass
+        # TODO: fixme
 
 
 class v_zbytes(v_zstr):
@@ -605,8 +842,9 @@ class TILTypeInfo(VStruct):
 
     def vsParse(self, sbytes, offset=0, fast=False):
         offset = VStruct.vsParse(self, sbytes, offset, fast)
-        typ = TypeData()
-        typ.vsParse(self.type_info)
+        typ = TypeData.create_type_data(
+            self, self.type_info, self.fields, self.fieldcmts
+        )
         object.__setattr__(self, "typ", typ)
         return offset
 
