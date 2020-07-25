@@ -461,17 +461,17 @@ class TypeString:
     def de(self):
         val = 0
         while True:
-            b = self.u8()
             hi = val << 6
+            b = self.u8()
             sign = b & 0x80
             if not sign:
                 lo = b & 0x3F
+                val = lo | hi
+                break
             else:
                 lo = 2 * hi
                 hi = b & 0x7F
-            val = lo | hi
-            if not sign:
-                break
+                val = lo | hi
         n = val & 0xFFFFFFFF
         return n | (-(n & 0x80000000))
 
@@ -488,10 +488,12 @@ class TypeString:
     def pstring(self):
         length = self.dt()
         buf = self.read(length)
-        try:
-            return buf.decode("ascii")
-        except UnicodeDecodeError:
-            return buf
+        return buf.decode("ascii")
+
+    def pbytes(self):
+        length = self.dt()
+        buf = self.read(length)
+        return buf
 
     def type_attr(self):
         val = 0
@@ -757,10 +759,10 @@ class UdtTypeData(TypeData):
 
 
 class EnumMember:
-    def __init__(self):
-        self.name = None  # qstring
-        self.cmt = None  # qstring
-        self.value = 0
+    def __init__(self, name, value=0, cmt=""):
+        self.name = name  # qstring
+        self.cmt = value  # qstring
+        self.value = cmt
 
 
 class EnumTypeData(TypeData):
@@ -769,11 +771,14 @@ class EnumTypeData(TypeData):
     def __init__(self):
         TypeData.__init__(self)
         self.group_sizes = []  # intvec_t
+        # TAENUM_64BIT   0x0020
+        #  	enum: store 64-bit values
         self.taenum_bits = 0
         self.bte = 0
         self.members = []
 
     def deserialize(self, til, type_string, fields, fieldcmts):
+        typ = type_string.u8()
         n = type_string.complex_n()
         if n == 0:
             type_string.pstring()
@@ -781,13 +786,27 @@ class EnumTypeData(TypeData):
         else:
             type_string.tah_attr()
             self.bte = type_string.u8()
-            # for i in range(n):
-            #     delta = type_string.de()
-            #     if self.bte & 0x10:
-            #         f = type_string.complex_n()
-            #         for j in range(f):
-            #             val = type_string.de()
-        # TODO: fixme
+            cur = 0
+            for i in range(n):
+                # TODO: subarrays
+                # https://www.hex-rays.com/products/ida/support/sdkdoc/group__tf__enum.html#ga9ae7aa54dbc597ec17cbb17555306a02
+                # In this case ANY record has the following format:
+                #     'de' mask (has name)
+                #     'dt' cnt
+                #     cnt records of 'de' values (cnt CAN be 0)
+                # Note
+                #     delta for ALL subsegment is ONE
+                if self.bte & BTE_BITFIELD:
+                    # mask = type_string.de()
+                    # cnt = type_string.dt()
+                    # for j in range(cnt):
+                    #     val = type_string.de()
+                    pass
+                else:
+                    delta = type_string.de()
+                    cur += delta
+                    member = EnumMember(fields[i], value=cur)
+                    self.members.append(member)
 
 
 class TypedefTypeData(TypeData):
@@ -796,6 +815,11 @@ class TypedefTypeData(TypeData):
     def __init__(self):
         TypeData.__init__(self)
         self.til = None
+        # union
+        # {
+        #    const char* name is_ordref=false: target type name. we do not own this pointer!
+        #    uint32   ordinal is_ordref=true: type ordinal number
+        # }
         self.name = None
         self.ordinal = 0
         self.is_ordref = False
@@ -804,9 +828,12 @@ class TypedefTypeData(TypeData):
     def deserialize(self, til, type_string, fields, fieldcmts):
         self.til = til
         typ = type_string.u8()
-        self.name = type_string.pstring()
-        if len(self.name) > 1 and self.name[0] == "#":
+        buf = type_string.pbytes()
+        if len(buf) > 1 and buf.find(b"#") == 0:
             self.is_ordref = True
+            self.ordinal = TypeString(buf[1:]).de()
+        else:
+            self.name = buf.decode("ascii")
         return self
 
 
