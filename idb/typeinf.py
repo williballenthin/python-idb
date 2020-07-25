@@ -416,7 +416,7 @@ def is_sdacl_byte(t):
 
 
 def is_type_closure(t):
-    return get_type_flags(t) & BTMT_CLOSURE
+    return get_type_flags(t) == BTMT_CLOSURE
 
 
 class TypeString:
@@ -546,15 +546,14 @@ class TypeData:
         pass
 
     @classmethod
-    def create_type_data(cls, til, type_info, fields=None, fieldcmts=None):
+    def create_tinfo(cls, til, type_info, fields=None, fieldcmts=None):
         type_string = (
             type_info if isinstance(type_info, TypeString) else TypeString(type_info)
         )
         typ = type_string.peek_u8()
-        type_data = None
         if is_typeid_last(typ):
             type_string.seek(1)
-            return BasicTypeData(typ)
+            return TInfo(typ)
 
         elif is_type_ptr(typ):
             type_data = PointerTypeData()
@@ -571,20 +570,16 @@ class TypeData:
         elif is_type_bitfld(typ):
             type_data = BitfieldTypeData()
         else:  # BT_RESERVED 0xF
-            return BasicTypeData(typ)
+            return TInfo(typ)
         type_data.deserialize(til, type_string, fields, fieldcmts)
-        return type_data
+        return TInfo(typ, type_data)
 
 
-class BasicTypeData(TypeData):
-    def __init__(self, base_type=BT_UNK, type_details=0):
-        TypeData.__init__(self)
+class TInfo:
+    def __init__(self, base_type=BT_UNK, type_details=None):
         self.base_type = base_type
         self.flags = 0
         self.type_details = type_details
-
-    def deserialize(self, til, type_string, fields, fieldcmts):
-        raise NotImplementedError
 
 
 class PointerTypeData(TypeData):
@@ -602,13 +597,11 @@ class PointerTypeData(TypeData):
         if is_type_closure(typ):
             ptr_size = type_string.u8()
             if ptr_size == RESERVED_BYTE:
-                self.closure = TypeData.create_type_data(til, type_string.ref())
+                self.closure = TypeData.create_tinfo(til, type_string.ref())
             else:
                 self.based_ptr_size = type_string.u8()
         self.taptr_bits = type_string.tah_attr()
-        self.obj_type = TypeData.create_type_data(
-            til, type_string.ref(), fields, fieldcmts
-        )
+        self.obj_type = TypeData.create_tinfo(til, type_string.ref(), fields, fieldcmts)
         return self
 
 
@@ -627,7 +620,7 @@ class ArrayTypeData(TypeData):
         else:
             self.n_elems, self.base, _ = type_string.da()
             return self
-        self.elem_type = TypeData.create_type_data(
+        self.elem_type = TypeData.create_tinfo(
             til, type_string.get(), fields, fieldcmts
         )
         return self
@@ -653,58 +646,56 @@ class FuncTypeData(TypeData):
         self.spoiled = None  # reginfovec_t
         self.cc = 0
 
-    def deserialize(self, til, type_string, fields, fieldcmts):
-        typ = type_string.u8()
-        cm = type_string.u8()
+    def deserialize(self, til, ts, fields, fieldcmts):
+        typ = ts.u8()
+        cm = ts.u8()
         if (cm & CM_CC_MASK) == CM_CC_SPOILED:
             num_of_spoiled_reg = cm & 0x0F  # low nibble is count
             if num_of_spoiled_reg == 15:
-                bfa = type_string.u8()  # function attribute byte (see BFA_*)
+                bfa = ts.u8()  # function attribute byte (see BFA_*)
             else:  # spoiled_reg_info[num_of_spoiled_regs] see extract_spoiledreg
                 pass
-            cm = type_string.u8()  # present real cm
+            cm = ts.u8()  # present real cm
         self.cc = cm & 0xF0
         self.flags |= 4 * get_type_flags(typ)
-        if type_string.peek_u8() == TAH_BYTE:
-            type_string.type_attr()
-        self.rettype = TypeData.create_type_data(
-            til, type_string.ref(), fields, fieldcmts
-        )
-        # TODO: fixme
-        # if (
-        #     self.cc == CM_CC_SPECIALE
-        #     or self.cc == CM_CC_SPECIALP
-        #     or self.cc == CM_CC_SPECIAL
-        # ):
-        #     if (self.rettype.base_type() & TYPE_FULL_MASK) == 1:
-        #         self.retloc = self.deserialize_argloc(type_string.get())
-        # if self.cc != CM_CC_VOIDARG:
-        #     n = type_string.dt()
-        #     if n > 256:
-        #         raise ValueError("invalid arg count!")
-        #     if n > 0:
-        #         for n in range(n):
-        #             arg = FuncArg()
-        #             if fields is not None:
-        #                 if n < len(fields):
-        #                     arg.name = fields[n]
-        #             fah = type_string.peek_u8()
-        #             if fah == FAH_BYTE:
-        #                 type_string.seek(1)
-        #                 arg.flags = type_string.de()
-        #             arg.type = TypeData.create_type_data(
-        #                 til, type_string.ref(), fields, fieldcmts
-        #             )
-        #             if (
-        #                 self.cc == CM_CC_SPECIALE
-        #                 or self.cc == CM_CC_SPECIALP
-        #                 or self.cc == CM_CC_SPECIAL
-        #             ):
-        #                 arg.argloc = self.deserialize_argloc(type_string.get())
+        if ts.peek_u8() == TAH_BYTE:
+            ts.type_attr()
+        self.rettype = TypeData.create_tinfo(til, ts.ref(), fields, fieldcmts)
+        if (
+            self.cc == CM_CC_SPECIALE
+            or self.cc == CM_CC_SPECIALP
+            or self.cc == CM_CC_SPECIAL
+        ):
+            if (self.rettype.base_type & TYPE_FULL_MASK) == 1:
+                self.retloc = self.deserialize_argloc(ts.get())
+
+        # args
+        if self.cc == CM_CC_VOIDARG:
+            return self
+        n = ts.dt()
+        if n > 256:
+            raise ValueError("invalid arg count!")
+        for n in range(n):
+            arg = FuncArg()
+            if fields is not None:
+                if n < len(fields):
+                    arg.name = fields[n]
+            if ts.peek_u8() == FAH_BYTE:
+                ts.seek(1)
+                arg.flags = ts.de()
+            arg.type = TypeData.create_tinfo(til, ts.ref(), fields, fieldcmts)
+            if (
+                self.cc == CM_CC_SPECIALE
+                or self.cc == CM_CC_SPECIALP
+                or self.cc == CM_CC_SPECIAL
+            ):
+                arg.argloc = self.deserialize_argloc(ts.get())
+            self.args.append(arg)
         return self
 
     def deserialize_argloc(self, type_string):
-        raise NotImplementedError("extract_argloc() not implemented.")
+        # TODO: deserialize_argloc
+        raise NotImplementedError("deserialize_argloc() not implemented.")
 
 
 class UdtMember:
@@ -749,7 +740,7 @@ class UdtTypeData(TypeData):
             type_string.sdacl_attr()
             for n in range(mcnt):
                 member = UdtMember()
-                member.type = TypeData.create_type_data(
+                member.type = TypeData.create_tinfo(
                     til, type_string.ref(), fields, fieldcmts
                 )
                 # TODO: fixme
@@ -887,9 +878,7 @@ class TILTypeInfo(VStruct):
 
     def vsParse(self, sbytes, offset=0, fast=False):
         offset = VStruct.vsParse(self, sbytes, offset, fast)
-        typ = TypeData.create_type_data(
-            self, self.type_info, self.fields, self.fieldcmts
-        )
+        typ = TypeData.create_tinfo(self, self.type_info, self.fields, self.fieldcmts)
         object.__setattr__(self, "typ", typ)
         return offset
 
