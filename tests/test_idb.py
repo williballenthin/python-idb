@@ -571,7 +571,7 @@ def test_til(kernel32_idb, version, bitness, expected):
     assert til.size_e == 4
 
     syms = til.syms.defs
-    types = til.types.sorted_defs_by_ordinal
+    types = til.types.defs
 
     assert len(types) == 106
     assert len(syms) == 61
@@ -686,7 +686,7 @@ def test_til_affix():
         assert til.size_e == 4
 
         syms = til.syms.defs
-        types = til.types.sorted_defs_by_ordinal
+        types = til.types.defs
 
         # 24
         # class Base {

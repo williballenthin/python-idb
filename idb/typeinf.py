@@ -449,8 +449,14 @@ class TypeString:
     def peek_u8(self):
         return struct.unpack("<B", self.buf[self.pos : self.pos + 1])[0]
 
+    def peek_u16(self):
+        return struct.unpack("<H", self.buf[self.pos : self.pos + 2])[0]
+
     def u8(self):
         return struct.unpack("<B", self.read(1))[0]
+
+    def u16(self):
+        return struct.unpack("<H", self.read(2))[0]
 
     def dt(self):
         val = self.u8()
@@ -545,17 +551,25 @@ class TypeData:
     def deserialize(self, til, type_string, fields, fieldcmts):
         pass
 
-    @classmethod
-    def create_tinfo(cls, til, type_info, fields=None, fieldcmts=None):
-        type_string = (
-            type_info if isinstance(type_info, TypeString) else TypeString(type_info)
-        )
-        typ = type_string.peek_u8()
-        if is_typeid_last(typ):
-            type_string.seek(1)
-            return TInfo(typ)
 
-        elif is_type_ptr(typ):
+class TInfo:
+    def __init__(self, base_type=BT_UNK, type_details=None):
+        self.base_type = base_type
+        self.flags = 0
+        self.type_details = type_details
+
+
+def create_tinfo(til, type_info, fields=None, fieldcmts=None):
+    type_string = (
+        type_info if isinstance(type_info, TypeString) else TypeString(type_info)
+    )
+    typ = type_string.peek_u8()
+    if is_typeid_last(typ) or get_base_type(typ) == BT_RESERVED:
+        type_string.seek(1)
+        tinfo = TInfo(typ)
+    else:
+        type_data = None
+        if is_type_ptr(typ):
             type_data = PointerTypeData()
         elif is_type_func(typ):
             type_data = FuncTypeData()
@@ -569,17 +583,8 @@ class TypeData:
             type_data = EnumTypeData()
         elif is_type_bitfld(typ):
             type_data = BitfieldTypeData()
-        else:  # BT_RESERVED 0xF
-            return TInfo(typ)
-        type_data.deserialize(til, type_string, fields, fieldcmts)
-        return TInfo(typ, type_data)
-
-
-class TInfo:
-    def __init__(self, base_type=BT_UNK, type_details=None):
-        self.base_type = base_type
-        self.flags = 0
-        self.type_details = type_details
+        tinfo = TInfo(typ, type_data.deserialize(til, type_string, fields, fieldcmts))
+    return tinfo
 
 
 class PointerTypeData(TypeData):
@@ -597,11 +602,11 @@ class PointerTypeData(TypeData):
         if is_type_closure(typ):
             ptr_size = type_string.u8()
             if ptr_size == RESERVED_BYTE:
-                self.closure = TypeData.create_tinfo(til, type_string.ref())
+                self.closure = create_tinfo(til, type_string.ref())
             else:
                 self.based_ptr_size = type_string.u8()
         self.taptr_bits = type_string.tah_attr()
-        self.obj_type = TypeData.create_tinfo(til, type_string.ref(), fields, fieldcmts)
+        self.obj_type = create_tinfo(til, type_string.ref(), fields, fieldcmts)
         return self
 
 
@@ -620,9 +625,7 @@ class ArrayTypeData(TypeData):
         else:
             self.n_elems, self.base, _ = type_string.da()
             return self
-        self.elem_type = TypeData.create_tinfo(
-            til, type_string.get(), fields, fieldcmts
-        )
+        self.elem_type = create_tinfo(til, type_string.get(), fields, fieldcmts)
         return self
 
 
@@ -660,7 +663,7 @@ class FuncTypeData(TypeData):
         self.flags |= 4 * get_type_flags(typ)
         if ts.peek_u8() == TAH_BYTE:
             ts.type_attr()
-        self.rettype = TypeData.create_tinfo(til, ts.ref(), fields, fieldcmts)
+        self.rettype = create_tinfo(til, ts.ref(), fields, fieldcmts)
         if (
             self.cc == CM_CC_SPECIALE
             or self.cc == CM_CC_SPECIALP
@@ -683,7 +686,7 @@ class FuncTypeData(TypeData):
             if ts.peek_u8() == FAH_BYTE:
                 ts.seek(1)
                 arg.flags = ts.de()
-            arg.type = TypeData.create_tinfo(til, ts.ref(), fields, fieldcmts)
+            arg.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
             if (
                 self.cc == CM_CC_SPECIALE
                 or self.cc == CM_CC_SPECIALP
@@ -716,35 +719,52 @@ class UdtTypeData(TypeData):
     def __init__(self):
         TypeData.__init__(self)
         self.members = []
+        # total structure size in bytes
         self.total_size = 0
+        # unpadded structure size in bytes
         self.unpadded_size = 0
+        # effective structure alignment (in bytes)
         self.effalign = 0
+        # TA... and TAUDT... bits.
         self.taudt_bits = 0
+        # declared structure alignment (shift amount+1). 0 - unspecified
         self.sda = 0
+        # pragma pack() alignment (shift amount)
         self.pack = 0
         self.is_union = False
 
-    def deserialize(self, til, type_string, fields, fieldcmts):
-        typ = type_string.u8()
-        n = type_string.complex_n()
-        if n == 0:
-            pass
-            # string = type_string.pstring()
-            # if len(string) > 1 and string[0] == "#":
-            #     return self
-            # TODO: Need to implement struct references
+    def deserialize(self, til, ts, fields, fieldcmts):
+        typ = ts.u8()
+        self.is_union = is_type_union(typ)
+        n = ts.complex_n()
+        if n == 0 and len(ts.rest()) >= 2 and ts.peek_u16() != 33009:
+            buf = ts.pbytes()
+            if buf.find(b"#") == 0:
+                ordinal = TypeString(buf[1:]).de()
+                _def = til.types.defs[ordinal - 1]
+                if "type" in _def:
+                    _type = _def.type
+                else:
+                    # may ref self
+                    _type = ordinal
+            else:
+                name = buf.decode("ascii")
+                _def = list(filter(lambda x: x.name == name, til.types.defs))
+                if len(_def) > 0:
+                    _type = _def[0].type
+                else:
+                    _type = name
+            return _type
         else:
             alpow = n & 7
-            mcnt = n >> 3
+            member_cnt = n >> 3
             self.pack = alpow
-            type_string.sdacl_attr()
-            for n in range(mcnt):
+            self.sda = ts.sdacl_attr()
+            for i in range(member_cnt):
                 member = UdtMember()
-                member.type = TypeData.create_tinfo(
-                    til, type_string.ref(), fields, fieldcmts
-                )
-                # TODO: fixme
-                # member.tafld_bits = type_string.sdacl_attr()
+                member.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
+                if not fields and len(fields) > i:
+                    member.name = fields[i]
                 self.members.append(member)
         return self
 
@@ -876,11 +896,9 @@ class TILTypeInfo(VStruct):
         if self.flags not in (0x7FFFFFFF, 0xFFFFFFFF):
             raise Exception("unsupported format {}".format(self.flags))
 
-    def vsParse(self, sbytes, offset=0, fast=False):
-        offset = VStruct.vsParse(self, sbytes, offset, fast)
-        typ = TypeData.create_tinfo(self, self.type_info, self.fields, self.fieldcmts)
-        object.__setattr__(self, "typ", typ)
-        return offset
+    def deserialize(self, til):
+        _type = create_tinfo(til, self.type_info, self.fields, self.fieldcmts)
+        object.__setattr__(self, "type", _type)
 
     @cached_property
     def fields(self):
@@ -927,17 +945,11 @@ class TILBucket(VStruct):
 
         defs = []
         offset = 0
-
         for _ in range(self.ndefs):
             _def = TILTypeInfo()
             offset = _def.vsParse(buf, offset=offset)
             defs.append(_def)
-
         self.defs = defs
-
-    @cached_property
-    def sorted_defs_by_ordinal(self):
-        return sorted(self.defs, key=lambda x: x.ordinal)
 
 
 TIL_ZIP = 0x0001  # pack buckets using zip
@@ -1000,7 +1012,16 @@ class TIL(VStruct):
 
     def vsParse(self, sbytes, offset=0, fast=False):
         sbytes = sbytes.tobytes() if isinstance(sbytes, memoryview) else sbytes
-        return VStruct.vsParse(self, sbytes, offset, fast)
+        result = VStruct.vsParse(self, sbytes, offset, fast)
+
+        self.types.defs.sort(key=lambda x: x.ordinal)
+        self.deserialize_bucket(self.syms)
+        self.deserialize_bucket(self.types)
+        return result
+
+    def deserialize_bucket(self, bucket):
+        for t in bucket.defs:
+            t.deserialize(til=self)
 
     def validate(self):
         if self.signature != "IDATIL":
