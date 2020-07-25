@@ -500,22 +500,21 @@ class TypeString:
         if is_tah_byte(tah) or tmp == 8:
             if tmp == 8:
                 val = tmp
-            next_byte = self.u8()
             shift = 0
             while True:
+                next_byte = self.u8()
+                if next_byte == 0:
+                    raise ValueError("type_attr(): failed to parse")
                 val |= (next_byte & 0x7F) << shift
                 if next_byte & 0x80 == 0:
                     break
                 shift += 7
-                next_byte = self.u8()
-                if next_byte == 0:
-                    raise ValueError("type_attr(): failed to parse")
         unk = []
         if val & TAH_HASATTRS:
             val = self.dt()
             for _ in range(val):
                 string = self.pstring()
-                self.dt()
+                self.seek(self.dt())
                 unk.append(string)
         return val
 
@@ -624,7 +623,8 @@ class ArrayTypeData(TypeData):
             self.base = 0
             self.n_elems = type_string.dt()
         else:
-            self.n_elems, self.base = type_string.da()
+            self.n_elems, self.base, _ = type_string.da()
+            return self
         self.elem_type = TypeData.create_type_data(
             til, type_string.get(), fields, fieldcmts
         )
@@ -655,10 +655,13 @@ class FuncTypeData(TypeData):
         typ = type_string.u8()
         cm = type_string.u8()
         if (cm & CM_CC_MASK) == CM_CC_SPOILED:
-            pass
-        else:
-            self.flags = 0
-        self.cc = cm
+            num_of_spoiled_reg = cm & 0x0F  # low nibble is count
+            if num_of_spoiled_reg == 15:
+                bfa = type_string.u8()  # function attribute byte (see BFA_*)
+            else:  # spoiled_reg_info[num_of_spoiled_regs] see extract_spoiledreg
+                pass
+            cm = type_string.u8()  # present real cm
+        self.cc = cm & 0xF0
         self.flags |= 4 * get_type_flags(typ)
         if type_string.peek_u8() == TAH_BYTE:
             type_string.type_attr()
@@ -765,13 +768,25 @@ class EnumTypeData(TypeData):
 
     def __init__(self):
         TypeData.__init__(self)
-        self.group_sizes = None  # intvec_t
+        self.group_sizes = []  # intvec_t
         self.taenum_bits = 0
         self.bte = 0
         self.members = []
 
     def deserialize(self, til, type_string, fields, fieldcmts):
-        pass
+        n = type_string.complex_n()
+        if n == 0:
+            type_string.pstring()
+            type_string.tah_attr()
+        else:
+            type_string.tah_attr()
+            self.bte = type_string.u8()
+            # for i in range(n):
+            #     delta = type_string.de()
+            #     if self.bte & 0x10:
+            #         f = type_string.complex_n()
+            #         for j in range(f):
+            #             val = type_string.de()
         # TODO: fixme
 
 
@@ -805,7 +820,10 @@ class BitfieldTypeData(TypeData):
         self.is_unsigned = False
 
     def deserialize(self, til, type_string, fields, fieldcmts):
-        pass
+        dt = type_string.dt()
+        self.nbytes = dt >> 1
+        self.is_unsigned = bool(dt & 1)
+        type_string.tah_attr()
         # TODO: fixme
 
 
