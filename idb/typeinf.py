@@ -419,6 +419,14 @@ def is_type_closure(t):
     return get_type_flags(t) == BTMT_CLOSURE
 
 
+def is_cm_cc_special(t):
+    return t & CM_CC_MASK in CM_CC_SPECIAL
+
+
+def is_cm_cc_special_pe(t):
+    return t & CM_CC_MASK in (CM_CC_SPECIAL, CM_CC_SPECIALP, CM_CC_SPECIALE)
+
+
 class TypeString:
     def __init__(self, buf, pos=0, parent=None):
         self.buf = buf
@@ -488,7 +496,7 @@ class TypeString:
 
     def complex_n(self):
         n = self.dt()
-        if n == 0x7FFE:
+        if n == 0x7FFE:  # Support for high (i.e., > 4095) members count
             n = self.de()
         return n
 
@@ -530,10 +538,12 @@ class TypeString:
     def tah_attr(self):
         if self.has_next() and is_tah_byte(self.peek_u8()):
             return self.type_attr()
+        return 0
 
     def sdacl_attr(self):
         if self.has_next() and is_sdacl_byte(self.peek_u8()):
             return self.type_attr()
+        return 0
 
     def get(self):
         return TypeString(self.rest())
@@ -557,10 +567,56 @@ class TypeData:
 
 
 class TInfo:
-    def __init__(self, base_type=BT_UNK, type_details=None):
+    def __init__(self, til=None, ttf=None, base_type=BT_UNK, type_details=None):
+        self.til = til
+        self.ttf = ttf
+        self._types = til.types
         self.base_type = base_type
         self.flags = 0
         self.type_details = type_details
+
+    def get_name(self):
+        return self.ttf.name
+
+    def get_next_tinfo(self):
+        if self.is_typedef():
+            typedef_detail = self.type_details
+            if typedef_detail.is_ordref:
+                _def = self._types.get_by_ordinal(typedef_detail.ordinal)
+            else:
+                _def = self._types.find_by_name(typedef_detail.name)
+            return _def.type
+        return None
+
+    def get_final_tinfo(self):
+        if self.is_typedef():
+            _type = self.get_next_tinfo()
+            while _type.is_typedef():
+                _type = _type.get_next_tinfo()
+            return _type
+        return self
+
+    def get_arr_object(self):
+        if self.is_array():
+            return self.type_details.elem_type
+        return TInfo()
+
+    def get_pointed_object(self):
+        if self.is_ptr():
+            pt = self.type_details
+            if pt.closure is not None:
+                return pt.closure
+            else:
+                return pt.obj_type
+        return TInfo()
+
+    def get_ptrarr_object(self):
+        if self.is_ptr_or_array():
+            if self.is_array():
+                return self.get_arr_object()
+            else:
+                return self.get_pointed_object()
+        return TInfo()
 
     def get_size(self):
         # TODO:
@@ -570,15 +626,392 @@ class TInfo:
         # TODO:
         raise NotImplementedError()
 
+    def has_details(self):
+        return self.type_details is not None
 
-def create_tinfo(til, type_info, fields=None, fieldcmts=None):
+    def has_vftable(self):
+        raise NotImplementedError()
+
+    def get_decltype(self):
+        return self.base_type
+
+    def get_realtype(self, full=False):
+        if full:
+            return self.get_final_tinfo().get_decltype()
+        return self.get_decltype()
+
+    def is_typedef(self):
+        return is_type_typedef(self.get_decltype())
+
+    def is_arithmetic(self):
+        return is_type_arithmetic(self.base_type)
+
+    def is_decl_array(self):
+        return is_type_array(self.get_decltype())
+
+    def is_decl_bitfield(self):
+        return is_type_bitfld(self.get_decltype())
+
+    def is_decl_bool(self):
+        return is_type_bool(self.get_decltype())
+
+    def is_decl_castable_to(self, target):
+        raise NotImplementedError()
+
+    def is_decl_char(self):
+        return is_type_char(self.get_decltype())
+
+    def is_decl_complex(self):
+        return is_type_complex(self.get_decltype())
+
+    def is_decl_const(self):
+        return is_type_const(self.get_decltype())
+
+    def is_decl_correct(self):
+        raise NotImplementedError()
+
+    def is_decl_double(self):
+        return is_type_double(self.get_decltype())
+
+    def is_decl_empty_udt(self):
+        raise NotImplementedError()
+
+    def is_decl_enum(self):
+        return is_type_enum(self.get_decltype())
+
+    def is_decl_ext_arithmetic(self):
+        return is_type_ext_arithmetic(self.get_decltype())
+
+    def is_decl_ext_integral(self):
+        return is_type_ext_integral(self.get_decltype())
+
+    def is_decl_float(self):
+        return is_type_float(self.get_decltype())
+
+    def is_decl_floating(self):
+        return is_type_floating(self.get_decltype())
+
+    def is_decl_forward_decl(self):
+        raise NotImplementedError()
+
+    def is_decl_from_subtil(self):
+        raise NotImplementedError()
+
+    def is_decl_func(self):
+        return is_type_func(self.get_decltype())
+
+    def is_decl_funcptr(self):
+        raise NotImplementedError()
+
+    def is_decl_high_func(self):
+        raise NotImplementedError()
+
+    def is_decl_int(self):
+        return is_type_int(self.get_decltype())
+
+    def is_decl_int128(self):
+        return is_type_int128(self.get_decltype())
+
+    def is_decl_int16(self):
+        return is_type_int16(self.get_decltype())
+
+    def is_decl_int32(self):
+        return is_type_int32(self.get_decltype())
+
+    def is_decl_int64(self):
+        return is_type_int64(self.get_decltype())
+
+    def is_decl_integral(self):
+        return is_type_integral(self.get_decltype())
+
+    def is_decl_ldouble(self):
+        return is_type_ldouble(self.get_decltype())
+
+    def is_decl_manually_castable_to(self, target):
+        raise NotImplementedError()
+
+    def is_decl_one_fpval(self):
+        raise NotImplementedError()
+
+    def is_decl_paf(self):
+        return is_type_paf(self.get_decltype())
+
+    def is_decl_partial(self):
+        return is_type_partial(self.get_decltype())
+
+    def is_decl_ptr(self):
+        return is_type_ptr(self.get_decltype())
+
+    def is_decl_ptr_or_array(self):
+        return is_type_ptr_or_array(self.get_decltype())
+
+    def is_decl_purging_cc(self):
+        raise NotImplementedError()
+
+    def is_decl_pvoid(self):
+        raise NotImplementedError()
+
+    def is_decl_scalar(self):
+        raise NotImplementedError()
+
+    def is_decl_shifted_ptr(self):
+        raise NotImplementedError()
+
+    def is_decl_signed(self):
+        raise NotImplementedError()
+
+    def is_decl_small_udt(self):
+        raise NotImplementedError()
+
+    def is_decl_sse_type(self):
+        raise NotImplementedError()
+
+    def is_decl_struct(self):
+        return is_type_struct(self.get_decltype())
+
+    def is_decl_sue(self):
+        return is_type_sue(self.get_decltype())
+
+    def is_decl_tbyte(self):
+        raise NotImplementedError()
+
+    def is_decl_typeref(self):
+        raise NotImplementedError()
+
+    def is_decl_uchar(self):
+        return is_type_uchar(self.get_decltype())
+
+    def is_decl_udt(self):
+        return is_type_struni(self.get_decltype())
+
+    def is_decl_uint(self):
+        return is_type_uint(self.get_decltype())
+
+    def is_decl_uint128(self):
+        return is_type_uint128(self.get_decltype())
+
+    def is_decl_uint16(self):
+        return is_type_uint16(self.get_decltype())
+
+    def is_decl_uint32(self):
+        return is_type_uint32(self.get_decltype())
+
+    def is_decl_uint64(self):
+        return is_type_uint64(self.get_decltype())
+
+    def is_decl_union(self):
+        return is_type_union(self.get_decltype())
+
+    def is_decl_unknown(self):
+        return is_type_unknown(self.get_decltype())
+
+    def is_decl_unsigned(self):
+        raise NotImplementedError()
+
+    def is_decl_user_cc(self):
+        raise NotImplementedError()
+
+    def is_decl_vararg_cc(self):
+        raise NotImplementedError()
+
+    def is_decl_varstruct(self):
+        raise NotImplementedError()
+
+    def is_decl_vftable(self):
+        raise NotImplementedError()
+
+    def is_decl_void(self):
+        return is_type_void(self.get_decltype())
+
+    def is_decl_volatile(self):
+        return is_type_volatile(self.get_decltype())
+
+    def is_array(self):
+        return is_type_array(self.get_realtype())
+
+    def is_bitfield(self):
+        return is_type_bitfld(self.get_realtype())
+
+    def is_bool(self):
+        return is_type_bool(self.get_realtype())
+
+    def is_castable_to(self, target):
+        raise NotImplementedError()
+
+    def is_char(self):
+        return is_type_char(self.get_realtype())
+
+    def is_complex(self):
+        return is_type_complex(self.get_realtype())
+
+    def is_const(self):
+        return is_type_const(self.get_realtype())
+
+    def is_correct(self):
+        raise NotImplementedError()
+
+    def is_double(self):
+        return is_type_double(self.get_realtype())
+
+    def is_empty_udt(self):
+        raise NotImplementedError()
+
+    def is_enum(self):
+        return is_type_enum(self.get_realtype())
+
+    def is_ext_arithmetic(self):
+        return is_type_ext_arithmetic(self.get_realtype())
+
+    def is_ext_integral(self):
+        return is_type_ext_integral(self.get_realtype())
+
+    def is_float(self):
+        return is_type_float(self.get_realtype())
+
+    def is_floating(self):
+        return is_type_floating(self.get_realtype())
+
+    def is_forward_decl(self):
+        raise NotImplementedError()
+
+    def is_from_subtil(self):
+        raise NotImplementedError()
+
+    def is_func(self):
+        return is_type_func(self.get_realtype())
+
+    def is_funcptr(self):
+        raise NotImplementedError()
+
+    def is_high_func(self):
+        raise NotImplementedError()
+
+    def is_int(self):
+        return is_type_int(self.base_type)
+
+    def is_int128(self):
+        return is_type_int128(self.get_realtype())
+
+    def is_int16(self):
+        return is_type_int16(self.get_realtype())
+
+    def is_int32(self):
+        return is_type_int32(self.get_realtype())
+
+    def is_int64(self):
+        return is_type_int64(self.get_realtype())
+
+    def is_integral(self):
+        return is_type_integral(self.get_realtype())
+
+    def is_ldouble(self):
+        return is_type_ldouble(self.get_realtype())
+
+    def is_manually_castable_to(self, target):
+        raise NotImplementedError()
+
+    def is_one_fpval(self):
+        raise NotImplementedError()
+
+    def is_paf(self):
+        return is_type_paf(self.base_type)
+
+    def is_partial(self):
+        return is_type_partial(self.get_realtype())
+
+    def is_ptr(self):
+        return is_type_ptr(self.get_realtype())
+
+    def is_ptr_or_array(self):
+        return is_type_ptr_or_array(self.get_realtype())
+
+    def is_purging_cc(self):
+        raise NotImplementedError()
+
+    def is_pvoid(self):
+        raise NotImplementedError()
+
+    def is_scalar(self):
+        raise NotImplementedError()
+
+    def is_shifted_ptr(self):
+        raise NotImplementedError()
+
+    def is_signed(self):
+        raise NotImplementedError()
+
+    def is_small_udt(self):
+        raise NotImplementedError()
+
+    def is_sse_type(self):
+        raise NotImplementedError()
+
+    def is_struct(self):
+        return is_type_struct(self.base_type)
+
+    def is_sue(self):
+        return is_type_sue(self.base_type)
+
+    def is_tbyte(self):
+        raise NotImplementedError()
+
+    def is_uchar(self):
+        return is_type_uchar(self.get_realtype())
+
+    def is_udt(self):
+        return is_type_struni(self.get_realtype())
+
+    def is_uint(self):
+        return is_type_uint(self.get_realtype())
+
+    def is_uint128(self):
+        return is_type_uint128(self.get_realtype())
+
+    def is_uint16(self):
+        return is_type_uint16(self.get_realtype())
+
+    def is_uint32(self):
+        return is_type_uint32(self.get_realtype())
+
+    def is_uint64(self):
+        return is_type_uint64(self.get_realtype())
+
+    def is_union(self):
+        return is_type_union(self.get_realtype())
+
+    def is_unknown(self):
+        return is_type_unknown(self.get_realtype())
+
+    def is_unsigned(self):
+        raise NotImplementedError()
+
+    def is_user_cc(self):
+        raise NotImplementedError()
+
+    def is_vararg_cc(self):
+        raise NotImplementedError()
+
+    def is_varstruct(self):
+        raise NotImplementedError()
+
+    def is_vftable(self):
+        raise NotImplementedError()
+
+    def is_void(self):
+        return is_type_void(self.base_type)
+
+    def is_volatile(self):
+        return is_type_volatile(self.base_type)
+
+
+def create_tinfo(til, type_info, fields=None, fieldcmts=None, ttf=None):
     type_string = (
         type_info if isinstance(type_info, TypeString) else TypeString(type_info)
     )
     typ = type_string.peek_u8()
     if is_typeid_last(typ) or get_base_type(typ) == BT_RESERVED:
         type_string.seek(1)
-        tinfo = TInfo(typ)
+        tinfo = TInfo(til, ttf, typ)
     else:
         type_data = None
         if is_type_ptr(typ):
@@ -595,7 +1028,9 @@ def create_tinfo(til, type_info, fields=None, fieldcmts=None):
             type_data = EnumTypeData()
         elif is_type_bitfld(typ):
             type_data = BitfieldTypeData()
-        tinfo = TInfo(typ, type_data.deserialize(til, type_string, fields, fieldcmts))
+        tinfo = TInfo(
+            til, ttf, typ, type_data.deserialize(til, type_string, fields, fieldcmts)
+        )
     return tinfo
 
 
@@ -609,16 +1044,15 @@ class PointerTypeData(TypeData):
         self.based_ptr_size = 0
         self.taptr_bits = 0
 
-    def deserialize(self, til, type_string, fields, fieldcmts):
-        typ = type_string.u8()
+    def deserialize(self, til, ts, fields, fieldcmts):
+        typ = ts.u8()
         if is_type_closure(typ):
-            ptr_size = type_string.u8()
-            if ptr_size == RESERVED_BYTE:
-                self.closure = create_tinfo(til, type_string.ref())
+            if ts.u8() == RESERVED_BYTE:
+                self.closure = create_tinfo(til, ts.ref())
             else:
-                self.based_ptr_size = type_string.u8()
-        self.taptr_bits = type_string.tah_attr()
-        self.obj_type = create_tinfo(til, type_string.ref(), fields, fieldcmts)
+                self.based_ptr_size = ts.u8()
+        self.taptr_bits = ts.tah_attr()
+        self.obj_type = create_tinfo(til, ts.ref(), fields, fieldcmts)
         return self
 
 
@@ -629,15 +1063,16 @@ class ArrayTypeData(TypeData):
         self.base = None
         self.n_elems = 0
 
-    def deserialize(self, til, type_string, fields, fieldcmts):
-        typ = type_string.u8()
+    def deserialize(self, til, ts, fields, fieldcmts):
+        typ = ts.u8()
         if get_type_flags(typ) & BTMT_NONBASED:
             self.base = 0
-            self.n_elems = type_string.dt()
+            self.n_elems = ts.dt()
         else:
-            self.n_elems, self.base, _ = type_string.da()
+            self.n_elems, self.base, _ = ts.da()
             return self
-        self.elem_type = create_tinfo(til, type_string.get(), fields, fieldcmts)
+        ts.tah_attr()
+        self.elem_type = create_tinfo(til, ts.get(), fields, fieldcmts)
         return self
 
 
@@ -663,26 +1098,27 @@ class FuncTypeData(TypeData):
 
     def deserialize(self, til, ts, fields, fieldcmts):
         typ = ts.u8()
+        self.flags |= 4 * get_type_flags(typ)
+
         cm = ts.u8()
         if (cm & CM_CC_MASK) == CM_CC_SPOILED:
-            num_of_spoiled_reg = cm & 0x0F  # low nibble is count
-            if num_of_spoiled_reg == 15:
-                bfa = ts.u8()  # function attribute byte (see BFA_*)
-            else:  # spoiled_reg_info[num_of_spoiled_regs] see extract_spoiledreg
-                pass
-            cm = ts.u8()  # present real cm
+            raise NotImplementedError()
+            # num_of_spoiled_reg = cm & 0x0F  # low nibble is count
+            # if num_of_spoiled_reg == 15:
+            #     bfa = ts.u8()  # function attribute byte (see BFA_*)
+            #     # const type_t BFA_NORET  = 0x01;    ///< __noreturn
+            #     # const type_t BFA_PURE   = 0x02;    ///< __pure
+            #     # const type_t BFA_HIGH   = 0x04;    ///< high level prototype (with possibly hidden args)
+            #     # const type_t BFA_STATIC = 0x08;    ///< static
+            #     # const type_t BFA_VIRTUAL= 0x10;    ///< virtual
+            # else:  # spoiled_reg_info[num_of_spoiled_regs] see extract_spoiledreg
+            #     pass
         self.cc = cm & 0xF0
-        self.flags |= 4 * get_type_flags(typ)
-        if ts.peek_u8() == TAH_BYTE:
-            ts.type_attr()
+
+        ts.tah_attr()
         self.rettype = create_tinfo(til, ts.ref(), fields, fieldcmts)
-        if (
-            self.cc == CM_CC_SPECIALE
-            or self.cc == CM_CC_SPECIALP
-            or self.cc == CM_CC_SPECIAL
-        ):
-            if (self.rettype.base_type & TYPE_FULL_MASK) == 1:
-                self.retloc = self.deserialize_argloc(ts.get())
+        if is_cm_cc_special_pe(self.cc) and not self.rettype.is_void():
+            self.retloc = self.deserialize_argloc(ts.get())
 
         # args
         if self.cc == CM_CC_VOIDARG:
@@ -690,27 +1126,36 @@ class FuncTypeData(TypeData):
         n = ts.dt()
         if n > 256:
             raise ValueError("invalid arg count!")
-        for n in range(n):
-            arg = FuncArg()
-            if fields is not None:
-                if n < len(fields):
+        # elif n == 0:
+        #     if self.cc & CM_CC_ELLIPSIS or is_cm_cc_special(self.cc):
+        #         # func(...) ??
+        #         pass
+        #     else:
+        #         # parameters are unknown
+        #         pass
+        else:
+            for n in range(n):
+                arg = FuncArg()
+                arg.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
+                if is_cm_cc_special_pe(self.cc):
+                    arg.argloc = self.deserialize_argloc(ts.get())
+                if ts.has_next() and ts.peek_u8() == FAH_BYTE:
+                    ts.seek(1)
+                    arg.flags = ts.de()
+                if fields is not None and n < len(fields):
                     arg.name = fields[n]
-            if ts.peek_u8() == FAH_BYTE:
-                ts.seek(1)
-                arg.flags = ts.de()
-            arg.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
-            if (
-                self.cc == CM_CC_SPECIALE
-                or self.cc == CM_CC_SPECIALP
-                or self.cc == CM_CC_SPECIAL
-            ):
-                arg.argloc = self.deserialize_argloc(ts.get())
-            self.args.append(arg)
+                self.args.append(arg)
         return self
 
     def deserialize_argloc(self, type_string):
         # TODO: deserialize_argloc
         raise NotImplementedError("deserialize_argloc() not implemented.")
+
+
+# tattr_field Type attributes for udt fields
+TAFLD_BASECLASS = 0x0020  # field: do not include but inherit from the current field
+TAFLD_UNALIGNED = 0x0040  # field: unaligned field
+TAFLD_VIRTBASE = 0x0080  # field: virtual base (not supported yet)
 
 
 class UdtMember:
@@ -723,6 +1168,21 @@ class UdtMember:
         self.effalign = 0
         self.tafld_bits = 0
         self.fda = 0
+
+    def is_unaligned(self):
+        return bool(self.tafld_bits & TAFLD_UNALIGNED)
+
+    def is_baseclass(self):
+        return bool(self.tafld_bits & TAFLD_BASECLASS)
+
+    def is_virtbase(self):
+        return bool(self.tafld_bits & TAFLD_VIRTBASE)
+
+
+# tattr_udt Type attributes for udts
+TAUDT_UNALIGNED = 0x0040  # struct: unaligned struct
+TAUDT_MSSTRUCT = 0x0020  # struct: gcc msstruct attribute
+TAUDT_CPPOBJ = 0x0080  # struct: a c++ object, not simple pod type
 
 
 class UdtTypeData(TypeData):
@@ -770,13 +1230,21 @@ class UdtTypeData(TypeData):
         else:
             alpow = n & 7
             member_cnt = n >> 3
-            self.pack = alpow
-            self.sda = ts.sdacl_attr()
+            if alpow == 0:
+                # inf.cc.defalign
+                self.effalign = 0
+            else:
+                self.effalign = 1 << (alpow - 1)
+            self.taudt_bits = ts.sdacl_attr()
+            # process cpp class inherit
+            field_i = 0
             for i in range(member_cnt):
                 member = UdtMember()
                 member.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
-                if fields and len(fields) > i:
-                    member.name = fields[i]
+                member.tafld_bits = ts.sdacl_attr() if not self.is_union else 0
+                if not member.is_baseclass() and len(fields) > field_i:
+                    member.name = fields[field_i]
+                    field_i += 1
                 self.members.append(member)
         return self
 
@@ -907,7 +1375,7 @@ class TILTypeInfo(VStruct):
             raise Exception("unsupported format {}".format(self.flags))
 
     def deserialize(self, til):
-        _type = create_tinfo(til, self.type_info, self.fields, self.fieldcmts)
+        _type = create_tinfo(til, self.type_info, self.fields, self.fieldcmts, ttf=self)
         object.__setattr__(self, "type", _type)
 
     @cached_property
@@ -968,6 +1436,9 @@ class TILBucket(VStruct):
         if len(_def) == 0:
             return None
         return _def[0]
+
+    def get_by_ordinal(self, ordinal):
+        return self.defs[ordinal - 1]
 
 
 TIL_ZIP = 0x0001  # pack buckets using zip

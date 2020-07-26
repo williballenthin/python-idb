@@ -703,12 +703,19 @@ def test_til_affix():
         #
         #     int32_t bar() const { return field1_ + field2_; }
         # };
-        assert types[23].name == "Base"
-        assert types[23].fields == [
+        base = types[23]
+        assert base.name == "Base"
+        assert base.fields == [
             "field0_",
             "field1_",
             "field2_",
         ]
+
+        assert base.type.is_struct()
+        base_members = base.type.type_details.members
+        assert base_members[0].type.is_int()
+        assert base_members[1].type.is_int()
+        assert base_members[2].type.is_int()
 
         # 25
         # class Derive : Base {
@@ -718,12 +725,24 @@ def test_til_affix():
         #
         #     int32_t field3_, field4_, field5_;
         # };
-        assert types[24].name == "Derive"
-        assert types[24].fields == [
+        derive = types[24]
+        assert derive.name == "Derive"
+        assert derive.fields == [
             "field3_",
             "field4_",
             "field5_",
         ]
+
+        assert derive.type.is_struct()
+        derive_members = derive.type.type_details.members
+        assert derive_members[0].is_baseclass()
+        assert (
+            derive_members[0].type.get_final_tinfo().get_name() == base.type.get_name()
+        )
+
+        assert derive_members[1].type.is_int()
+        assert derive_members[2].type.is_int()
+        assert derive_members[3].type.is_int()
 
         # struct Outside {
         #     struct {
@@ -735,19 +754,26 @@ def test_til_affix():
         # };
 
         # 34
-        assert types[33].name == "Outside::<unnamed_type_inside>"
-        assert types[33].fields == [
+        t34 = types[33]
+        assert t34.name == "Outside::<unnamed_type_inside>"
+        assert t34.fields == [
             "field0",
             "field1",
             "field2",
         ]
+        assert t34.type.is_struct()
+
         # 35
-        assert types[34].name == "Outside"
-        assert types[34].fields == [
+        t35 = types[34]
+        assert t35.name == "Outside"
+        assert t35.fields == [
             "inside",
             "foo",
             "bar",
         ]
+        assert t35.type.is_struct()
+        members = t35.type.type_details.members
+        assert members[0].type.get_final_tinfo().is_struct()
 
         # class Sorter {
         # public:
@@ -755,18 +781,28 @@ def test_til_affix():
         # };
 
         # 52
-        assert types[51].name == "Sorter"
-        assert types[51].fields == [
+        t52 = types[51]
+        assert t52.name == "Sorter"
+        assert t52.fields == [
             "__vftable",
         ]
+        assert t52.type.is_struct()
+        t52_typ = t52.type.type_details.members[0].type
+        assert t52_typ.is_ptr()
+        assert t52_typ.get_pointed_object().is_typedef()
+        assert t52_typ.get_pointed_object().get_final_tinfo().is_struct()
         # 53
-        assert types[52].name == "Sorter_vtbl"
-        assert types[52].fields == [
+        t53 = types[52]
+        assert t53.name == "Sorter_vtbl"
+        assert t53.fields == [
             "compare",
             "this",
         ]
+        assert t53.type.is_struct()
 
         # 209
         # PTP_CLEANUP_GROUP_CANCEL_CALLBACK typedef void (__fastcall *)(void *, void *)
         #
-        assert types[208].name == "PTP_CLEANUP_GROUP_CANCEL_CALLBACK"
+        t209 = types[208]
+        assert t209.name == "PTP_CLEANUP_GROUP_CANCEL_CALLBACK"
+        assert t209.is_func()
