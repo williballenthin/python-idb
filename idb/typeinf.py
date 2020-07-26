@@ -483,8 +483,8 @@ class TypeString:
 
     def da(self):
         # TODO: da
-        # raise Exception()
-        return 0, 0, 0
+        raise Exception()
+        # return 0, 0, 0
 
     def complex_n(self):
         n = self.dt()
@@ -561,6 +561,14 @@ class TInfo:
         self.base_type = base_type
         self.flags = 0
         self.type_details = type_details
+
+    def get_size(self):
+        # TODO:
+        raise NotImplementedError()
+
+    def get_type_name(self):
+        # TODO:
+        raise NotImplementedError()
 
 
 def create_tinfo(til, type_info, fields=None, fieldcmts=None):
@@ -754,7 +762,7 @@ class UdtTypeData(TypeData):
             else:
                 name = buf.decode("ascii")
                 _def = list(filter(lambda x: x.name == name, til.types.defs))
-                if len(_def) > 0:
+                if len(_def) > 0 and "type" in _def:
                     _type = _def[0].type
                 else:
                     _type = name
@@ -822,6 +830,7 @@ class EnumTypeData(TypeData):
                     cur += delta
                     member = EnumMember(fields[i], value=cur)
                     self.members.append(member)
+        return self
 
 
 class TypedefTypeData(TypeData):
@@ -882,12 +891,9 @@ class v_zbytes(v_zstr):
 class TILTypeInfo(VStruct):
     def __init__(self):
         VStruct.__init__(self)
-
         self.flags = v_uint32()
         self.name = v_zstr_utf8()
-
         self.ordinal = v_uint32()
-
         self.type_info = v_zbytes()
         self.cmt = v_zstr_utf8()
         self.fields_buf = v_zbytes()
@@ -955,6 +961,14 @@ class TILBucket(VStruct):
             defs.append(_def)
         self.defs = defs
 
+    def find_by_name(self, name):
+        if not self.defs:
+            return None
+        _def = list(filter(lambda x: x.name == name, self.defs))
+        if len(_def) == 0:
+            return None
+        return _def[0]
+
 
 TIL_ZIP = 0x0001  # pack buckets using zip
 TIL_MAC = 0x0002  # til has macro table
@@ -990,6 +1004,15 @@ class TIL(VStruct):
         self.size_b = v_uint8()
         self.size_e = v_uint8()
         self.def_align = v_uint8()
+
+        # self.size_s  uint8
+        # self.size_l  uint8
+        # self.size_ll  uint8
+        # self.size_ldbl  uint8
+        # self.syms  TILBucket
+        # self.type_ordinal_numbers  uint32
+        # self.types  TILBucket
+        # self.macros  TILBucket
 
     def pcb_flags(self):
         if self.flags & TIL_ESI:
