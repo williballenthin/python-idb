@@ -483,6 +483,7 @@ class TypeString:
 
     def da(self):
         # TODO: da
+        # raise Exception()
         return 0, 0, 0
 
     def complex_n(self):
@@ -527,11 +528,11 @@ class TypeString:
         return val
 
     def tah_attr(self):
-        if is_tah_byte(self.peek_u8()):
+        if self.has_next() and is_tah_byte(self.peek_u8()):
             return self.type_attr()
 
     def sdacl_attr(self):
-        if is_sdacl_byte(self.peek_u8()):
+        if self.has_next() and is_sdacl_byte(self.peek_u8()):
             return self.type_attr()
 
     def get(self):
@@ -542,6 +543,9 @@ class TypeString:
 
     def rest(self):
         return self.buf[self.pos :]
+
+    def has_next(self):
+        return self.pos < len(self.buf)
 
 
 class TypeData:
@@ -763,7 +767,7 @@ class UdtTypeData(TypeData):
             for i in range(member_cnt):
                 member = UdtMember()
                 member.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
-                if not fields and len(fields) > i:
+                if fields and len(fields) > i:
                     member.name = fields[i]
                 self.members.append(member)
         return self
@@ -858,11 +862,11 @@ class BitfieldTypeData(TypeData):
         self.is_unsigned = False
 
     def deserialize(self, til, type_string, fields, fieldcmts):
+        typ = type_string.u8()
         dt = type_string.dt()
         self.nbytes = dt >> 1
         self.is_unsigned = bool(dt & 1)
         type_string.tah_attr()
-        # TODO: fixme
 
 
 class v_zbytes(v_zstr):
