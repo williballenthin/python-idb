@@ -789,7 +789,7 @@ def test_til_affix():
         assert t52.type.is_struct()
         t52_typ = t52.type.type_details.members[0].type
         assert t52_typ.is_ptr()
-        assert t52_typ.get_pointed_object().is_typedef()
+        assert t52_typ.get_pointed_object().is_decl_typedef()
         assert t52_typ.get_pointed_object().get_final_tinfo().is_struct()
         # 53
         t53 = types[52]
@@ -805,4 +805,4 @@ def test_til_affix():
         #
         t209 = types[208]
         assert t209.name == "PTP_CLEANUP_GROUP_CANCEL_CALLBACK"
-        assert t209.is_func()
+        assert t209.type.is_funcptr()

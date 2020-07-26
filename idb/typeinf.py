@@ -579,7 +579,7 @@ class TInfo:
         return self.ttf.name
 
     def get_next_tinfo(self):
-        if self.is_typedef():
+        if self.is_decl_typedef():
             typedef_detail = self.type_details
             if typedef_detail.is_ordref:
                 _def = self._types.get_by_ordinal(typedef_detail.ordinal)
@@ -589,9 +589,9 @@ class TInfo:
         return None
 
     def get_final_tinfo(self):
-        if self.is_typedef():
+        if self.is_decl_typedef():
             _type = self.get_next_tinfo()
-            while _type.is_typedef():
+            while _type.is_decl_typedef():
                 _type = _type.get_next_tinfo()
             return _type
         return self
@@ -635,12 +635,12 @@ class TInfo:
     def get_decltype(self):
         return self.base_type
 
-    def get_realtype(self, full=False):
+    def get_realtype(self, full=True):
         if full:
             return self.get_final_tinfo().get_decltype()
         return self.get_decltype()
 
-    def is_typedef(self):
+    def is_decl_typedef(self):
         return is_type_typedef(self.get_decltype())
 
     def is_arithmetic(self):
@@ -699,9 +699,6 @@ class TInfo:
 
     def is_decl_func(self):
         return is_type_func(self.get_decltype())
-
-    def is_decl_funcptr(self):
-        raise NotImplementedError()
 
     def is_decl_high_func(self):
         raise NotImplementedError()
@@ -881,7 +878,10 @@ class TInfo:
         return is_type_func(self.get_realtype())
 
     def is_funcptr(self):
-        raise NotImplementedError()
+        pt = self.type_details
+        return self.is_ptr() and (
+            (pt.obj_type is not None and pt.obj_type.is_func()) or pt.closure.is_func()
+        )
 
     def is_high_func(self):
         raise NotImplementedError()
