@@ -13,7 +13,7 @@ class TILEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, TILBucket):
             _dict = {k: v for k, v in obj if k != "buf"}
-            _dict["defs"] = obj.sorted_defs_by_ordinal
+            _dict["defs"] = obj.defs
             return _dict
         elif isinstance(obj, TILTypeInfo):
             _dict = {k: v for k, v in obj if k != "fields_buf"}
