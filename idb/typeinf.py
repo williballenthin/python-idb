@@ -419,8 +419,12 @@ def is_type_closure(t):
     return get_type_flags(t) == BTMT_CLOSURE
 
 
+def is_cm_cc_voidarg(t):
+    return t & CM_CC_MASK == CM_CC_VOIDARG
+
+
 def is_cm_cc_special(t):
-    return t & CM_CC_MASK in CM_CC_SPECIAL
+    return t & CM_CC_MASK == CM_CC_SPECIAL
 
 
 def is_cm_cc_special_pe(t):
@@ -466,13 +470,27 @@ class TypeString:
     def u16(self):
         return struct.unpack("<H", self.read(2))[0]
 
+    def db(self, pos=0):
+        """ read 1 byte as u8"""
+        return self.u8()
+
     def dt(self):
+        """ Reads 1 to 2 bytes.
+        Value Range: 0-0xFFFE
+        Usage: 16bit numbers
+        :return: int
+        """
         val = self.u8()
         if val & 0x80:
             val = val & 0x7F | self.u8() << 7
         return val - 1
 
     def de(self):
+        """ Reads 1 to 5 bytes
+        Value Range: 0-0xFFFFFFFF
+        Usage: Enum Deltas
+        :return: int
+        """
         val = 0
         while True:
             hi = val << 6
@@ -486,15 +504,48 @@ class TypeString:
                 lo = 2 * hi
                 hi = b & 0x7F
                 val = lo | hi
-        n = val & 0xFFFFFFFF
-        return n | (-(n & 0x80000000))
+        return val
 
     def da(self):
-        # TODO: da
-        raise Exception()
-        # return 0, 0, 0
+        """ Reads 1 to 9 bytes.
+        ValueRange: 0x-0x7FFFFFFF, 0-0xFFFFFFFF
+        Usage: Arrays
+        :return: (int, int)
+        """
+        a = 0
+        b = 0
+        da = 0
+        base = 0
+        nelem = 0
+        while True:
+            typ = self.db()
+            if typ & 0x80 == 0:
+                break
+            self.seek(1)
+            da = (da << 7) | typ & 0x7F
+            b += 1
+            if b >= 4:
+                z = self.db()
+                if z != 0:
+                    base = 0x10 * da | z & 0xF
+                nelem = (self.db() >> 4) & 7
+                while True:
+                    y = self.db()
+                    if (y & 0x80) == 0:
+                        break
+                    self.seek(1)
+                    nelem = (nelem << 7) | y & 0x7F
+                    a += 1
+                    if a >= 4:
+                        return True, nelem, base
+        return False, nelem, base
 
     def complex_n(self):
+        """ Reads dt or dt+de
+        Value Range: 0-0xFFFE or 0-0xFFFFFFFF
+        Usage: complex data type's member size
+        :return: int
+        """
         n = self.dt()
         if n == 0x7FFE:  # Support for high (i.e., > 4095) members count
             n = self.de()
@@ -623,8 +674,32 @@ class TInfo:
         raise NotImplementedError()
 
     def get_type_name(self):
-        # TODO:
-        raise NotImplementedError()
+        t = ""
+        # simple type
+        if is_typeid_last(self.base_type):
+            if self.is_unknown():
+                t = "unknown"
+            elif BT_INT8 <= get_base_type(self.base_type) <= BT_INT128:
+                if self.is_unsigned():
+                    t += "u"
+
+                if self.is_char():
+                    t += "int8"
+                elif self.is_int16():
+                    t += "int16"
+                elif self.is_int32():
+                    t += "int32"
+                elif self.is_int64():
+                    t += "int64"
+                elif self.is_int128():
+                    t += "int128"
+            elif self.is_float():
+                t = "float"
+            elif self.is_double():
+                t = "double"
+        else:
+            t = "complex type"
+        return t
 
     def has_details(self):
         return self.type_details is not None
@@ -1069,7 +1144,9 @@ class ArrayTypeData(TypeData):
             self.base = 0
             self.n_elems = ts.dt()
         else:
-            self.n_elems, self.base, _ = ts.da()
+            ok, self.n_elems, self.base = ts.da()
+            if not ok:
+                raise ValueError()
             return self
         ts.tah_attr()
         self.elem_type = create_tinfo(til, ts.get(), fields, fieldcmts)
@@ -1100,8 +1177,8 @@ class FuncTypeData(TypeData):
         typ = ts.u8()
         self.flags |= 4 * get_type_flags(typ)
 
-        cm = ts.u8()
-        if (cm & CM_CC_MASK) == CM_CC_SPOILED:
+        self.cc = ts.u8()
+        if is_cm_cc_special(self.cc):
             raise NotImplementedError()
             # num_of_spoiled_reg = cm & 0x0F  # low nibble is count
             # if num_of_spoiled_reg == 15:
@@ -1113,7 +1190,6 @@ class FuncTypeData(TypeData):
             #     # const type_t BFA_VIRTUAL= 0x10;    ///< virtual
             # else:  # spoiled_reg_info[num_of_spoiled_regs] see extract_spoiledreg
             #     pass
-        self.cc = cm & 0xF0
 
         ts.tah_attr()
         self.rettype = create_tinfo(til, ts.ref(), fields, fieldcmts)
@@ -1121,18 +1197,11 @@ class FuncTypeData(TypeData):
             self.retloc = self.deserialize_argloc(ts.get())
 
         # args
-        if self.cc == CM_CC_VOIDARG:
+        if is_cm_cc_voidarg(self.cc):
             return self
         n = ts.dt()
         if n > 256:
             raise ValueError("invalid arg count!")
-        # elif n == 0:
-        #     if self.cc & CM_CC_ELLIPSIS or is_cm_cc_special(self.cc):
-        #         # func(...) ??
-        #         pass
-        #     else:
-        #         # parameters are unknown
-        #         pass
         else:
             for n in range(n):
                 arg = FuncArg()
@@ -1144,6 +1213,8 @@ class FuncTypeData(TypeData):
                     arg.flags = ts.de()
                 if fields is not None and n < len(fields):
                     arg.name = fields[n]
+                if fieldcmts is not None and n < len(fieldcmts):
+                    arg.cmt = fieldcmts[n]
                 self.args.append(arg)
         return self
 
@@ -1211,22 +1282,16 @@ class UdtTypeData(TypeData):
         n = ts.complex_n()
         if n == 0 and len(ts.rest()) >= 2 and ts.peek_u16() != 33009:
             buf = ts.pbytes()
+            typeref = TypedefTypeData()
             if buf.find(b"#") == 0:
-                ordinal = TypeString(buf[1:]).de()
-                _def = til.types.defs[ordinal - 1]
-                if "type" in _def:
-                    _type = _def.type
-                else:
-                    # may ref self
-                    _type = ordinal
+                typeref.is_ordref = True
+                typeref.ordinal = TypeString(buf[1:]).de()
             else:
-                name = buf.decode("ascii")
-                _def = list(filter(lambda x: x.name == name, til.types.defs))
-                if len(_def) > 0 and "type" in _def:
-                    _type = _def[0].type
-                else:
-                    _type = name
-            return _type
+                typeref.name = buf.decode("ascii")
+
+            member = UdtMember()
+            member.type = typeref
+            self.members.append(member)
         else:
             alpow = n & 7
             member_cnt = n >> 3
@@ -1241,9 +1306,14 @@ class UdtTypeData(TypeData):
             for i in range(member_cnt):
                 member = UdtMember()
                 member.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
-                member.tafld_bits = ts.sdacl_attr() if not self.is_union else 0
-                if not member.is_baseclass() and len(fields) > field_i:
-                    member.name = fields[field_i]
+                attr = ts.sdacl_attr() if not self.is_union else 0
+                member.tafld_bits = attr
+                member.fda = attr
+                if not member.is_baseclass():
+                    if len(fields) > field_i:
+                        member.name = fields[field_i]
+                    if n < len(fieldcmts):
+                        member.cmt = fieldcmts[field_i]
                     field_i += 1
                 self.members.append(member)
         return self
@@ -1268,15 +1338,15 @@ class EnumTypeData(TypeData):
         self.bte = 0
         self.members = []
 
-    def deserialize(self, til, type_string, fields, fieldcmts):
-        typ = type_string.u8()
-        n = type_string.complex_n()
+    def deserialize(self, til, ts, fields, fieldcmts):
+        typ = ts.u8()
+        n = ts.complex_n()
         if n == 0:
-            type_string.pstring()
-            type_string.tah_attr()
+            ts.pstring()
+            ts.tah_attr()
         else:
-            type_string.tah_attr()
-            self.bte = type_string.u8()
+            self.taenum_bits = ts.tah_attr()
+            self.bte = ts.u8()
             cur = 0
             for i in range(n):
                 # TODO: subarrays
@@ -1287,17 +1357,13 @@ class EnumTypeData(TypeData):
                 #     cnt records of 'de' values (cnt CAN be 0)
                 # Note
                 #     delta for ALL subsegment is ONE
-                if self.bte & BTE_BITFIELD:
-                    # mask = type_string.de()
-                    # cnt = type_string.dt()
-                    # for j in range(cnt):
-                    #     val = type_string.de()
+                if self.taenum_bits:
                     pass
-                else:
-                    delta = type_string.de()
-                    cur += delta
-                    member = EnumMember(fields[i], value=cur)
-                    self.members.append(member)
+                if self.bte & BTE_BITFIELD:
+                    self.group_sizes.append(ts.dt())
+                cur += ts.de()
+                member = EnumMember(fields[i], value=cur)
+                self.members.append(member)
         return self
 
 
@@ -1340,8 +1406,9 @@ class BitfieldTypeData(TypeData):
 
     def deserialize(self, til, type_string, fields, fieldcmts):
         typ = type_string.u8()
+        self.nbytes = 1 << (get_type_flags(typ) >> 4)
         dt = type_string.dt()
-        self.nbytes = dt >> 1
+        self.width = dt >> 1
         self.is_unsigned = bool(dt & 1)
         type_string.tah_attr()
 
