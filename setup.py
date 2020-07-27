@@ -15,11 +15,7 @@ from setuptools import setup, find_packages
 # python3.4 setup.py bdist_wheel upload
 # python3.4 -m pip install
 
-PY3_DEPS = [
-    "six",
-    "hexdump",
-    "vivisect-vstruct-wb>=1.0.3",
-]
+PY3_DEPS = ["six", "hexdump", "vivisect-vstruct-wb>=1.0.3", "cached-property"]
 
 # python2.7 has no `functools.lru_cache`,
 # so use a backported copy when necessary.
