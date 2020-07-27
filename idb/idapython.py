@@ -2614,9 +2614,7 @@ class ida_struct:
 
     def get_last_struc_idx(self):
         return (
-            len(self._struct_ids) - 1
-            if len(self._struct_ids) > 0
-            else self.api.idc.BADADDR
+            self._struct_ids[-1] if len(self._struct_ids) > 0 else self.api.idc.BADADDR
         )
 
     def get_struc(self, id):

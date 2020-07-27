@@ -1,9 +1,4 @@
-import os
-
-import pytest
 from fixtures import *
-
-import idb
 
 
 def pluck(prop, s):
@@ -864,6 +859,7 @@ def test_name(kernel32_idb, version, bitness, expected):
     assert api.ida_name.get_name(0x689DB190) == "FinestResolution"
 
 
+@pytest.mark.slow
 @kern32_test()
 def test_names(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
@@ -905,3 +901,10 @@ def test_function_comment():
         api = idb.IDAPython(db)
         assert api.ida_funcs.get_func_cmt(3, False) == "function comment"
         assert api.ida_funcs.get_func_cmt(3, True) == "repeatable function comment"
+
+
+@kern32_test()
+def test_ida_structs(kernel32_idb, version, bitness, expected):
+    idapy = idb.IDAPython(kernel32_idb)
+    assert idapy.ida_struct.get_first_struc_idx() == 0
+    assert idapy.ida_struct.get_last_struc_idx() == 0x29
