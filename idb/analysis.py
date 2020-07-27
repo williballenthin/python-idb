@@ -1004,11 +1004,21 @@ class TypeString(vstruct.VStruct):
 
 
 class StructMember:
-    def __init__(self, db, nodeid):
+    def __init__(self, db, identify):
         self.idb = db
 
-        self.nodeid = nodeid
-        self.netnode = idb.netnode.Netnode(db, self.nodeid)
+        if isinstance(identify, six.integer_types):
+            # if doesn't start with 0xFF0000..., add it.
+            nodebase = idb.netnode.Netnode.get_nodebase(db)
+            if identify < nodebase:
+                identify += nodebase
+            self.netnode = idb.netnode.Netnode(db, identify)
+            self.nodeid = identify
+        elif isinstance(identify, six.string_types):
+            self.netnode = idb.netnode.Netnode(db, identify)
+            self.nodeid = self.netnode.nodeid
+        else:
+            raise ValueError("Expected identify is integer or string")
 
     def get_fullname(self):
         return self.netnode.name()
@@ -1093,16 +1103,21 @@ class Struct:
         assert list(struc.get_members())[0].get_type() == 'DWORD'
     """
 
-    def __init__(self, db, structid):
+    def __init__(self, db, identify):
         self.idb = db
 
-        # if structid doesn't start with 0xFF0000..., add it.
-        nodebase = idb.netnode.Netnode.get_nodebase(db)
-        if structid < nodebase:
-            structid += nodebase
-
-        self.nodeid = structid
-        self.netnode = idb.netnode.Netnode(db, self.nodeid)
+        if isinstance(identify, six.integer_types):
+            # if doesn't start with 0xFF0000..., add it.
+            nodebase = idb.netnode.Netnode.get_nodebase(db)
+            if identify < nodebase:
+                identify += nodebase
+            self.netnode = idb.netnode.Netnode(db, identify)
+            self.nodeid = identify
+        elif isinstance(identify, six.string_types):
+            self.netnode = idb.netnode.Netnode(db, identify)
+            self.nodeid = self.netnode.nodeid
+        else:
+            raise ValueError("Expected identify is integer or string")
 
     def get_name(self):
         return self.netnode.name()

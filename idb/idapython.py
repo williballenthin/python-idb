@@ -6,6 +6,8 @@ import weakref
 
 import six
 
+from idb.analysis import StructMember, Struct
+from idb.netnode import Netnode
 from idb.typeinf import TIL
 
 if six.PY2:
@@ -2535,18 +2537,25 @@ class ida_struct:
         self.idb = db
         self.api = api
 
+        self._struct_ids = []
+        self._load_structs()
+
+    def _load_structs(self):
+        node = Netnode(self.idb, "$ structs")
+        for entry in node.altentries():
+            self._struct_ids.append(idb.netnode.as_uint(entry.value) - 1)
+
     # def get_member(self, sptr, offset):
     #     """Get member at given offset."""
     #     raise NotImplementedError()
-    #
-    # def get_member_by_fullname(self, fullname):
-    #     """Get a member by its fully qualified name, "struct.field"."""
-    #     parts = fullname.split(".")
-    #     raise NotImplementedError()
+
+    def get_member_by_fullname(self, fullname):
+        """Get a member by its fully qualified name, "struct.field"."""
+        return StructMember(self.idb, fullname)
 
     def get_member_by_id(self, mid):
         """Check if the specified member id points to a struct member."""
-        return idb.analysis.StructMember(self.idb, mid)
+        return StructMember(self.idb, mid)
 
     def get_member_by_name(self, sptr, membername):
         """Get a member by its name, like "field44"."""
@@ -2581,9 +2590,9 @@ class ida_struct:
         else:
             return tinfo.get_size()
 
-    # def get_member_struc(self, fullname):
-    #     """Get containing structure of member by its full name "struct.field"."""
-    #     raise NotImplementedError()
+    def get_member_struc(self, fullname):
+        """Get containing structure of member by its full name "struct.field"."""
+        return Struct(self.idb, fullname)
 
     def get_member_tinfo(self, mptr):
         """Get tinfo for given member."""
@@ -2596,17 +2605,36 @@ class ida_struct:
         else:
             return self.api.ida_typeinf.get_numbered_type(ordinal)
 
-    # def get_struc_id(self, name):
-    #     """Get struct id by name."""
-    #     raise NotImplementedError()
+    def get_struc_id(self, name):
+        """Get struct id by name."""
+        return Struct(self.idb, name).nodeid
+
+    def get_first_struc_idx(self):
+        return 0 if len(self._struct_ids) > 0 else self.api.idc.BADADDR
+
+    def get_last_struc_idx(self):
+        return (
+            len(self._struct_ids) - 1
+            if len(self._struct_ids) > 0
+            else self.api.idc.BADADDR
+        )
 
     def get_struc(self, id):
         """Get pointer to struct type info."""
-        return idb.analysis.Struct(self.idb, id)
+        return Struct(self.idb, id)
+
+    def get_struc_by_idx(self, idx):
+        return Struct(self.idb, self._struct_ids[idx])
 
     def get_struc_name(self, id, flags=0):
         """Get struct name by id"""
         return self.get_struc(id).get_name()
+
+    def get_struc_idx(self, id):
+        return self._struct_ids.index(id)
+
+    def get_struc_id(self, name):
+        return Netnode(self.idb, name).nodeid
 
 
 class ida_typeinf:

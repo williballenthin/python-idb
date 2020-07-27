@@ -256,7 +256,7 @@ class Netnode(object):
             return
         while bytes(cursor.key).startswith(key):
             parsed_key = parse_key(cursor.key, wordsize=self.idb.wordsize)
-            yield Entry(cursor.key, parsed_key, cursor.value)
+            yield Entry(cursor.key, parsed_key, bytes(cursor.value))
             try:
                 cursor.next()
             except IndexError:

@@ -607,7 +607,7 @@ class Cursor(object):
                     try:
                         entry_number = current_page.find_index(start_key)
                     except KeyError:
-                        # not found, becaues its too big for this node.
+                        # not found, because its too big for this node.
                         # so we need to go higher.
                         continue
                     else:
