@@ -6,7 +6,7 @@ from vstruct import VStruct
 from vstruct.primitives import v_prim
 
 import idb
-from idb.typeinf import TILBucket, TILTypeInfo
+from idb.typeinf import TILBucket, TILTypeInfo, TInfo
 
 
 class TILEncoder(json.JSONEncoder):
@@ -18,7 +18,10 @@ class TILEncoder(json.JSONEncoder):
         elif isinstance(obj, TILTypeInfo):
             _dict = {k: v for k, v in obj if k != "fields_buf"}
             _dict["fields"] = obj.fields
+            _dict["type"] = obj.type.get_typename()
             return _dict
+        elif isinstance(obj, TInfo):
+            return obj.get_typename()
         elif isinstance(obj, VStruct):
             return {k: v for k, v in obj}
         elif isinstance(obj, v_prim):
@@ -39,7 +42,11 @@ def main():
     args = parser.parse_args()
 
     til = idb.from_buffer(args.idb.read()).til
-    print(json.dumps(til, indent=2, cls=TILEncoder))
+    print(
+        json.dumps(
+            list(map(lambda x: x.type, til.types.defs)), indent=2, cls=TILEncoder
+        )
+    )
     return 0
 
 

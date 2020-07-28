@@ -1004,18 +1004,18 @@ class TypeString(vstruct.VStruct):
 
 
 class StructMember:
-    def __init__(self, db, identify):
+    def __init__(self, db, identity):
         self.idb = db
 
-        if isinstance(identify, six.integer_types):
+        if isinstance(identity, six.integer_types):
             # if doesn't start with 0xFF0000..., add it.
             nodebase = idb.netnode.Netnode.get_nodebase(db)
-            if identify < nodebase:
-                identify += nodebase
-            self.netnode = idb.netnode.Netnode(db, identify)
-            self.nodeid = identify
-        elif isinstance(identify, six.string_types):
-            self.netnode = idb.netnode.Netnode(db, identify)
+            if identity < nodebase:
+                identity += nodebase
+            self.netnode = idb.netnode.Netnode(db, identity)
+            self.nodeid = identity
+        elif isinstance(identity, six.string_types):
+            self.netnode = idb.netnode.Netnode(db, identity)
             self.nodeid = self.netnode.nodeid
         else:
             raise ValueError("Expected identify is integer or string")
@@ -1103,18 +1103,18 @@ class Struct:
         assert list(struc.get_members())[0].get_type() == 'DWORD'
     """
 
-    def __init__(self, db, identify):
+    def __init__(self, db, identity):
         self.idb = db
 
-        if isinstance(identify, six.integer_types):
+        if isinstance(identity, six.integer_types):
             # if doesn't start with 0xFF0000..., add it.
             nodebase = idb.netnode.Netnode.get_nodebase(db)
-            if identify < nodebase:
-                identify += nodebase
-            self.netnode = idb.netnode.Netnode(db, identify)
-            self.nodeid = identify
-        elif isinstance(identify, six.string_types):
-            self.netnode = idb.netnode.Netnode(db, identify)
+            if identity < nodebase:
+                identity += nodebase
+            self.netnode = idb.netnode.Netnode(db, identity)
+            self.nodeid = identity
+        elif isinstance(identity, six.string_types):
+            self.netnode = idb.netnode.Netnode(db, identity)
             self.nodeid = self.netnode.nodeid
         else:
             raise ValueError("Expected identify is integer or string")

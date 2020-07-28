@@ -627,6 +627,11 @@ class TInfo:
         self.type_details = type_details
 
     def get_name(self):
+        if self.ttf is None:
+            if self.is_decl_typedef():
+                return self.get_next_tinfo().get_name()
+            else:
+                return "{name}"
         return self.ttf.name
 
     def get_next_tinfo(self):
@@ -673,33 +678,66 @@ class TInfo:
         # TODO:
         raise NotImplementedError()
 
-    def get_type_name(self):
+    def get_typename(self):
         t = ""
-        # simple type
+        base = get_base_type(self.get_decltype())
         if is_typeid_last(self.base_type):
-            if self.is_unknown():
+            if self.is_decl_unknown():
                 t = "unknown"
-            elif BT_INT8 <= get_base_type(self.base_type) <= BT_INT128:
-                if self.is_unsigned():
-                    t += "u"
-
-                if self.is_char():
+            elif self.is_decl_void():
+                t = "void"
+            elif BT_INT8 <= base <= BT_INT:
+                if self.is_decl_unsigned():
+                    t += "unsigned "
+                if base == BT_INT8:
                     t += "int8"
-                elif self.is_int16():
+                elif base == BT_INT16:
                     t += "int16"
-                elif self.is_int32():
+                elif base == BT_INT32:
                     t += "int32"
-                elif self.is_int64():
+                elif base == BT_INT64:
                     t += "int64"
-                elif self.is_int128():
+                elif base == BT_INT128:
                     t += "int128"
-            elif self.is_float():
+                elif base == BT_INT:
+                    t += "int"
+            elif self.is_decl_bool():
+                t = "bool"
+            elif self.is_decl_float():
                 t = "float"
-            elif self.is_double():
+            elif self.is_decl_double():
                 t = "double"
+            else:
+                raise ValueError("unknown type")
         else:
-            t = "complex type"
-        return t
+            if self.is_funcptr():
+                func = self.get_pointed_object()
+                t += func.get_typename().replace(
+                    "{name}", "(*{})".format(self.get_name())
+                )
+            elif self.is_decl_ptr():
+                t += "{} *".format(self.get_pointed_object().get_typename())
+            elif self.is_decl_array():
+                t += "{} []".format(self.get_arr_object().get_typename())
+            elif self.is_decl_typedef():
+                nex = self.get_next_tinfo()
+                nex_name = (
+                    nex.get_name() if nex.is_decl_typedef() else nex.get_typename()
+                )
+                t += "typedef {} {}".format(self.get_name(), nex_name)
+            elif self.is_decl_enum():
+                return "enum {}".format(self.get_name())
+            elif self.is_decl_func():
+                t += "{} {}()".format(
+                    self.type_details.rettype.get_typename(), self.get_name(),
+                )
+            elif self.is_union():
+                t += "union {}".format(self.get_name())
+            elif self.is_struct():
+                t += "struct {}".format(self.get_name())
+            else:
+                raise ValueError("unknown type")
+        return t.replace("{name}", self.get_name())
 
     def has_details(self):
         return self.type_details is not None
@@ -878,7 +916,7 @@ class TInfo:
         return is_type_unknown(self.get_decltype())
 
     def is_decl_unsigned(self):
-        raise NotImplementedError()
+        return get_type_flags(self.get_decltype()) == BTMT_UNSIGNED
 
     def is_decl_user_cc(self):
         raise NotImplementedError()
@@ -955,7 +993,8 @@ class TInfo:
     def is_funcptr(self):
         pt = self.type_details
         return self.is_ptr() and (
-            (pt.obj_type is not None and pt.obj_type.is_func()) or pt.closure.is_func()
+            (pt.obj_type is not None and pt.obj_type.is_func())
+            or (pt.closure is not None and pt.closure.is_func())
         )
 
     def is_high_func(self):
