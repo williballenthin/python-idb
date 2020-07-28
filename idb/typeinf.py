@@ -609,6 +609,19 @@ class TypeString:
         return self.pos < len(self.buf)
 
 
+def serialize_dt(n):
+    if n > 0x7FFE:
+        raise ValueError("Value too high for append_dt")
+    lo = n + 1
+    hi = n + 1
+    result = bytearray()
+    if lo > 127:
+        result += struct.pack("<B", lo & 0x7F | 0x80)
+        hi = (lo >> 7) & 0xFF
+    result += struct.pack("<B", hi)
+    return result
+
+
 class TypeData:
     __metaclass__ = ABCMeta
 
@@ -1307,7 +1320,7 @@ class FuncTypeData(TypeData):
         if n > 256:
             raise ValueError("invalid arg count!")
         else:
-            for n in range(n):
+            for i in range(n):
                 arg = FuncArg()
                 arg.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
                 if is_cm_cc_special_pe(self.cc):
@@ -1315,10 +1328,10 @@ class FuncTypeData(TypeData):
                 if ts.has_next() and ts.peek_u8() == FAH_BYTE:
                     ts.seek(1)
                     arg.flags = ts.de()
-                if fields is not None and n < len(fields):
-                    arg.name = fields[n]
-                if fieldcmts is not None and n < len(fieldcmts):
-                    arg.cmt = fieldcmts[n]
+                if fields is not None and i < len(fields):
+                    arg.name = fields[i]
+                if fieldcmts is not None and i < len(fieldcmts):
+                    arg.cmt = fieldcmts[i]
                 self.args.append(arg)
         return self
 
@@ -1384,17 +1397,15 @@ class UdtTypeData(TypeData):
     def deserialize(self, til, ts, fields, fieldcmts):
         typ = ts.u8()
         self.is_union = is_type_union(typ)
-        n = ts.complex_n()
-        if n == 0 and len(ts.rest()) >= 2 and ts.peek_u16() != 33009:
+        n = ts.dt()
+        if n == 0:
             buf = ts.pbytes()
-            typeref = TypedefTypeData()
-            if buf.find(b"#") == 0:
-                typeref.is_ordref = True
-                typeref.ordinal = TypeString(buf[1:]).de()
-            else:
-                typeref.name = buf.decode("ascii")
-            self.ref = TInfo(BTF_TYPEDEF, typeref, til=til)
+            self.ref = create_tinfo(
+                til, struct.pack("<B", BTF_TYPEDEF) + serialize_dt(len(buf)) + buf
+            )
         else:
+            if n == 0x7FFE:
+                n = ts.de()
             alpow = n & 7
             member_cnt = n >> 3
             if alpow == 0:
@@ -1505,7 +1516,7 @@ class TypedefTypeData(TypeData):
         self.til = til
         typ = type_string.u8()
         buf = type_string.pbytes()
-        if len(buf) > 1 and buf.find(b"#") == 0:
+        if buf.startswith(b"#"):
             self.is_ordref = True
             self.ordinal = TypeString(buf[1:]).de()
         else:
