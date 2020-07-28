@@ -618,13 +618,19 @@ class TypeData:
 
 
 class TInfo:
-    def __init__(self, til=None, ttf=None, base_type=BT_UNK, type_details=None):
-        self.til = til
-        self.ttf = ttf
-        self._types = til.types
+    def __init__(
+        self, base_type=BT_UNK, type_details=None, til=None, ttf=None,
+    ):
         self.base_type = base_type
         self.flags = 0
         self.type_details = type_details
+        self.til = til
+        self.ttf = ttf
+
+        if til is not None:
+            self._types = til.types
+        else:
+            self._types = []
 
     def get_name(self):
         if self.ttf is None:
@@ -641,7 +647,10 @@ class TInfo:
                 _def = self._types.get_by_ordinal(typedef_detail.ordinal)
             else:
                 _def = self._types.find_by_name(typedef_detail.name)
-            return _def.type
+            if _def is not None:
+                return _def.type
+            else:
+                return TInfo()
         return None
 
     def get_final_tinfo(self):
@@ -707,23 +716,28 @@ class TInfo:
                 t = "float"
             elif self.is_decl_double():
                 t = "double"
-            else:
-                raise ValueError("unknown type")
         else:
             if self.is_funcptr():
                 func = self.get_pointed_object()
-                t += func.get_typename().replace(
-                    "{name}", "(*{})".format(self.get_name())
-                )
+                t += func.get_typename().format(name="(*{})".format(self.get_name()))
             elif self.is_decl_ptr():
                 t += "{} *".format(self.get_pointed_object().get_typename())
             elif self.is_decl_array():
                 t += "{} []".format(self.get_arr_object().get_typename())
             elif self.is_decl_typedef():
                 nex = self.get_next_tinfo()
-                nex_name = (
-                    nex.get_name() if nex.is_decl_typedef() else nex.get_typename()
-                )
+                # may ref a type unknown
+                if nex.base_type != 0:
+                    nex_name = (
+                        nex.get_name() if nex.is_decl_typedef() else nex.get_typename()
+                    )
+                else:
+                    detail = self.type_details
+                    nex_name = (
+                        "#{}".format(detail.ordinal)
+                        if detail.is_ordref
+                        else detail.name
+                    )
                 t += "typedef {} {}".format(self.get_name(), nex_name)
             elif self.is_decl_enum():
                 return "enum {}".format(self.get_name())
@@ -736,6 +750,7 @@ class TInfo:
             elif self.is_struct():
                 t += "struct {}".format(self.get_name())
             else:
+                print("p1")
                 raise ValueError("unknown type")
         return t.replace("{name}", self.get_name())
 
@@ -1125,7 +1140,7 @@ def create_tinfo(til, type_info, fields=None, fieldcmts=None, ttf=None):
     typ = type_string.peek_u8()
     if is_typeid_last(typ) or get_base_type(typ) == BT_RESERVED:
         type_string.seek(1)
-        tinfo = TInfo(til, ttf, typ)
+        tinfo = TInfo(typ, til=til, ttf=ttf)
     else:
         type_data = None
         if is_type_ptr(typ):
@@ -1143,7 +1158,10 @@ def create_tinfo(til, type_info, fields=None, fieldcmts=None, ttf=None):
         elif is_type_bitfld(typ):
             type_data = BitfieldTypeData()
         tinfo = TInfo(
-            til, ttf, typ, type_data.deserialize(til, type_string, fields, fieldcmts)
+            typ,
+            type_data.deserialize(til, type_string, fields, fieldcmts),
+            til=til,
+            ttf=ttf,
         )
     return tinfo
 
