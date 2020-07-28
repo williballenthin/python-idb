@@ -632,12 +632,22 @@ class TInfo:
         else:
             self._types = []
 
+    def get_refname(self):
+        if self.is_decl_typedef():
+            nex = self.get_next_tinfo()
+            if nex.base_type == 0:
+                return (
+                    "#{}".format(self.type_details.ordinal)
+                    if self.type_details.is_ordref
+                    else self.type_details.name
+                )
+            else:
+                return nex.get_name()
+        return "{name}"
+
     def get_name(self):
         if self.ttf is None:
-            if self.is_decl_typedef():
-                return self.get_next_tinfo().get_name()
-            else:
-                return "{name}"
+            return self.get_refname()
         return self.ttf.name
 
     def get_next_tinfo(self):
@@ -721,38 +731,83 @@ class TInfo:
                 func = self.get_pointed_object()
                 t += func.get_typename().format(name="(*{})".format(self.get_name()))
             elif self.is_decl_ptr():
-                t += "{} *".format(self.get_pointed_object().get_typename())
+                t += "{}*".format(self.get_pointed_object().get_typename())
+                t.replace("{name}", self.get_name())
             elif self.is_decl_array():
-                t += "{} []".format(self.get_arr_object().get_typename())
-            elif self.is_decl_typedef():
-                nex = self.get_next_tinfo()
-                # may ref a type unknown
-                if nex.base_type != 0:
-                    nex_name = (
-                        nex.get_name() if nex.is_decl_typedef() else nex.get_typename()
-                    )
-                else:
-                    detail = self.type_details
-                    nex_name = (
-                        "#{}".format(detail.ordinal)
-                        if detail.is_ordref
-                        else detail.name
-                    )
-                t += "typedef {} {}".format(self.get_name(), nex_name)
-            elif self.is_decl_enum():
-                return "enum {}".format(self.get_name())
+                t += "{}[]".format(self.get_arr_object().get_typename())
+                t.replace("{name}", self.get_name())
             elif self.is_decl_func():
-                t += "{} {}()".format(
+                t += "{} {}(".format(
                     self.type_details.rettype.get_typename(), self.get_name(),
                 )
-            elif self.is_union():
-                t += "union {}".format(self.get_name())
-            elif self.is_struct():
-                t += "struct {}".format(self.get_name())
+                args = self.type_details.args
+                for arg in args:
+                    t += "{} {}, ".format(arg.type.get_typename(), arg.name)
+                t += ")"
+            elif self.is_decl_udt():
+                ref = self.type_details.ref
+                t += self.get_name() if ref is None else ref.get_refname()
+            elif self.is_decl_bitfield():
+                if self.type_details.is_unsigned:
+                    t += "unsigned "
+                t += "int{}".format(self.type_details.nbytes * 8)
             else:
-                print("p1")
-                raise ValueError("unknown type")
-        return t.replace("{name}", self.get_name())
+                t += self.get_name()
+        return t
+
+    def get_typedeclare(self):
+        t = ""
+        if self.is_decl_typedef():
+            t += "typedef {} {}".format(self.get_typename(), self.get_refname())
+        elif self.is_decl_enum():
+            t += "enum {}".format(self.get_name())
+        elif self.is_decl_udt():
+            if self.is_union():
+                t += "union "
+            elif self.is_struct():
+                t += "struct "
+            t += self.get_typename()
+        else:
+            t += self.get_typename()
+        return t
+
+    def get_typestr(self, indent=2):
+        typestr = self.get_typedeclare()
+        if self.is_decl_sue():
+            members = self.type_details.members
+            if self.is_decl_udt():
+                if len(members) > 0 and members[0].is_baseclass():
+                    typestr += " : {}".format(members[0].type.get_name())
+                    members = members[1:]
+
+                if len(members) == 0:
+                    typestr += " { }"
+                else:
+                    typestr += "\n{\n"
+                    for m in members:
+                        typestr += " " * indent
+                        if m.type.is_funcptr():
+                            sym = m.type.get_typename()
+                            typestr += (
+                                sym.replace("{name}", m.name)
+                                if m.name is not None
+                                else sym
+                            )
+                            typestr += ";\n"
+                        elif m.type.is_decl_bitfield():
+                            typestr += "{} {} : {};\n".format(
+                                m.type.get_typename(), m.name, m.type.type_details.width
+                            )
+                        else:
+                            typestr += "{} {};\n".format(m.type.get_typename(), m.name)
+                    typestr += "}"
+            else:
+                typestr += "\n{\n"
+                for m in members:
+                    typestr += " " * indent
+                    typestr += "{} = 0x{:X},\n".format(m.name, m.value)
+                typestr += "}"
+        return typestr
 
     def has_details(self):
         return self.type_details is not None
@@ -1006,11 +1061,12 @@ class TInfo:
         return is_type_func(self.get_realtype())
 
     def is_funcptr(self):
-        pt = self.type_details
-        return self.is_ptr() and (
-            (pt.obj_type is not None and pt.obj_type.is_func())
-            or (pt.closure is not None and pt.closure.is_func())
-        )
+        if not self.is_ptr():
+            return False
+        typ = self.get_pointed_object()
+        while typ.is_ptr():
+            typ = typ.get_pointed_object()
+        return typ.is_func()
 
     def is_high_func(self):
         raise NotImplementedError()
@@ -1237,16 +1293,7 @@ class FuncTypeData(TypeData):
         self.cc = ts.u8()
         if is_cm_cc_special(self.cc):
             raise NotImplementedError()
-            # num_of_spoiled_reg = cm & 0x0F  # low nibble is count
-            # if num_of_spoiled_reg == 15:
-            #     bfa = ts.u8()  # function attribute byte (see BFA_*)
-            #     # const type_t BFA_NORET  = 0x01;    ///< __noreturn
-            #     # const type_t BFA_PURE   = 0x02;    ///< __pure
-            #     # const type_t BFA_HIGH   = 0x04;    ///< high level prototype (with possibly hidden args)
-            #     # const type_t BFA_STATIC = 0x08;    ///< static
-            #     # const type_t BFA_VIRTUAL= 0x10;    ///< virtual
-            # else:  # spoiled_reg_info[num_of_spoiled_regs] see extract_spoiledreg
-            #     pass
+            # TODO: spoiled
 
         ts.tah_attr()
         self.rettype = create_tinfo(til, ts.ref(), fields, fieldcmts)
@@ -1332,6 +1379,7 @@ class UdtTypeData(TypeData):
         # pragma pack() alignment (shift amount)
         self.pack = 0
         self.is_union = False
+        self.ref = None
 
     def deserialize(self, til, ts, fields, fieldcmts):
         typ = ts.u8()
@@ -1345,10 +1393,7 @@ class UdtTypeData(TypeData):
                 typeref.ordinal = TypeString(buf[1:]).de()
             else:
                 typeref.name = buf.decode("ascii")
-
-            member = UdtMember()
-            member.type = typeref
-            self.members.append(member)
+            self.ref = TInfo(BTF_TYPEDEF, typeref, til=til)
         else:
             alpow = n & 7
             member_cnt = n >> 3
@@ -1376,11 +1421,19 @@ class UdtTypeData(TypeData):
         return self
 
 
+TAENUM_64BIT = 0x0020  # enum: store 64-bit values
+
+
 class EnumMember:
     def __init__(self, name, value=0, cmt=""):
         self.name = name  # qstring
-        self.cmt = value  # qstring
-        self.value = cmt
+        self.cmt = cmt  # qstring
+        self.value = value
+
+
+def to_s32(n):
+    n = n & 0xFFFFFFFF
+    return n | (-(n & 0x80000000))
 
 
 class EnumTypeData(TypeData):
@@ -1405,23 +1458,31 @@ class EnumTypeData(TypeData):
             self.taenum_bits = ts.tah_attr()
             self.bte = ts.u8()
             cur = 0
+            hi = 0
+            mask = self.calc_mask(til)
             for i in range(n):
                 # TODO: subarrays
                 # https://www.hex-rays.com/products/ida/support/sdkdoc/group__tf__enum.html#ga9ae7aa54dbc597ec17cbb17555306a02
-                # In this case ANY record has the following format:
-                #     'de' mask (has name)
-                #     'dt' cnt
-                #     cnt records of 'de' values (cnt CAN be 0)
-                # Note
-                #     delta for ALL subsegment is ONE
-                if self.taenum_bits:
-                    pass
+                if self.taenum_bits & TAENUM_64BIT:
+                    hi = ts.de()
                 if self.bte & BTE_BITFIELD:
                     self.group_sizes.append(ts.dt())
-                cur += ts.de()
+                lo = ts.de()
+                cur += to_s32(lo | (hi << 32) & mask)
                 member = EnumMember(fields[i], value=cur)
                 self.members.append(member)
         return self
+
+    def calc_mask(self, til):
+        emsize = self.bte & BTE_SIZE_MASK
+        if emsize != 0:
+            bytesize = 1 << (emsize - 1)
+        else:
+            bytesize = til.size_e
+        bitsize = bytesize * 8
+        if bitsize < 64:
+            return (1 << bitsize) - 1
+        return 0xFFFFFFFFFFFFFFFF
 
 
 class TypedefTypeData(TypeData):
@@ -1468,6 +1529,7 @@ class BitfieldTypeData(TypeData):
         self.width = dt >> 1
         self.is_unsigned = bool(dt & 1)
         type_string.tah_attr()
+        return self
 
 
 class v_zbytes(v_zstr):

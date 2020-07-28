@@ -18,10 +18,10 @@ class TILEncoder(json.JSONEncoder):
         elif isinstance(obj, TILTypeInfo):
             _dict = {k: v for k, v in obj if k != "fields_buf"}
             _dict["fields"] = obj.fields
-            _dict["type"] = obj.type.get_typename()
+            _dict["type"] = obj.type.get_typedeclare()
             return _dict
         elif isinstance(obj, TInfo):
-            return obj.get_typename()
+            return obj.get_typestr()
         elif isinstance(obj, VStruct):
             return {k: v for k, v in obj}
         elif isinstance(obj, v_prim):
@@ -42,11 +42,10 @@ def main():
     args = parser.parse_args()
 
     til = idb.from_buffer(args.idb.read()).til
-    print(
-        json.dumps(
-            list(map(lambda x: x.type, til.types.defs)), indent=2, cls=TILEncoder
-        )
-    )
+    # for _def in til.syms.defs:
+    #     print(_def.type.get_typestr())
+    for _def in til.types.defs:
+        print(_def.type.get_typestr())
     return 0
 
 
