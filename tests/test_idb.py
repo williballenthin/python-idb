@@ -255,8 +255,9 @@ def test_find_exact_match_min(kernel32_idb, version, bitness, expected):
 
 @kern32_test()
 def test_find_exact_match_max(kernel32_idb, version, bitness, expected):
-    maxkey = h2b("4e776373737472")
-    assert kernel32_idb.id0.find(maxkey).key == maxkey
+    if version <= 700:
+        maxkey = h2b("4e776373737472")
+        assert kernel32_idb.id0.find(maxkey).key == maxkey
 
 
 @kern32_test()

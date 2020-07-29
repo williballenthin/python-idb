@@ -1,9 +1,4 @@
-import os
-
-import pytest
 from fixtures import *
-
-import idb
 
 
 def pluck(prop, s):
@@ -220,7 +215,11 @@ def test_data(kernel32_idb, version, bitness, expected):
 @kern32_test()
 def test_function_name(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
-    assert api.idc.GetFunctionName(0x68901695) == "DllEntryPoint"
+    assert (
+        api.idc.GetFunctionName(0x68901695) == "DllEntryPoint"
+        if version <= 700
+        else "_BaseDllInitialize@12"
+    )
 
 
 @kern32_test()
@@ -535,8 +534,16 @@ def test_functions(kernel32_idb, version, bitness, expected):
 def test_function_names(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
-    assert api.idc.GetFunctionName(0x68901695) == "DllEntryPoint"
-    assert api.idc.GetFunctionName(0x689016B5) == "sub_689016b5"
+    assert (
+        api.idc.GetFunctionName(0x68901695) == "DllEntryPoint"
+        if version <= 700
+        else "_BaseDllInitialize@12"
+    )
+    assert (
+        api.idc.GetFunctionName(0x689016B5) == "sub_689016b5"
+        if version <= 700
+        else "__BaseDllInitialize@12"
+    )
 
     with pytest.raises(KeyError):
         # this is issue #7.
@@ -558,17 +565,23 @@ def test_all_function_names(kernel32_idb, version, bitness, expected):
 def test_comments(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
+    expected = (
+        "jumptable 6892FF97 default case"
+        if version <= 700
+        else "jumptable 6892FF97 default case, cases 3,5-7"
+    )
+
     assert api.ida_bytes.get_cmt(0x6890103C, False) == "Flags"
-    assert api.ida_bytes.get_cmt(0x689023B4, True) == "jumptable 6892FF97 default case"
+    assert api.ida_bytes.get_cmt(0x689023B4, True) == expected
 
     assert api.idc.Comment(0x6890103C) == "Flags"
     assert api.idc.RptCmt(0x6890103C) == ""
 
-    assert api.idc.RptCmt(0x689023B4) == "jumptable 6892FF97 default case"
+    assert api.idc.RptCmt(0x689023B4) == expected
     assert api.idc.Comment(0x689023B4) == ""
 
     assert api.idc.GetCommentEx(0x6890103C, False) == "Flags"
-    assert api.idc.GetCommentEx(0x689023B4, True) == "jumptable 6892FF97 default case"
+    assert api.idc.GetCommentEx(0x689023B4, True) == expected
 
 
 @pytest.mark.slow
@@ -602,10 +615,11 @@ def test_all_comments(kernel32_idb, version, bitness, expected):
 def test_LocByName(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
-    assert api.idc.LocByName("CancelIo") == 0x6892E70A
-    assert api.idc.GetFunctionName(api.idc.LocByName("CancelIo")) == "CancelIo"
+    if version <= 700:
+        assert api.idc.LocByName("CancelIo") == 0x6892E70A
+        assert api.idc.GetFunctionName(api.idc.LocByName("CancelIo")) == "CancelIo"
 
-    assert api.idc.LocByName("__does not exist__") == -1
+        assert api.idc.LocByName("__does not exist__") == -1
 
 
 @kern32_test()
@@ -820,7 +834,11 @@ def test_exports(kernel32_idb, version, bitness, expected):
     )
 
     assert api.ida_entry.get_entry_ordinal(1572) == 0x68901695
-    assert api.ida_entry.get_entry_name(0x68901695) == "DllEntryPoint"
+    assert (
+        api.ida_entry.get_entry_name(0x68901695) == "DllEntryPoint"
+        if version <= 700
+        else "_BaseDllInitialize@12"
+    )
 
 
 @kern32_test()
@@ -829,6 +847,8 @@ def test_GetType(kernel32_idb, version, bitness, expected):
     assert (
         api.idc.GetType(0x68901695)
         == "BOOL __stdcall DllEntryPoint(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)"
+        if version <= 700
+        else "BOOL __stdcall _BaseDllInitialize@12(HINSTANCE hinstDLL, #E fdwReason, LPVOID lpReserved)"
     )
 
     # valid function, but no type data associated...
@@ -836,7 +856,8 @@ def test_GetType(kernel32_idb, version, bitness, expected):
     #     .text:6899AE01                         ; Attributes: bp-based frame
     #     .text:6899AE01
     #     .text:6899AE01                         sub_6899AE01 proc near
-    assert api.idc.GetType(0x6899AE01) is None
+    if version <= 700:
+        assert api.idc.GetType(0x6899AE01) is None
 
 
 @kern32_test()
@@ -861,18 +882,24 @@ def test_multi_bitness():
 def test_name(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     assert api.ida_bytes.has_name(api.ida_bytes.get_flags(0x689DB190)) == True
-    assert api.ida_name.get_name(0x689DB190) == "FinestResolution"
+    assert (
+        api.ida_name.get_name(0x689DB190) == "FinestResolution"
+        if version <= 700
+        else "_MinimumTime"
+    )
 
 
 @kern32_test()
 def test_names(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
-    if version == 700:
-        assert len(list(api.idautils.Names())) == 14247
-    elif version == 695:
+    if version == 695:
         assert len(list(api.idautils.Names())) == 14252
-    else:
-        raise ValueError("unexpected version")
+    elif version == 700:
+        assert len(list(api.idautils.Names())) == 14247
+    elif version == 720:
+        assert len(list(api.idautils.Names())) == 16457
+    elif version == 730:
+        assert len(list(api.idautils.Names())) == 16455
 
 
 def test_anterior_lines():

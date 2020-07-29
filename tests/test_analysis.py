@@ -32,8 +32,8 @@ def test_root(kernel32_idb, version, bitness, expected):
     assert root.get_field_tag("version") == "A"
     assert root.get_field_index("version") == -1
 
-    assert root.version_string in ("6.95", "7.00")
-    assert root.open_count == 1
+    assert root.version_string == str(version / 100)
+    assert root.open_count in (1, 2)
     assert root.md5 == "00bf1bf1b779ce1af41371426821e0c2"
 
 
@@ -168,7 +168,10 @@ def test_function(kernel32_idb, version, bitness, expected):
     # .text:689016B8 8B EC                                   mov     ebp, esp
     # .text:689016BA 81 EC 14 02 00 00                       sub     esp, 214h
     sub_689016B5 = idb.analysis.Function(kernel32_idb, 0x689016B5)
-    assert sub_689016B5.get_name() == "sub_689016B5"
+    if version <= 700:
+        assert sub_689016B5.get_name() == "sub_689016B5"
+    else:
+        assert sub_689016B5.get_name() == "__BaseDllInitialize@12"
 
     chunks = list(sub_689016B5.get_chunks())
     assert chunks == [
@@ -198,11 +201,11 @@ def test_function(kernel32_idb, version, bitness, expected):
     assert sig.calling_convention == "__stdcall"
     assert sig.rtype == "BOOL"
     assert len(sig.parameters) == 3
-    assert list(map(lambda p: p.type, sig.parameters)) == [
-        "HINSTANCE",
-        "DWORD",
-        "LPVOID",
-    ]
+    assert (
+        list(map(lambda p: p.type, sig.parameters)) == ["HINSTANCE", "DWORD", "LPVOID",]
+        if version <= 700
+        else ["HINSTANCE", "#E", "LPVOID",]
+    )
     assert list(map(lambda p: p.name, sig.parameters)) == [
         "hinstDLL",
         "fdwReason",
@@ -583,7 +586,10 @@ def test_entrypoints2(kernel32_idb, version, bitness, expected):
         1473,
         "NTDLL.TpWaitForWork",
     )
-    assert entrypoints[-1] == ("DllEntryPoint", 0x68901696, None, None)
+    if version <= 700:
+        assert entrypoints[-1] == ("DllEntryPoint", 0x68901696, None, None)
+    else:
+        assert entrypoints[-1] == ("_BaseDllInitialize@12", 0x68901696, None, None)
 
 
 @kern32_test()
@@ -594,7 +600,7 @@ def test_idainfo(kernel32_idb, version, bitness, expected):
         assert idainfo.tag == "IDA"
     elif version == 700:
         assert idainfo.tag == "ida"
-    assert idainfo.version == version
+    assert idainfo.version == min(version, 700)
     assert idainfo.procname == "metapc"
 
     # Portable Executable (PE)
@@ -652,7 +658,7 @@ def test_idainfo720plus(kernel32_idb, version, bitness, expected):
 
     assert idainfo.maxref == 16
     assert idainfo.netdelta == 0
-    assert idainfo.xrefnum == 2
+    assert idainfo.xrefnum in (2, 0)
     assert idainfo.xrefflag == 0xF
     # Visual C++
     assert idainfo.cc_id == 0x01

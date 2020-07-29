@@ -593,9 +593,12 @@ class IdaInfo(vstruct.VStruct):
                 if self.len_sbytes == 119:
                     pass
                 # 7.20 <= ver <= 7.50?
-                elif self.len_sbytes in (141, 172):
+                elif self.len_sbytes in (141, 142, 172, 173):
                     jump_size = 1 if self.wordsize == 4 else 2
                     jump_size2 = 0 if self.wordsize == 4 else 1
+
+                    if self.len_sbytes in (142, 173):
+                        self.vsAddField("unknown-1", v_int8())
 
                     self.vsAddField("genflags", v_uint8())  # 0x0c
                     self.vsAddField("lflags", v_uint16(bigend=True))
