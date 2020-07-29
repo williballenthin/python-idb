@@ -642,8 +642,6 @@ class TInfo:
 
         if til is not None:
             self._types = til.types
-        else:
-            self._types = []
 
     def get_refname(self):
         if self.is_decl_typedef():
@@ -685,12 +683,12 @@ class TInfo:
         return self
 
     def get_arr_object(self):
-        if self.is_array():
+        if self.is_decl_array():
             return self.type_details.elem_type
         return TInfo()
 
     def get_pointed_object(self):
-        if self.is_ptr():
+        if self.is_decl_ptr():
             pt = self.type_details
             if pt.closure is not None:
                 return pt.closure
@@ -699,8 +697,8 @@ class TInfo:
         return TInfo()
 
     def get_ptrarr_object(self):
-        if self.is_ptr_or_array():
-            if self.is_array():
+        if self.is_decl_ptr_or_array():
+            if self.is_decl_array():
                 return self.get_arr_object()
             else:
                 return self.get_pointed_object()
@@ -775,9 +773,9 @@ class TInfo:
         elif self.is_decl_enum():
             t += "enum {}".format(self.get_name())
         elif self.is_decl_udt():
-            if self.is_union():
+            if self.is_decl_union():
                 t += "union "
-            elif self.is_struct():
+            elif self.is_decl_struct():
                 t += "struct "
             t += self.get_typename()
         else:
@@ -840,7 +838,7 @@ class TInfo:
         return is_type_typedef(self.get_decltype())
 
     def is_arithmetic(self):
-        return is_type_arithmetic(self.base_type)
+        return is_type_arithmetic(self.get_decltype())
 
     def is_decl_array(self):
         return is_type_array(self.get_decltype())
@@ -965,9 +963,6 @@ class TInfo:
     def is_decl_sue(self):
         return is_type_sue(self.get_decltype())
 
-    def is_decl_tbyte(self):
-        raise NotImplementedError()
-
     def is_decl_typeref(self):
         raise NotImplementedError()
 
@@ -1018,6 +1013,8 @@ class TInfo:
 
     def is_decl_volatile(self):
         return is_type_volatile(self.get_decltype())
+
+    # realtype
 
     def is_array(self):
         return is_type_array(self.get_realtype())
@@ -1074,18 +1071,18 @@ class TInfo:
         return is_type_func(self.get_realtype())
 
     def is_funcptr(self):
-        if not self.is_ptr():
+        if not self.is_decl_ptr():
             return False
         typ = self.get_pointed_object()
-        while typ.is_ptr():
+        while typ.is_decl_ptr():
             typ = typ.get_pointed_object()
-        return typ.is_func()
+        return typ.is_decl_func()
 
     def is_high_func(self):
         raise NotImplementedError()
 
     def is_int(self):
-        return is_type_int(self.base_type)
+        return is_type_int(self.get_realtype())
 
     def is_int128(self):
         return is_type_int128(self.get_realtype())
@@ -1112,7 +1109,7 @@ class TInfo:
         raise NotImplementedError()
 
     def is_paf(self):
-        return is_type_paf(self.base_type)
+        return is_type_paf(self.get_realtype())
 
     def is_partial(self):
         return is_type_partial(self.get_realtype())
@@ -1145,13 +1142,10 @@ class TInfo:
         raise NotImplementedError()
 
     def is_struct(self):
-        return is_type_struct(self.base_type)
+        return is_type_struct(self.get_realtype())
 
     def is_sue(self):
-        return is_type_sue(self.base_type)
-
-    def is_tbyte(self):
-        raise NotImplementedError()
+        return is_type_sue(self.get_realtype())
 
     def is_uchar(self):
         return is_type_uchar(self.get_realtype())
@@ -1196,10 +1190,10 @@ class TInfo:
         raise NotImplementedError()
 
     def is_void(self):
-        return is_type_void(self.base_type)
+        return is_type_void(self.get_realtype())
 
     def is_volatile(self):
-        return is_type_volatile(self.base_type)
+        return is_type_volatile(self.get_realtype())
 
 
 def create_tinfo(til, type_info, fields=None, fieldcmts=None, ttf=None):
