@@ -32,7 +32,8 @@ def test_root(kernel32_idb, version, bitness, expected):
     assert root.get_field_tag("version") == "A"
     assert root.get_field_index("version") == -1
 
-    assert root.version_string == str(version / 100)
+    vs = str(version / 100)
+    assert root.version_string == vs if len(vs) == 4 else vs + "0"
     assert root.open_count in (1, 2)
     assert root.md5 == "00bf1bf1b779ce1af41371426821e0c2"
 
