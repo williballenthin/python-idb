@@ -889,6 +889,7 @@ def test_name(kernel32_idb, version, bitness, expected):
     )
 
 
+@pytest.mark.slow
 @kern32_test()
 def test_names(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
