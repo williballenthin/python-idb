@@ -3,7 +3,9 @@ import datetime
 import itertools
 import logging
 import types
+from collections import Counter
 from collections import namedtuple
+from random import randint
 
 import six
 import vstruct
@@ -13,6 +15,16 @@ import idb
 import idb.netnode
 
 logger = logging.getLogger(__name__)
+
+_counter = Counter()
+
+
+def name_generator(prefix="unknown"):
+    def inner(index=randint(0, 0xFFFFFFFF)):
+        _counter[index] += 1
+        return "{}{}".format(prefix, _counter[index])
+
+    return inner
 
 
 def is_flag_set(flags, flag):
@@ -597,10 +609,13 @@ class IdaInfo(vstruct.VStruct):
                     jump_size = 1 if self.wordsize == 4 else 2
                     jump_size2 = 0 if self.wordsize == 4 else 1
 
-                    if self.len_sbytes in (142, 173):
-                        self.vsAddField("unknown-1", v_int8())
+                    unk = name_generator()
 
-                    self.vsAddField("genflags", v_uint8())  # 0x0c
+                    if self.len_sbytes in (142, 173):
+                        self.vsAddField("genflags", v_uint16(bigend=True))  # 0x0c
+                    else:
+                        self.vsAddField("genflags", v_uint8())  # 0x0c
+
                     self.vsAddField("lflags", v_uint16(bigend=True))
                     self.vsAddField("database_change_count", v_uint8())
                     self.vsAddField("filetype", v_uint8())
@@ -610,12 +625,12 @@ class IdaInfo(vstruct.VStruct):
                     self.vsAddField("asmtype", v_int8())
                     self.vsAddField("specsegs", v_uint8())
 
-                    self.vsAddField("unknown0", v_bytes(size=1))
+                    self.vsAddField(unk(), v_bytes(size=1))
 
                     self.vsAddField("af", v_uint32(bigend=True))
                     self.vsAddField("af2", v_uint8())
 
-                    self.vsAddField("unknown1", v_bytes(size=jump_size2))
+                    self.vsAddField(unk(), v_bytes(size=jump_size2))
                     self.vsAddField("baseaddr", v_uint8())
 
                     self.vsAddField("start_ss", v_word())
@@ -645,17 +660,17 @@ class IdaInfo(vstruct.VStruct):
                     self.vsAddField("filler_8", v_bytes(size=jump_size))
                     self.vsAddField("highoff", v_uint32(bigend=True))
 
-                    self.vsAddField("unknown2", v_bytes(size=jump_size2))
+                    self.vsAddField(unk(), v_bytes(size=jump_size2))
                     self.vsAddField("maxref", v_uint8())
 
-                    self.vsAddField("unknown3", v_bytes(size=jump_size2))
-                    self.vsAddField("unknown4", v_bytes(size=jump_size))
+                    self.vsAddField(unk(), v_bytes(size=jump_size2))
+                    self.vsAddField(unk(), v_bytes(size=jump_size))
 
                     self.vsAddField("privrange_start_ea", v_uint32(bigend=True))
                     self.vsAddField("privrange_end_ea", v_uint32(bigend=True))
 
-                    self.vsAddField("unknown5", v_bytes(size=jump_size2))
-                    self.vsAddField("unknown6", v_bytes(size=jump_size2))
+                    self.vsAddField(unk(), v_bytes(size=jump_size2))
+                    self.vsAddField(unk(), v_bytes(size=jump_size2))
 
                     self.vsAddField("netdelta", v_uint8())
 
@@ -691,9 +706,9 @@ class IdaInfo(vstruct.VStruct):
                     self.vsAddField("strlit_pref_size", v_uint8())
                     self.vsAddField("strlit_pref", v_str(16))
 
-                    self.vsAddField("unknown7", v_bytes(size=jump_size2))
+                    self.vsAddField(unk(), v_bytes(size=jump_size2))
                     self.vsAddField("strlit_sernum", v_uint8())
-                    self.vsAddField("unknown8", v_bytes(size=jump_size2))
+                    self.vsAddField(unk(), v_bytes(size=jump_size2))
                     self.vsAddField("datatypes", v_uint8())
 
                     self.vsAddField("cc_id", v_uint8())
