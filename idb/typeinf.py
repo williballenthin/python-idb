@@ -837,9 +837,6 @@ class TInfo:
     def is_decl_typedef(self):
         return is_type_typedef(self.get_decltype())
 
-    def is_arithmetic(self):
-        return is_type_arithmetic(self.get_decltype())
-
     def is_decl_array(self):
         return is_type_array(self.get_decltype())
 
@@ -1015,6 +1012,9 @@ class TInfo:
         return is_type_volatile(self.get_decltype())
 
     # realtype
+
+    def is_arithmetic(self):
+        return is_type_arithmetic(self.get_realtype())
 
     def is_array(self):
         return is_type_array(self.get_realtype())

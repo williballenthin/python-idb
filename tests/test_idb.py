@@ -806,3 +806,39 @@ def test_til_affix():
         t209 = types[208]
         assert t209.name == "PTP_CLEANUP_GROUP_CANCEL_CALLBACK"
         assert t209.type.is_funcptr()
+
+        # 79
+        # _TP_CALLBACK_ENVIRON_V3::<unnamed_type_u>::<unnamed_type_s>
+        # struct
+        # {
+        #   unsigned __int32 LongFunction : 1;
+        #   unsigned __int32 Persistent : 1;
+        #   unsigned __int32 Private : 30;
+        # }
+        assert (
+            types[78].type.get_typestr()
+            == """struct _TP_CALLBACK_ENVIRON_V3::<unnamed_type_u>::<unnamed_type_s>
+{
+  unsigned int32 LongFunction : 1;
+  unsigned int32 Persistent : 1;
+  unsigned int32 Private : 30;
+}"""
+        )
+
+        # 115
+        # _TypeDescriptor
+        # struct
+        # {
+        #   const void *pVFTable;
+        #   void *spare;
+        #   char name[];
+        # }
+        assert (
+            types[114].type.get_typestr()
+            == """struct _TypeDescriptor
+{
+  void* pVFTable;
+  void* spare;
+  int8[] name;
+}"""
+        )
