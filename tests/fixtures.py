@@ -110,6 +110,10 @@ def kern32_test(specs=None):
             (695, 64, None),
             (700, 32, None),
             (700, 64, None),
+            (720, 32, None),
+            (720, 64, None),
+            (730, 32, None),
+            (730, 64, None),
         ]
 
     ids = []
@@ -124,6 +128,8 @@ def kern32_test(specs=None):
             500: "v5.0",
             695: "v6.95",
             700: "v7.0b",
+            720: "v7.2",
+            730: "v7.3",
         }
         sversion = version_map[version] if version in version_map else str(version)
 
