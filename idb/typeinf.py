@@ -169,6 +169,8 @@ CM_M_FF = 0x04
 CM_M_NF = 0x08
 CM_M_FN = 0x0C
 
+# CM_CC_ Calling convention
+
 CM_CC_MASK = 0xF0
 CM_CC_INVALID = 0x00
 CM_CC_UNKNOWN = 0x10
@@ -429,6 +431,38 @@ def is_cm_cc_special(t):
 
 def is_cm_cc_special_pe(t):
     return t & CM_CC_MASK in (CM_CC_SPECIAL, CM_CC_SPECIALP, CM_CC_SPECIALE)
+
+
+def get_cc(cm):
+    return cm & CM_CC_MASK
+
+
+def is_user_cc(cm):
+    cc = get_cc(cm)
+    return cc >= CM_CC_SPECIALE
+
+
+# Does the calling convention use ellipsis?
+
+
+def is_vararg_cc(cm):
+    cc = get_cc(cm)
+    return cc in (CM_CC_ELLIPSIS, cc == CM_CC_SPECIALE)
+
+
+# Does the calling convention clean the stack arguments upon return?.
+# \note this function is valid only for x86 code
+
+
+def is_purging_cc(cm):
+    cc = get_cc(cm)
+    return cc in (
+        CM_CC_STDCALL,
+        CM_CC_PASCAL,
+        CM_CC_SPECIALP,
+        CM_CC_FASTCALL,
+        CM_CC_THISCALL,
+    )
 
 
 class TypeString:
@@ -704,6 +738,18 @@ class TInfo:
                 return self.get_pointed_object()
         return TInfo()
 
+    def get_cc(self):
+        if self.is_decl_func():
+            return get_cc(self.type_details.cc)
+        elif self.is_funcptr():
+            return self.get_pointed_object().type_details.cc
+
+    def get_rettype(self):
+        if self.is_decl_func():
+            return self.type_details.rettype
+        elif self.is_funcptr():
+            return self.get_pointed_object().type_details.rettype
+
     def get_size(self):
         # TODO:
         raise NotImplementedError()
@@ -711,11 +757,14 @@ class TInfo:
     def get_typename(self):
         t = ""
         base = get_base_type(self.get_decltype())
+        flags = get_type_flags(self.get_decltype())
+        # 0-9
         if is_typeid_last(self.base_type):
-            if self.is_decl_unknown():
-                t = "unknown"
-            elif self.is_decl_void():
-                t = "void"
+            if base == BT_UNK:
+                t += "unknown"
+            elif base == BT_VOID:
+                t += "void"
+            # 2-7
             elif BT_INT8 <= base <= BT_INT:
                 if self.is_decl_unsigned():
                     t += "unsigned "
@@ -731,16 +780,23 @@ class TInfo:
                     t += "int128"
                 elif base == BT_INT:
                     t += "int"
-            elif self.is_decl_bool():
-                t = "bool"
-            elif self.is_decl_float():
-                t = "float"
-            elif self.is_decl_double():
-                t = "double"
+            elif base == BT_BOOL:
+                t += "bool"
+            elif base == BT_FLOAT:
+                if flags == BTMT_FLOAT:
+                    t += "float"
+                elif flags == BTMT_FLOAT:
+                    t += "double"
+                elif flags == BTMT_LNGDBL:
+                    t += "long double"
+                elif flags == BTMT_SPECFLT:
+                    t += "special float"
+                else:
+                    t += "unknown float"
         else:
             if self.is_funcptr():
                 func = self.get_pointed_object()
-                t += func.get_typename().format(name="(*{})".format(self.get_name()))
+                t += func.get_typename().format(name="*{}".format(self.get_name()))
             elif self.is_decl_ptr():
                 t += "{}*".format(self.get_pointed_object().get_typename())
                 t.replace("{name}", self.get_name())
@@ -748,12 +804,46 @@ class TInfo:
                 t += "{}[]".format(self.get_arr_object().get_typename())
                 t.replace("{name}", self.get_name())
             elif self.is_decl_func():
-                t += "{} {}(".format(
-                    self.type_details.rettype.get_typename(), self.get_name(),
+                cc = self.get_cc()
+                # CM_CC_CDECL
+                # CM_CC_ELLIPSIS
+                # CM_CC_STDCALL
+                # CM_CC_PASCAL
+                # CM_CC_FASTCALL
+                # CM_CC_THISCALL
+                # CM_CC_MANUAL
+                # CM_CC_SPOILED
+                conv = ""
+                if cc == CM_CC_CDECL:
+                    conv = "__cdecl"
+                # elif cc == CM_CC_ELLIPSIS:
+                #     conv = "call"
+                elif cc == CM_CC_STDCALL:
+                    conv = "__stdcall"
+                elif cc == CM_CC_PASCAL:
+                    conv = "__pascal"
+                elif cc == CM_CC_FASTCALL:
+                    conv = "__fastcall"
+                elif cc == CM_CC_THISCALL:
+                    conv = "__thiscall"
+                # elif cc == CM_CC_MANUAL:
+                #     conv = "__manual"
+                elif cc == CM_CC_SPOILED:
+                    conv = "__spoiled"
+
+                t += "{} ({}{})(".format(
+                    self.get_rettype().get_typename(),
+                    conv + " " if conv != "" else "",
+                    self.get_name(),
                 )
                 args = self.type_details.args
                 for arg in args:
-                    t += "{} {}, ".format(arg.type.get_typename(), arg.name)
+                    t += "{}{}, ".format(
+                        arg.type.get_typename(),
+                        " " + arg.name if arg.name != "" else "",
+                    )
+                if len(args) > 0:
+                    t = t[:-2]
                 t += ")"
             elif self.is_decl_udt():
                 ref = self.type_details.ref
@@ -797,20 +887,20 @@ class TInfo:
                     typestr += "\n{\n"
                     for m in members:
                         typestr += " " * indent
+                        typename = m.type.get_typename()
                         if m.type.is_funcptr():
-                            sym = m.type.get_typename()
                             typestr += (
-                                sym.replace("{name}", m.name)
+                                typename.replace("{name}", m.name)
                                 if m.name is not None
-                                else sym
+                                else typename
                             )
                             typestr += ";\n"
                         elif m.type.is_decl_bitfield():
                             typestr += "{} {} : {};\n".format(
-                                m.type.get_typename(), m.name, m.type.type_details.width
+                                typename, m.name, m.type.type_details.width
                             )
                         else:
-                            typestr += "{} {};\n".format(m.type.get_typename(), m.name)
+                            typestr += "{} {};\n".format(typename, m.name)
                     typestr += "}"
             else:
                 typestr += "\n{\n"
