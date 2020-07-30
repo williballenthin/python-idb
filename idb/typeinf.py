@@ -574,17 +574,6 @@ class TypeString:
                         return True, nelem, base
         return False, nelem, base
 
-    def complex_n(self):
-        """ Reads dt or dt+de
-        Value Range: 0-0xFFFE or 0-0xFFFFFFFF
-        Usage: complex data type's member size
-        :return: int
-        """
-        n = self.dt()
-        if n == 0x7FFE:  # Support for high (i.e., > 4095) members count
-            n = self.de()
-        return n
-
     def pstring(self):
         length = self.dt()
         buf = self.read(length)
@@ -674,8 +663,7 @@ class TInfo:
         self.til = til
         self.ttf = ttf
 
-        if til is not None:
-            self._types = til.types
+        self._types = til.types if til is not None else None
 
     def get_refname(self):
         if self.is_decl_typedef():
@@ -696,7 +684,7 @@ class TInfo:
         return self.ttf.name
 
     def get_next_tinfo(self):
-        if self.is_decl_typedef():
+        if self.is_decl_typedef() and self._types is not None:
             typedef_detail = self.type_details
             if typedef_detail.is_ordref:
                 _def = self._types.get_by_ordinal(typedef_detail.ordinal)
@@ -706,10 +694,10 @@ class TInfo:
                 return _def.type
             else:
                 return TInfo()
-        return None
+        return TInfo()
 
     def get_final_tinfo(self):
-        if self.is_decl_typedef():
+        if self.is_decl_typedef() and self._types is not None:
             _type = self.get_next_tinfo()
             while _type.is_decl_typedef():
                 _type = _type.get_next_tinfo()
@@ -799,10 +787,8 @@ class TInfo:
                 t += func.get_typename().format(name="*{}".format(self.get_name()))
             elif self.is_decl_ptr():
                 t += "{}*".format(self.get_pointed_object().get_typename())
-                t.replace("{name}", self.get_name())
             elif self.is_decl_array():
                 t += "{}[]".format(self.get_arr_object().get_typename())
-                t.replace("{name}", self.get_name())
             elif self.is_decl_func():
                 cc = self.get_cc()
                 # CM_CC_CDECL
@@ -845,7 +831,7 @@ class TInfo:
                 if len(args) > 0:
                     t = t[:-2]
                 t += ")"
-            elif self.is_decl_udt():
+            elif self.is_decl_udt() or self.is_decl_enum():
                 ref = self.type_details.ref
                 t += self.get_name() if ref is None else ref.get_refname()
             elif self.is_decl_bitfield():
@@ -1319,6 +1305,12 @@ def create_tinfo(til, type_info, fields=None, fieldcmts=None, ttf=None):
     return tinfo
 
 
+def create_ref(til, type_info):
+    if not type_info.startswith(b"="):
+        type_info = b"=" + serialize_dt(len(type_info)) + type_info
+    return create_tinfo(til, type_info)
+
+
 class PointerTypeData(TypeData):
     """Representation of ptr_type_data_t"""
 
@@ -1483,10 +1475,8 @@ class UdtTypeData(TypeData):
         self.is_union = is_type_union(typ)
         n = ts.dt()
         if n == 0:
-            buf = ts.pbytes()
-            self.ref = create_tinfo(
-                til, struct.pack("<B", BTF_TYPEDEF) + serialize_dt(len(buf)) + buf
-            )
+            self.ref = create_ref(til, ts.pbytes())
+            self.taudt_bits = ts.sdacl_attr()
         else:
             if n == 0x7FFE:
                 n = ts.de()
@@ -1542,14 +1532,17 @@ class EnumTypeData(TypeData):
         self.taenum_bits = 0
         self.bte = 0
         self.members = []
+        self.ref = None
 
     def deserialize(self, til, ts, fields, fieldcmts):
         typ = ts.u8()
-        n = ts.complex_n()
+        n = ts.dt()
         if n == 0:
-            ts.pstring()
-            ts.tah_attr()
+            self.ref = create_ref(til, ts.pbytes())
+            self.taenum_bits = ts.sdacl_attr()
         else:
+            if n == 0x7FFE:
+                n = ts.de()
             self.taenum_bits = ts.tah_attr()
             self.bte = ts.u8()
             cur = 0
@@ -1572,8 +1565,10 @@ class EnumTypeData(TypeData):
         emsize = self.bte & BTE_SIZE_MASK
         if emsize != 0:
             bytesize = 1 << (emsize - 1)
-        else:
+        elif til is not None:
             bytesize = til.size_e
+        else:
+            bytesize = 4
         bitsize = bytesize * 8
         if bitsize < 64:
             return (1 << bitsize) - 1
