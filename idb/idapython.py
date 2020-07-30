@@ -6,6 +6,10 @@ import weakref
 
 import six
 
+from idb.analysis import StructMember, Struct
+from idb.netnode import Netnode
+from idb.typeinf import TIL
+
 if six.PY2:
     import functools32 as functools
 else:
@@ -2528,6 +2532,148 @@ class ida_name:
         return self.get_name(ea)
 
 
+class ida_struct:
+    def __init__(self, db, api):
+        self.idb = db
+        self.api = api
+
+        self._struct_ids = []
+        self._load_structs()
+
+    def _load_structs(self):
+        node = Netnode(self.idb, "$ structs")
+        for entry in node.altentries():
+            self._struct_ids.append(idb.netnode.as_uint(entry.value) - 1)
+
+    # def get_member(self, sptr, offset):
+    #     """Get member at given offset."""
+    #     raise NotImplementedError()
+
+    def get_member_by_fullname(self, fullname):
+        """Get a member by its fully qualified name, "struct.field"."""
+        return StructMember(self.idb, fullname)
+
+    def get_member_by_id(self, mid):
+        """Check if the specified member id points to a struct member."""
+        return StructMember(self.idb, mid)
+
+    def get_member_by_name(self, sptr, membername):
+        """Get a member by its name, like "field44"."""
+        return sptr.find_member_by_name(membername)
+
+    def get_member_cmt(self, mid, repeatable):
+        """Get comment of structure member."""
+        m = self.get_member_by_id(mid)
+        if repeatable:
+            return m.get_repeatable_member_comment()
+        else:
+            return m.get_member_comment()
+
+    def get_member_fullname(self, mid):
+        """Get a member's fully qualified name, "struct.field"."""
+        m = self.get_member_by_id(mid)
+        return m.get_fullname()
+
+    # def get_member_id(self, sptr, offset):
+    #     """Get member id at given offset."""
+    #     raise NotImplementedError()
+
+    def get_member_name(self, mid):
+        """Get name of structure member."""
+        return self.get_member_by_id(mid).get_name()
+
+    def get_member_size(self, nonnul_mptr):
+        """Get size of structure member."""
+        tinfo = self.get_member_tinfo(nonnul_mptr)
+        if not tinfo:
+            return None
+        else:
+            return tinfo.get_size()
+
+    def get_member_struc(self, fullname):
+        """Get containing structure of member by its full name "struct.field"."""
+        return Struct(self.idb, fullname)
+
+    def get_member_tinfo(self, mptr):
+        """Get tinfo for given member."""
+        _type = mptr.get_typeinfo()
+        if not _type:
+            return None
+        ordinal = self.api.ida_typeinf.get_ordinal_from_idb_type(mptr.get_name(), _type)
+        if ordinal == -1:
+            return None
+        else:
+            return self.api.ida_typeinf.get_numbered_type(ordinal)
+
+    def get_struc_id(self, name):
+        """Get struct id by name."""
+        return Struct(self.idb, name).nodeid
+
+    def get_first_struc_idx(self):
+        return 0 if len(self._struct_ids) > 0 else self.api.idc.BADADDR
+
+    def get_last_struc_idx(self):
+        return (
+            self._struct_ids[-1] if len(self._struct_ids) > 0 else self.api.idc.BADADDR
+        )
+
+    def get_struc(self, id):
+        """Get pointer to struct type info."""
+        return Struct(self.idb, id)
+
+    def get_struc_by_idx(self, idx):
+        return Struct(self.idb, self._struct_ids[idx])
+
+    def get_struc_name(self, id, flags=0):
+        """Get struct name by id"""
+        return self.get_struc(id).get_name()
+
+    def get_struc_idx(self, id):
+        return self._struct_ids.index(id)
+
+    def get_struc_id(self, name):
+        return Netnode(self.idb, name).nodeid
+
+
+class ida_typeinf:
+    def __init__(self, db, api):
+        self.idb = db
+        self.api = api
+        self.types = db.til.types
+
+    def get_named_type(self, name, ntf_flags=None):
+        """Get a type data by its name."""
+        return self.types.find_by_name(name)
+
+    def get_type_flags(self, t):
+        """Get type flags ( 'TYPE_FLAGS_MASK' )"""
+        return idb.typeinf.get_type_flags(t)
+
+    def get_base_flags(self, t):
+        return idb.typeinf.get_base_type(t)
+
+    def get_numbered_type(self, ordinal):
+        """Get type ordinal by its name."""
+        if 0 < ordinal < len(self.types):
+            return self.types[ordinal]
+        else:
+            return None
+
+    def get_ordinal_from_idb_type(self, name, _type):
+        """Get ordinal number of an idb type (struct/enum).
+        The 'type' parameter is used only to determine the kind of the type (struct or enum).
+        Use this function to find out the correspondence between idb types and til types"""
+        if not _type or len(_type) == 0:
+            return -1
+        typ = self.get_named_type(name)
+        if self.get_base_flags(typ.type.base_type) == self.get_base_flags(
+            ord(_type[0])
+        ):
+            return typ.ordinal
+        else:
+            return -1
+
+
 class IDAPython:
     def __init__(self, db, ScreenEA=None):
         self.idb = db
@@ -2543,3 +2689,5 @@ class IDAPython:
         self.ida_nalt = ida_nalt(db, self)
         self.ida_entry = ida_entry(db, self)
         self.ida_name = ida_name(db, self)
+        self.ida_struct = ida_struct(db, self)
+        self.ida_typeinf = ida_typeinf(db, self)

@@ -4,16 +4,15 @@ lots of inspiration from: https://github.com/nlitsme/pyidbutil
 import abc
 import functools
 import logging
-import re
 import zlib
 from collections import namedtuple
 
 import vstruct
-from cached_property import cached_property
 from vstruct.primitives import *
 
 import idb
 import idb.netnode
+from idb.typeinf import TIL
 
 logger = logging.getLogger(__name__)
 
@@ -608,7 +607,7 @@ class Cursor(object):
                     try:
                         entry_number = current_page.find_index(start_key)
                     except KeyError:
-                        # not found, becaues its too big for this node.
+                        # not found, because its too big for this node.
                         # so we need to go higher.
                         continue
                     else:
@@ -1035,147 +1034,6 @@ class NAM(vstruct.VStruct):
         if size > len(self.buffer):
             raise ValueError("buffer too small")
         return struct.unpack(fmt, self.buffer[:size])
-
-
-class TILTypeInfo(vstruct.VStruct):
-    def __init__(self):
-        vstruct.VStruct.__init__(self)
-
-        self.flags = v_uint32()
-        self.name = v_zstr_utf8()
-
-        self.ordinal = v_uint32()
-
-        self.type_info = v_zstr_utf8()
-        self.cmt = v_zstr_utf8()
-        self.fields = v_zstr_utf8()
-        self.fieldscmts = v_zstr_utf8()
-        self.sclass = v_zstr_utf8()
-
-    def pcb_flags(self):
-        if self.flags >> 31:
-            self.vsSetField("ordinal", v_uint64())
-        if self.flags not in (0x7FFFFFFF, 0xFFFFFFFF):
-            raise Exception("unsupported format {}".format(self.flags))
-
-    @cached_property
-    def parsed_fields(self):
-        parts = re.split(r"\W", self.fields)
-        return list(filter(lambda x: x != "", parts))
-
-
-class TILBucket(vstruct.VStruct):
-    def __init__(self, flags):
-        vstruct.VStruct.__init__(self)
-
-        self.flags = flags
-        self.defs = None
-
-        self.ndefs = v_uint32()
-        self.size = v_uint32()
-
-        if self.flags & TIL_ZIP:
-            self.csize = v_uint32()
-        else:
-            self.csize = None
-
-        self.buf = v_bytes()
-
-    def pcb_size(self):
-        self["buf"].vsSetLength(self.size)
-
-    def pcb_csize(self):
-        if self.csize is not None:
-            self["buf"].vsSetLength(self.csize)
-
-    def pcb_buf(self):
-        if self.csize is not None:
-            buf = zlib.decompress(self.buf)
-            self.vsSetField("buf", buf)
-        else:
-            buf = self.buf.tobytes() if isinstance(self.buf, memoryview) else self.buf
-
-        defs = []
-        offset = 0
-
-        for _ in range(self.ndefs):
-            _def = TILTypeInfo()
-            offset = _def.vsParse(buf, offset=offset)
-            defs.append(_def)
-
-        self.defs = defs
-
-    @cached_property
-    def sorted_defs_by_ordinal(self):
-        return sorted(self.defs, key=lambda x: x.ordinal)
-
-
-TIL_ZIP = 0x0001  # pack buckets using zip
-TIL_MAC = 0x0002  # til has macro table
-TIL_ESI = 0x0004  # extended sizeof info (short, long, longlong)
-TIL_UNI = 0x0008  # universal til for any compiler
-TIL_ORD = 0x0010  # type ordinal numbers are present
-TIL_ALI = 0x0020  # type aliases are present (this bit is used only on the disk)
-TIL_MOD = 0x0040  # til has been modified, should be saved
-TIL_STM = 0x0080  # til has extra streams
-TIL_SLD = 0x0100  # sizeof(long double)
-
-
-class TIL(vstruct.VStruct):
-    def __init__(self, buf=None, wordsize=4):
-        vstruct.VStruct.__init__(self)
-        self.wordsize = wordsize
-        self.signature = v_str(size=0x06)
-
-        # https://github.com/aerosoul94/tilutil/blob/master/distil.py#L545
-
-        self.format = v_uint32()
-        self.flags = v_uint32()
-
-        self.title_len = v_uint8()
-        self.title = v_str()
-
-        self.base_len = v_uint8()
-        self.base = v_str()
-
-        self.id = v_uint8()
-        self.cm = v_uint8()
-        self.size_i = v_uint8()
-        self.size_b = v_uint8()
-        self.size_e = v_uint8()
-        self.def_align = v_uint8()
-
-    def pcb_flags(self):
-        if self.flags & TIL_ESI:
-            self.vsAddField("size_s", v_uint8())
-            self.vsAddField("size_l", v_uint8())
-            self.vsAddField("size_ll", v_uint8())
-
-        if self.flags & TIL_SLD:
-            self.vsAddField("size_ldbl", v_uint8())
-
-        self.vsAddField("syms", TILBucket(flags=self.flags))
-
-        if self.flags & TIL_ORD:
-            self.vsAddField("type_ordinal_numbers", v_uint32())
-
-        self.vsAddField("types", TILBucket(flags=self.flags))
-        self.vsAddField("macros", TILBucket(flags=self.flags))
-
-    def pcb_title_len(self):
-        self["title"].vsSetLength(self.title_len)
-
-    def pcb_base_len(self):
-        self["base"].vsSetLength(self.base_len)
-
-    def vsParse(self, sbytes, offset=0, fast=False):
-        sbytes = sbytes.tobytes() if isinstance(sbytes, memoryview) else sbytes
-        return vstruct.VStruct.vsParse(self, sbytes, offset, fast)
-
-    def validate(self):
-        if self.signature != "IDATIL":
-            raise ValueError("bad signature")
-        return True
 
 
 SectionDescriptor = namedtuple("SectionDescriptor", ["name", "cls"])

@@ -1004,14 +1004,30 @@ class TypeString(vstruct.VStruct):
 
 
 class StructMember:
-    def __init__(self, db, nodeid):
+    def __init__(self, db, identity):
         self.idb = db
 
-        self.nodeid = nodeid
-        self.netnode = idb.netnode.Netnode(db, self.nodeid)
+        if isinstance(identity, six.integer_types):
+            # if doesn't start with 0xFF0000..., add it.
+            nodebase = idb.netnode.Netnode.get_nodebase(db)
+            if identity < nodebase:
+                identity += nodebase
+            self.netnode = idb.netnode.Netnode(db, identity)
+            self.nodeid = identity
+        elif isinstance(identity, six.string_types):
+            self.netnode = idb.netnode.Netnode(db, identity)
+            self.nodeid = self.netnode.nodeid
+        else:
+            raise ValueError("Expected identify is integer or string")
+
+    def get_fullname(self):
+        return self.netnode.name()
 
     def get_name(self):
         return self.netnode.name().partition(".")[2]
+
+    def get_typeinfo(self):
+        return self.netnode.supval(tag="S", index=0x3000)
 
     def get_type(self):
         # nodeid: ff000078 tag: S index: 0x3000
@@ -1023,16 +1039,16 @@ class StructMember:
         return s.s
 
     def get_enum_id(self):
-        return self.altval(tag="A", index=0xB)
+        return self.netnode.altval(tag="A", index=0xB)
 
     def get_struct_id(self):
-        return self.altval(tag="A", index=0x3)
+        return self.netnode.altval(tag="A", index=0x3)
 
     def get_member_comment(self):
-        return self.supstr(tag="S", index=0x0)
+        return self.netnode.supstr(tag="S", index=0x0)
 
     def get_repeatable_member_comment(self):
-        return self.supstr(tag="S", index=0x1)
+        return self.netnode.supstr(tag="S", index=0x1)
 
     # TODO: tag='A', index=0x10
     # TODO: tag='S', index=0x9, "ptrseg"
@@ -1087,16 +1103,24 @@ class Struct:
         assert list(struc.get_members())[0].get_type() == 'DWORD'
     """
 
-    def __init__(self, db, structid):
+    def __init__(self, db, identity):
         self.idb = db
 
-        # if structid doesn't start with 0xFF0000..., add it.
-        nodebase = idb.netnode.Netnode.get_nodebase(db)
-        if structid < nodebase:
-            structid += nodebase
+        if isinstance(identity, six.integer_types):
+            # if doesn't start with 0xFF0000..., add it.
+            nodebase = idb.netnode.Netnode.get_nodebase(db)
+            if identity < nodebase:
+                identity += nodebase
+            self.netnode = idb.netnode.Netnode(db, identity)
+            self.nodeid = identity
+        elif isinstance(identity, six.string_types):
+            self.netnode = idb.netnode.Netnode(db, identity)
+            self.nodeid = self.netnode.nodeid
+        else:
+            raise ValueError("Expected identify is integer or string")
 
-        self.nodeid = structid
-        self.netnode = idb.netnode.Netnode(db, self.nodeid)
+    def get_name(self):
+        return self.netnode.name()
 
     def get_members(self):
         v = self.netnode.supval(tag="M", index=0)
@@ -1116,6 +1140,12 @@ class Struct:
 
             member_nodeid = self.netnode.nodebase + nodeid_offset
             yield StructMember(self.idb, member_nodeid)
+
+    def find_member_by_name(self, name):
+        for m in self.get_members():
+            if m.get_name() == name:
+                return m
+        return None
 
 
 def chunks(l, n):

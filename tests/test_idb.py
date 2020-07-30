@@ -571,7 +571,7 @@ def test_til(kernel32_idb, version, bitness, expected):
     assert til.size_e == 4
 
     syms = til.syms.defs
-    types = til.types.sorted_defs_by_ordinal
+    types = til.types.defs
 
     assert len(types) == 106
     assert len(syms) == 61
@@ -587,7 +587,7 @@ def test_til(kernel32_idb, version, bitness, expected):
     #   unsigned __int8 Data4[8];
     # };
     assert types[1].name == "_GUID"
-    assert types[1].parsed_fields == ["Data1", "Data2", "Data3", "Data4"]
+    assert types[1].fields == ["Data1", "Data2", "Data3", "Data4"]
     # TODO: don't known how to use the type_info field
     # assert types[0].type_info == '\x0d!$##\x1b\x09"'
 
@@ -606,7 +606,7 @@ def test_til(kernel32_idb, version, bitness, expected):
     #   MaxJobObjectInfoClass = 0x8,
     # };
     assert types[5].name == "_JOBOBJECTINFOCLASS"
-    assert types[5].parsed_fields == [
+    assert types[5].fields == [
         "JobObjectBasicAccountingInformation",
         "JobObjectBasicLimitInformation",
         "JobObjectBasicProcessIdList",
@@ -635,14 +635,14 @@ def test_til(kernel32_idb, version, bitness, expected):
     assert syms[6].ordinal == 0x7
     assert syms[7].ordinal == 0x8
 
-    assert syms[0].type_info == "=\x14_JOBOBJECTINFOCLASS"
-    assert syms[1].type_info == "=\x14_JOBOBJECTINFOCLASS"
-    assert syms[2].type_info == "=\x14_JOBOBJECTINFOCLASS"
-    assert syms[3].type_info == "=\x14_JOBOBJECTINFOCLASS"
-    assert syms[4].type_info == "=\x14_JOBOBJECTINFOCLASS"
-    assert syms[5].type_info == "=\x14_JOBOBJECTINFOCLASS"
-    assert syms[6].type_info == "=\x14_JOBOBJECTINFOCLASS"
-    assert syms[7].type_info == "=\x14_JOBOBJECTINFOCLASS"
+    assert syms[0].type_info == b"=\x14_JOBOBJECTINFOCLASS"
+    assert syms[1].type_info == b"=\x14_JOBOBJECTINFOCLASS"
+    assert syms[2].type_info == b"=\x14_JOBOBJECTINFOCLASS"
+    assert syms[3].type_info == b"=\x14_JOBOBJECTINFOCLASS"
+    assert syms[4].type_info == b"=\x14_JOBOBJECTINFOCLASS"
+    assert syms[5].type_info == b"=\x14_JOBOBJECTINFOCLASS"
+    assert syms[6].type_info == b"=\x14_JOBOBJECTINFOCLASS"
+    assert syms[7].type_info == b"=\x14_JOBOBJECTINFOCLASS"
 
     # 59	ULARGE_INTEGER	typedef _ULARGE_INTEGER
     assert types[58].name == "ULARGE_INTEGER"
@@ -658,7 +658,7 @@ def test_til(kernel32_idb, version, bitness, expected):
     #   ULONGLONG QuadPart;
     # };
     assert types[59].name == "_ULARGE_INTEGER"
-    assert types[59].parsed_fields == [
+    assert types[59].fields == [
         "u",
         "QuadPart",
     ]
@@ -669,7 +669,7 @@ def test_til(kernel32_idb, version, bitness, expected):
     #   DWORD HighPart;
     # };
     assert types[60].name == "_ULARGE_INTEGER::$0354AA9C204208F00D0965D07BBE7FAC"
-    assert types[60].parsed_fields == [
+    assert types[60].fields == [
         "LowPart",
         "HighPart",
     ]
@@ -686,7 +686,7 @@ def test_til_affix():
         assert til.size_e == 4
 
         syms = til.syms.defs
-        types = til.types.sorted_defs_by_ordinal
+        types = til.types.defs
 
         # 24
         # class Base {
@@ -703,12 +703,19 @@ def test_til_affix():
         #
         #     int32_t bar() const { return field1_ + field2_; }
         # };
-        assert types[23].name == "Base"
-        assert types[23].parsed_fields == [
+        base = types[23]
+        assert base.name == "Base"
+        assert base.fields == [
             "field0_",
             "field1_",
             "field2_",
         ]
+
+        assert base.type.is_struct()
+        base_members = base.type.type_details.members
+        assert base_members[0].type.is_int()
+        assert base_members[1].type.is_int()
+        assert base_members[2].type.is_int()
 
         # 25
         # class Derive : Base {
@@ -718,12 +725,24 @@ def test_til_affix():
         #
         #     int32_t field3_, field4_, field5_;
         # };
-        assert types[24].name == "Derive"
-        assert types[24].parsed_fields == [
+        derive = types[24]
+        assert derive.name == "Derive"
+        assert derive.fields == [
             "field3_",
             "field4_",
             "field5_",
         ]
+
+        assert derive.type.is_struct()
+        derive_members = derive.type.type_details.members
+        assert derive_members[0].is_baseclass()
+        assert (
+            derive_members[0].type.get_final_tinfo().get_name() == base.type.get_name()
+        )
+
+        assert derive_members[1].type.is_int()
+        assert derive_members[2].type.is_int()
+        assert derive_members[3].type.is_int()
 
         # struct Outside {
         #     struct {
@@ -735,19 +754,26 @@ def test_til_affix():
         # };
 
         # 34
-        assert types[33].name == "Outside::<unnamed_type_inside>"
-        assert types[33].parsed_fields == [
+        t34 = types[33]
+        assert t34.name == "Outside::<unnamed_type_inside>"
+        assert t34.fields == [
             "field0",
             "field1",
             "field2",
         ]
+        assert t34.type.is_struct()
+
         # 35
-        assert types[34].name == "Outside"
-        assert types[34].parsed_fields == [
+        t35 = types[34]
+        assert t35.name == "Outside"
+        assert t35.fields == [
             "inside",
             "foo",
             "bar",
         ]
+        assert t35.type.is_struct()
+        members = t35.type.type_details.members
+        assert members[0].type.get_final_tinfo().is_struct()
 
         # class Sorter {
         # public:
@@ -755,18 +781,68 @@ def test_til_affix():
         # };
 
         # 52
-        assert types[51].name == "Sorter"
-        assert types[51].parsed_fields == [
+        t52 = types[51]
+        assert t52.name == "Sorter"
+        assert t52.fields == [
             "__vftable",
         ]
+        assert t52.type.is_struct()
+        t52_typ = t52.type.type_details.members[0].type
+        assert t52_typ.is_ptr()
+        assert t52_typ.get_pointed_object().is_decl_typedef()
+        assert t52_typ.get_pointed_object().get_final_tinfo().is_struct()
         # 53
-        assert types[52].name == "Sorter_vtbl"
-        assert types[52].parsed_fields == [
+        t53 = types[52]
+        assert t53.name == "Sorter_vtbl"
+        assert t53.fields == [
             "compare",
             "this",
         ]
+        assert t53.type.is_struct()
 
         # 209
         # PTP_CLEANUP_GROUP_CANCEL_CALLBACK typedef void (__fastcall *)(void *, void *)
         #
-        assert types[208].name == "PTP_CLEANUP_GROUP_CANCEL_CALLBACK"
+        t209 = types[208]
+        assert t209.name == "PTP_CLEANUP_GROUP_CANCEL_CALLBACK"
+        assert t209.type.is_funcptr()
+        assert (
+            t209.type.get_typestr()
+            == "void (__fastcall *PTP_CLEANUP_GROUP_CANCEL_CALLBACK)(void*, void*)"
+        )
+
+        # 79
+        # _TP_CALLBACK_ENVIRON_V3::<unnamed_type_u>::<unnamed_type_s>
+        # struct
+        # {
+        #   unsigned __int32 LongFunction : 1;
+        #   unsigned __int32 Persistent : 1;
+        #   unsigned __int32 Private : 30;
+        # }
+        assert (
+            types[78].type.get_typestr()
+            == """struct _TP_CALLBACK_ENVIRON_V3::<unnamed_type_u>::<unnamed_type_s>
+{
+  unsigned int32 LongFunction : 1;
+  unsigned int32 Persistent : 1;
+  unsigned int32 Private : 30;
+}"""
+        )
+
+        # 115
+        # _TypeDescriptor
+        # struct
+        # {
+        #   const void *pVFTable;
+        #   void *spare;
+        #   char name[];
+        # }
+        assert (
+            types[114].type.get_typestr()
+            == """struct _TypeDescriptor
+{
+  void* pVFTable;
+  void* spare;
+  int8[] name;
+}"""
+        )
