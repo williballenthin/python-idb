@@ -4,6 +4,12 @@ import os.path
 import pytest
 
 import idb
+import six
+
+if six.PY2:
+    from functools32 import lru_cache
+else:
+    from functools import lru_cache
 
 try:
     import capstone
@@ -57,6 +63,7 @@ def elf_idb():
         yield db
 
 
+@lru_cache(maxsize=16)
 def load_idb(path):
     with open(path, "rb") as f:
         return idb.from_buffer(f.read())
@@ -72,14 +79,6 @@ def skip(*spec):
 
 def if_exists(*spec):
     return ("if_exists", spec)
-
-
-COMMON_FIXTURES = {
-    (695, 32): load_idb(os.path.join(CD, "data", "v6.95", "x32", "kernel32.idb")),
-    (695, 64): load_idb(os.path.join(CD, "data", "v6.95", "x64", "kernel32.i64")),
-    (700, 32): load_idb(os.path.join(CD, "data", "v7.0b", "x32", "kernel32.idb")),
-    (700, 64): load_idb(os.path.join(CD, "data", "v7.0b", "x64", "kernel32.i64")),
-}
 
 
 @pytest.fixture
@@ -110,6 +109,10 @@ def kern32_test(specs=None):
             (695, 64, None),
             (700, 32, None),
             (700, 64, None),
+            (720, 32, None),
+            (720, 64, None),
+            (730, 32, None),
+            (730, 64, None),
         ]
 
     ids = []
@@ -124,6 +127,8 @@ def kern32_test(specs=None):
             500: "v5.0",
             695: "v6.95",
             700: "v7.0b",
+            720: "v7.2",
+            730: "v7.3",
         }
         sversion = version_map[version] if version in version_map else str(version)
 
@@ -148,13 +153,7 @@ def kern32_test(specs=None):
         else:
             marks = None
 
-        if not skipped:
-            if (version, bitness) in COMMON_FIXTURES:
-                db = COMMON_FIXTURES[(version, bitness)]
-            else:
-                db = load_idb(path)
-        else:
-            db = None
+        db = load_idb(path) if not skipped else None
 
         if marks:
             params.append(pytest.param(db, version, bitness, expected, marks=marks))
