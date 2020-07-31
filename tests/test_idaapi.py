@@ -939,4 +939,9 @@ def test_function_comment():
 def test_ida_structs(kernel32_idb, version, bitness, expected):
     idapy = idb.IDAPython(kernel32_idb)
     assert idapy.ida_struct.get_first_struc_idx() == 0
-    assert idapy.ida_struct.get_last_struc_idx() == 0x29
+    if version <= 700:
+        assert idapy.ida_struct.get_last_struc_idx() == 0x29
+    elif version == 720:
+        assert idapy.ida_struct.get_last_struc_idx() == 68
+    elif version == 730:
+        assert idapy.ida_struct.get_last_struc_idx() == 0x50
