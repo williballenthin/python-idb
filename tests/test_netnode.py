@@ -1,7 +1,5 @@
-import pytest
-from fixtures import *
-
 import idb.netnode
+from fixtures import *
 
 debug = pytest.mark.skipif(not rundebug, reason="need --rundebug option to run")
 
@@ -45,15 +43,25 @@ def test_sups(kernel32_idb, version, bitness, expected):
 def test_alts(kernel32_idb, version, bitness, expected):
     root = idb.netnode.Netnode(kernel32_idb, ROOT_NODEID)
     uint = kernel32_idb.uint
-    assert list(root.alts()) == [
-        uint(-8),
-        uint(-6),
-        uint(-5),
-        uint(-4),
-        uint(-3),
-        uint(-2),
-        uint(-1),
-    ]
+    if version > 680:
+        assert list(root.alts()) == [
+            uint(-8),
+            uint(-6),
+            uint(-5),
+            uint(-4),
+            uint(-3),
+            uint(-2),
+            uint(-1),
+        ]
+    else:
+        assert list(root.alts()) == [
+            uint(-6),
+            uint(-5),
+            uint(-4),
+            uint(-3),
+            uint(-2),
+            uint(-1),
+        ]
 
 
 # the small netnode has a root btree node with a single child.

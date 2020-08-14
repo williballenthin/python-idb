@@ -4,6 +4,7 @@ lots of inspiration from: https://github.com/nlitsme/pyidbutil
 import abc
 import functools
 import logging
+import re
 import zlib
 from collections import namedtuple
 
@@ -12,55 +13,57 @@ from vstruct.primitives import *
 
 import idb
 import idb.netnode
-from idb.analysis import name_generator
 from idb.typeinf import TIL
 
 logger = logging.getLogger(__name__)
 
 
 class FileHeader(vstruct.VStruct):
-    def __init__(self):
+    def __init__(self, buf):
         vstruct.VStruct.__init__(self)
+        self.buf = buf
         # list of offsets to section headers.
         # order should line up with the SECTIONS definition (see below).
         self.offsets = []
         # list of checksums of sections.
         # order should line up with the SECTIONS definition.
         self.checksums = []
+        self.version = struct.unpack_from("<H", buf, 0x1E)[0]
 
-        self.signature = v_bytes(size=0x4)  # IDA1 | IDA2
+        self.signature = v_bytes(size=0x4)  # IDA0 | IDA1 | IDA2
         self.unk04 = v_uint16()
-        self.offset1 = v_uint32()
-
-    def pcb_offset1(self):
-        unk = name_generator()
-
-        # version >= 695
-        if self.offset1 == 0xFC:
-            self.vsAddField(unk(), v_uint32())
-            self.vsAddField("offset2", v_uint64())
-            self.vsAddField("unk16", v_uint32())
-            self.vsAddField("sig2", v_uint32())  # | DD CC BB AA |
-            self.vsAddField("version", v_uint16())
-            self.vsAddField("offset3", v_uint64())
-            self.vsAddField("offset4", v_uint64())
-            self.vsAddField("offset5", v_uint64())
-            self.vsAddField("checksum1", v_uint32())
-            self.vsAddField("checksum2", v_uint32())
-            self.vsAddField("checksum3", v_uint32())
-            self.vsAddField("checksum4", v_uint32())
-            self.vsAddField("checksum5", v_uint32())
-            self.vsAddField("offset6", v_uint64())
-            self.vsAddField("checksum6", v_uint32())
-        elif self.offset1 == 0xDC:
-            self.vsAddField("offset2", v_uint32())
-            self.vsAddField("offset3", v_uint32())
-            self.vsAddField(unk(), v_uint32())
-            self.vsAddField("offset4", v_uint32())
-            self.vsAddField("sig2", v_uint32())  # | DD CC BB AA |
-            self.vsAddField("version", v_uint16())
+        if self.version <= 4:
+            self.offset1 = v_uint32()
+            self.offset2 = v_uint32()
+            self.offset3 = v_uint32()
+            self.offset4 = v_uint32()
+            self.offset5 = v_uint32()
+            self.sig2 = v_uint32()
+            self._version = v_uint16()
+            self.unk20 = v_uint32()
+            self.checksum1 = v_uint32()
+            self.checksum2 = v_uint32()
+            self.checksum3 = v_uint32()
+            self.checksum4 = v_uint32()
+            self.checksum5 = v_uint32()
+            self.offset6 = v_uint32()
+            self.checksum6 = v_uint32()
         else:
-            raise ValueError("unsupported version")
+            self.offset1 = v_uint64()
+            self.offset2 = v_uint64()
+            self.unk16 = v_uint32()
+            self.sig2 = v_uint32()
+            self._version = v_uint16()
+            self.offset3 = v_uint64()
+            self.offset4 = v_uint64()
+            self.offset5 = v_uint64()
+            self.checksum1 = v_uint32()
+            self.checksum2 = v_uint32()
+            self.checksum3 = v_uint32()
+            self.checksum4 = v_uint32()
+            self.checksum5 = v_uint32()
+            self.offset6 = v_uint64()
+            self.checksum6 = v_uint32()
 
     def vsParse(self, sbytes, offset=0, fast=False):
         result = vstruct.VStruct.vsParse(self, sbytes, offset, fast)
@@ -69,20 +72,18 @@ class FileHeader(vstruct.VStruct):
         self.offsets.append(self.offset2)
         self.offsets.append(self.offset3)
         self.offsets.append(self.offset4)
-
-        if self.version == 6:
-            self.offsets.append(self.offset5)
-            self.offsets.append(self.offset6)
-            self.checksums.append(self.checksum1)
-            self.checksums.append(self.checksum2)
-            self.checksums.append(self.checksum3)
-            self.checksums.append(self.checksum4)
-            self.checksums.append(self.checksum5)
-            self.checksums.append(self.checksum6)
+        self.offsets.append(self.offset5)
+        self.offsets.append(self.offset6)
+        self.checksums.append(self.checksum1)
+        self.checksums.append(self.checksum2)
+        self.checksums.append(self.checksum3)
+        self.checksums.append(self.checksum4)
+        self.checksums.append(self.checksum5)
+        self.checksums.append(self.checksum6)
         return result
 
     def validate(self):
-        if self.signature not in (b"IDA1", b"IDA2"):
+        if self.signature not in (b"IDA0", b"IDA1", b"IDA2"):
             raise ValueError("bad signature")
         if self.sig2 != 0xAABBCCDD:
             raise ValueError("bad sig2")
@@ -101,12 +102,10 @@ class SectionHeader(vstruct.VStruct):
         vstruct.VStruct.__init__(self)
         self.version = version
         self.compression_method = v_uint8()
-        if self.version == 4:
+        if self.version <= 4:
             self.length = v_uint32()
-        elif self.version == 6:
-            self.length = v_uint64()
         else:
-            raise ValueError("unsupported version")
+            self.length = v_uint64()
         self.is_compressed = False
 
     def pcb_compression_method(self):
@@ -144,14 +143,25 @@ class Section(vstruct.VStruct):
 # sizeof(BranchEntry)
 # sizeof(LeafEntry)
 # sizeof(LeafEntryPointer)
-SIZEOF_ENTRY = 0x6
+SIZEOF_ENTRY = {2.0: 6, 1.6: 6, 1.5: 4}
 
 
 class BranchEntryPointer(vstruct.VStruct):
-    def __init__(self):
+    def __init__(self, btree_version):
         vstruct.VStruct.__init__(self)
-        self.page = v_uint32()
-        self.offset = v_uint16()
+        self.btree_version = btree_version
+        self.offset = None
+        if self.btree_version in (1.6, 2.0):
+            self.page = v_uint32()
+            self._offset = v_uint16()
+        elif self.btree_version == 1.5:
+            self.page = v_uint16()
+            self._offset = v_uint16()
+        else:
+            raise ValueError("unsupported version")
+
+    def pcb__offset(self):
+        self.offset = self._offset if self.btree_version == 2.0 else self._offset + 1
 
 
 class BranchEntry(vstruct.VStruct):
@@ -171,11 +181,26 @@ class BranchEntry(vstruct.VStruct):
 
 
 class LeafEntryPointer(vstruct.VStruct):
-    def __init__(self):
+    def __init__(self, btree_version):
         vstruct.VStruct.__init__(self)
-        self.common_prefix = v_uint16()
-        self.unk02 = v_uint16()
-        self.offset = v_uint16()
+        self.btree_version = btree_version
+        self.offset = None
+        if self.btree_version == 2.0:
+            self.common_prefix = v_uint16()
+            self.unk02 = v_uint16()
+        elif self.btree_version == 1.6:
+            self.common_prefix = v_uint8()
+            self.unk01 = v_uint8()
+            self.unk02 = v_uint16()
+        elif self.btree_version == 1.5:
+            self.common_prefix = v_uint8()
+            self.unk01 = v_uint8()
+        else:
+            raise ValueError("unsupported version")
+        self._offset = v_uint16()
+
+    def pcb__offset(self):
+        self.offset = self._offset if self.btree_version == 2.0 else self._offset + 1
 
 
 class LeafEntry(vstruct.VStruct):
@@ -235,11 +260,16 @@ class Page(vstruct.VStruct):
 
     """
 
-    def __init__(self, page_size, page_number):
+    def __init__(self, page_size, page_number, btree_version):
         vstruct.VStruct.__init__(self)
         self.page_number = page_number
-        self.ppointer = v_uint32()
+        self.btree_version = btree_version
+        if self.btree_version >= 1.6:
+            self.ppointer = v_uint32()
+        else:
+            self.ppointer = v_uint16()
         self.entry_count = v_uint16()
+
         self.contents = v_bytes(page_size)
         # ordered cache of entries, once loaded.
         self._entries = []
@@ -256,19 +286,17 @@ class Page(vstruct.VStruct):
     def _load_entries(self):
         if not self._entries:
             key = b""
+            sizeof_entry = SIZEOF_ENTRY[self.btree_version]
             for i in range(self.entry_count):
                 if self.is_leaf():
-                    ptr = LeafEntryPointer()
-                    ptr.vsParse(self.contents, offset=i * SIZEOF_ENTRY)
-
+                    ptr = LeafEntryPointer(self.btree_version)
+                    ptr.vsParse(self.contents, offset=i * sizeof_entry)
                     entry = LeafEntry(key, ptr.common_prefix)
-                    entry.vsParse(self.contents, offset=ptr.offset - SIZEOF_ENTRY)
                 else:
-                    ptr = BranchEntryPointer()
-                    ptr.vsParse(self.contents, offset=i * SIZEOF_ENTRY)
-
+                    ptr = BranchEntryPointer(self.btree_version)
+                    ptr.vsParse(self.contents, offset=i * sizeof_entry)
                     entry = BranchEntry(int(ptr.page))
-                    entry.vsParse(self.contents, offset=ptr.offset - SIZEOF_ENTRY)
+                entry.vsParse(self.contents, offset=ptr.offset - sizeof_entry)
                 self._entries.append(entry)
                 key = entry.key
 
@@ -751,10 +779,15 @@ class ID0(vstruct.VStruct):
      instance to access the value, or traverse to less/greater entries.
     """
 
+    SignatureV6 = b"B-tree v 1.6 (C) Pol 1990"
+    Signature = b"B-tree v2"
+    SignaturePattern = b"B-tree v\\W?(\\d+(\\.\\d+)?).*"
+
     def __init__(self, buf, wordsize):
         vstruct.VStruct.__init__(self)
         self.buf = idb.memview(buf)
         self.wordsize = wordsize
+        self.btree_version = None
 
         self.next_free_offset = v_uint32()
         self.page_size = v_uint16()
@@ -762,9 +795,18 @@ class ID0(vstruct.VStruct):
         self.record_count = v_uint32()
         self.page_count = v_uint32()
         self.unk12 = v_uint8()
-        self.signature = v_bytes(size=0x09)
+        self.signature = v_bytes(max(len(ID0.SignatureV6), len(ID0.Signature)))
 
         self._page_cache = {}
+
+    def pcb_signature(self):
+        btree_vs = re.match(ID0.SignaturePattern, self.signature).group(1)
+        self.btree_version = float(btree_vs)
+
+    def validate(self):
+        if re.fullmatch(ID0.SignaturePattern, self.signature) is None:
+            raise ValueError("bad signature")
+        return True
 
     def get_page_buffer(self, page_number):
         if page_number < 1:
@@ -779,7 +821,7 @@ class ID0(vstruct.VStruct):
             return page
 
         buf = self.get_page_buffer(page_number)
-        page = Page(self.page_size, page_number)
+        page = Page(self.page_size, page_number, self.btree_version)
         page.vsParse(buf)
 
         self._page_cache[page_number] = page
@@ -828,11 +870,6 @@ class ID0(vstruct.VStruct):
           cursor: the cursor that points to the match.
         """
         return self.find(None, strategy=MAX_KEY)
-
-    def validate(self):
-        if self.signature != b"B-tree v2":
-            raise ValueError("bad signature")
-        return True
 
 
 class SegmentBounds(vstruct.VStruct):
@@ -1080,18 +1117,6 @@ SECTIONS = [
     SectionDescriptor("id2", None),
 ]
 
-# section order:
-#   - id0
-#   - id1
-#   - nam
-#   - til
-SECTIONS6x = [
-    SectionDescriptor("id0", ID0),
-    SectionDescriptor("id1", ID1),
-    SectionDescriptor("nam", NAM),
-    SectionDescriptor("til", TIL),
-]
-
 
 class IDB(vstruct.VStruct):
     def __init__(self, buf):
@@ -1113,7 +1138,7 @@ class IDB(vstruct.VStruct):
         self.id2 = None  # type: NotImplemented
 
         # these are the only true vstruct fields for this struct.
-        self.header = FileHeader()
+        self.header = FileHeader(self.buf)
 
         # updated once header is parsed.
         self.wordsize = 0
@@ -1140,8 +1165,7 @@ class IDB(vstruct.VStruct):
             section.vsParse(sectionbuf)
             self.sections.append(section)
 
-        sections = SECTIONS if self.header.version == 6 else SECTIONS6x
-        for i, sectiondef in enumerate(sections):
+        for i, sectiondef in enumerate(SECTIONS):
             if i > len(self.sections):
                 logger.debug("missing section: %s", sectiondef.name)
                 continue

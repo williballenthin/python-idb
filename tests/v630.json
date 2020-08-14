@@ -1,0 +1,11 @@
+{
+  "id0_header": {
+    "next_free_offset": 0,
+    "page_size": 8192,
+    "root_page": 338,
+    "record_count": 393456,
+    "page_count": 1024,
+    "unk12": 0,
+    "signature": "422d74726565207620312e362028432920506f6c2031393930"
+  }
+}

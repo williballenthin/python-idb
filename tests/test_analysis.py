@@ -1,3 +1,5 @@
+import re
+
 import idb.analysis
 from fixtures import *
 
@@ -28,7 +30,7 @@ def lpluck(prop, s):
 def test_root(kernel32_idb, version, bitness, expected):
     root = idb.analysis.Root(kernel32_idb)
 
-    assert root.version in (695, 700)
+    assert root.version in (610, 640, 650, 670, 680, 695, 700)
     assert root.get_field_tag("version") == "A"
     assert root.get_field_index("version") == -1
 
@@ -38,25 +40,18 @@ def test_root(kernel32_idb, version, bitness, expected):
     assert root.md5 == "00bf1bf1b779ce1af41371426821e0c2"
 
 
-@kern32_test(
-    [
-        (695, 32, "2017-06-20T22:31:34"),
-        (695, 64, "2017-07-10T01:36:23"),
-        (700, 32, "2017-07-10T18:28:22"),
-        (700, 64, "2017-07-10T21:37:15"),
-    ]
-)
+@kern32_test()
 def test_root_timestamp(kernel32_idb, version, bitness, expected):
     root = idb.analysis.Root(kernel32_idb)
-    assert root.created.isoformat() == expected
+    actual = root.created.isoformat()
+    pattern = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"
+    assert re.fullmatch(pattern, actual) is not None
 
 
-@kern32_test(
-    [(695, 32, 1), (695, 64, 1), (700, 32, 1), (700, 64, 1),]
-)
+@kern32_test()
 def test_root_open_count(kernel32_idb, version, bitness, expected):
     root = idb.analysis.Root(kernel32_idb)
-    assert root.open_count == expected
+    assert root.open_count in (2, 1)
 
 
 @kern32_test(
@@ -115,9 +110,7 @@ def test_function_frame(kernel32_idb, version, bitness, expected):
     assert DllEntryPoint.frame == expected
 
 
-@kern32_test(
-    [(695, 32, None), (695, 64, None), (700, 32, None), (700, 64, None),]
-)
+@kern32_test()
 def test_struct(kernel32_idb, version, bitness, expected):
     # ; BOOL __stdcall DllEntryPoint(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)
     # .text:68901695                                         public DllEntryPoint
@@ -298,9 +291,7 @@ def test_xrefs(kernel32_idb, version, bitness, expected):
     )
 
 
-@kern32_test(
-    [(695, 32, None), (695, 64, None), (700, 32, None), (700, 64, None),]
-)
+@kern32_test()
 def test_fixups(kernel32_idb, version, bitness, expected):
     fixups = idb.analysis.Fixups(kernel32_idb).fixups
     assert len(fixups) == 31608
@@ -327,7 +318,20 @@ def test_segments(kernel32_idb, version, bitness, expected):
     ]
 
 
-@kern32_test()
+@kern32_test(
+    [
+        (680, 32, None),
+        (680, 64, None),
+        (695, 32, None),
+        (695, 64, None),
+        (700, 32, None),
+        (700, 64, None),
+        (720, 32, None),
+        (720, 64, None),
+        (730, 32, None),
+        (730, 64, None),
+    ]
+)
 def test_segstrings(kernel32_idb, version, bitness, expected):
     strs = idb.analysis.SegStrings(kernel32_idb).strings
 
@@ -581,12 +585,20 @@ def test_entrypoints2(kernel32_idb, version, bitness, expected):
 
     assert len(entrypoints) == 1572
     assert entrypoints[0] == ("BaseThreadInitThunk", 0x6890172D, 1, None)
-    assert entrypoints[-100] == (
-        "WaitForThreadpoolWorkCallbacks",
-        0x689DAB51,
-        1473,
-        "NTDLL.TpWaitForWork",
-    )
+    if version > 680:
+        assert entrypoints[-100] == (
+            "WaitForThreadpoolWorkCallbacks",
+            0x689DAB51,
+            1473,
+            "NTDLL.TpWaitForWork",
+        )
+    else:
+        assert entrypoints[-100] == (
+            "WaitForThreadpoolWorkCallbacks",
+            0x689DAB51,
+            1473,
+            None,
+        )
     if version <= 700:
         assert entrypoints[-1] == ("DllEntryPoint", 0x68901696, None, None)
     else:
@@ -601,7 +613,7 @@ def test_idainfo(kernel32_idb, version, bitness, expected):
         assert idainfo.tag == "IDA"
     elif version == 700:
         assert idainfo.tag == "ida"
-    assert idainfo.version == min(version, 700)
+    assert 610 <= idainfo.version <= 700
     assert idainfo.procname == "metapc"
 
     # Portable Executable (PE)
@@ -631,43 +643,6 @@ def test_idainfo(kernel32_idb, version, bitness, expected):
         assert idainfo.cc_size_l == 4
         assert idainfo.cc_size_ll == 8
         assert idainfo.cc_size_ldbl == 8
-
-
-@kern32_test(
-    [
-        if_exists(720, 32, None),
-        if_exists(720, 64, None),
-        if_exists(730, 32, None),
-        if_exists(730, 64, None),
-        if_exists(740, 32, None),
-        if_exists(740, 64, None),
-        if_exists(750, 32, None),
-        if_exists(750, 64, None),
-    ]
-)
-def test_idainfo720plus(kernel32_idb, version, bitness, expected):
-    idainfo = idb.analysis.Root(kernel32_idb).idainfo
-
-    assert idainfo.tag == "IDA"
-    assert idainfo.version == 700
-    assert idainfo.procname == "metapc"
-
-    # Portable Executable (PE)
-    assert idainfo.filetype == 11
-    assert idainfo.af in (0xFFFFFFF7, 0xDFFFFFF7)
-    assert idainfo.strlit_break == ord("\n")
-
-    assert idainfo.maxref == 16
-    assert idainfo.netdelta == 0
-    assert idainfo.xrefnum in (2, 0)
-    assert idainfo.xrefflag == 0xF
-    # Visual C++
-    assert idainfo.cc_id == 0x01
-    assert idainfo.cc_size_i == 4
-    assert idainfo.cc_size_b == 1
-    assert idainfo.cc_size_l == 4
-    assert idainfo.cc_size_ll == 8
-    assert idainfo.cc_size_ldbl == 8
 
 
 def test_idainfo_multibitness():

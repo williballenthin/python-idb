@@ -485,7 +485,7 @@ class IdaInfo(vstruct.VStruct):
         v_ea_t = v_word
         v_sel_t = v_word
 
-        if 680 <= self.version < 700:
+        if 610 <= self.version < 700:
             self.vsAddField("lflags", v_uint8())  # 0x0d
             self.vsAddField("demnames", v_uint8())
 

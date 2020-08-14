@@ -63,7 +63,7 @@ def elf_idb():
         yield db
 
 
-@lru_cache(maxsize=16)
+@lru_cache(maxsize=64)
 def load_idb(path):
     with open(path, "rb") as f:
         return idb.from_buffer(f.read())
@@ -105,18 +105,18 @@ def kern32_test(specs=None):
     """
     if specs is None:
         specs = [
-            # (630, 32, None),
-            # (630, 64, None),
-            # (640, 32, None),
-            # (640, 64, None),
-            # (650, 32, None),
-            # (650, 64, None),
-            # (660, 32, None),
-            # (660, 64, None),
-            # (670, 32, None),
-            # (670, 64, None),
-            # (680, 32, None),
-            # (680, 64, None),
+            (630, 32, None),
+            (630, 64, None),
+            (640, 32, None),
+            (640, 64, None),
+            (650, 32, None),
+            (650, 64, None),
+            (660, 32, None),
+            (660, 64, None),
+            (670, 32, None),
+            (670, 64, None),
+            (680, 32, None),
+            (680, 64, None),
             (695, 32, None),
             (695, 64, None),
             (700, 32, None),
@@ -189,6 +189,21 @@ def kern32_test(specs=None):
 
     return pytest.mark.parametrize(
         "kernel32_idb,version,bitness,expected", params, ids=ids
+    )
+
+
+def kern32_test_v7():
+    return kern32_test(
+        [
+            (695, 32, None),
+            (695, 64, None),
+            (700, 32, None),
+            (700, 64, None),
+            (720, 32, None),
+            (720, 64, None),
+            (730, 32, None),
+            (730, 64, None),
+        ]
     )
 
 
