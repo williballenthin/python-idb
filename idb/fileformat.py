@@ -12,6 +12,7 @@ from vstruct.primitives import *
 
 import idb
 import idb.netnode
+from analysis import name_generator
 from idb.typeinf import TIL
 
 logger = logging.getLogger(__name__)
@@ -29,48 +30,63 @@ class FileHeader(vstruct.VStruct):
 
         self.signature = v_bytes(size=0x4)  # IDA1 | IDA2
         self.unk04 = v_uint16()
-        self.offset1 = v_uint64()
-        self.offset2 = v_uint64()
-        self.unk16 = v_uint32()
-        self.sig2 = v_uint32()  # | DD CC BB AA |
-        self.version = v_uint16()
-        self.offset3 = v_uint64()
-        self.offset4 = v_uint64()
-        self.offset5 = v_uint64()
-        self.checksum1 = v_uint32()
-        self.checksum2 = v_uint32()
-        self.checksum3 = v_uint32()
-        self.checksum4 = v_uint32()
-        self.checksum5 = v_uint32()
-        self.offset6 = v_uint64()
-        self.checksum6 = v_uint32()
+        self.offset1 = v_uint32()
 
-    def pcb_version(self):
-        if self.version != 0x6:
-            raise NotImplementedError("unsupported version: %d" % (self.version))
+    def pcb_offset1(self):
+        unk = name_generator()
 
-    def pcb_offset6(self):
+        # version >= 695
+        if self.offset1 == 0xFC:
+            self.vsAddField(unk(), v_uint32())
+            self.vsAddField("offset2", v_uint64())
+            self.vsAddField("unk16", v_uint32())
+            self.vsAddField("sig2", v_uint32())  # | DD CC BB AA |
+            self.vsAddField("version", v_uint16())
+            self.vsAddField("offset3", v_uint64())
+            self.vsAddField("offset4", v_uint64())
+            self.vsAddField("offset5", v_uint64())
+            self.vsAddField("checksum1", v_uint32())
+            self.vsAddField("checksum2", v_uint32())
+            self.vsAddField("checksum3", v_uint32())
+            self.vsAddField("checksum4", v_uint32())
+            self.vsAddField("checksum5", v_uint32())
+            self.vsAddField("offset6", v_uint64())
+            self.vsAddField("checksum6", v_uint32())
+        elif self.offset1 == 0xDC:
+            self.vsAddField("offset2", v_uint32())
+            self.vsAddField("offset3", v_uint32())
+            self.vsAddField(unk(), v_uint32())
+            self.vsAddField("offset4", v_uint32())
+            self.vsAddField("sig2", v_uint32())  # | DD CC BB AA |
+            self.vsAddField("version", v_uint16())
+        else:
+            raise ValueError("unsupported version")
+
+    def vsParse(self, sbytes, offset=0, fast=False):
+        result = vstruct.VStruct.vsParse(self, sbytes, offset, fast)
+
         self.offsets.append(self.offset1)
         self.offsets.append(self.offset2)
         self.offsets.append(self.offset3)
         self.offsets.append(self.offset4)
-        self.offsets.append(self.offset5)
-        self.offsets.append(self.offset6)
 
-    def pcb_checksum6(self):
-        self.checksums.append(self.checksum1)
-        self.checksums.append(self.checksum2)
-        self.checksums.append(self.checksum3)
-        self.checksums.append(self.checksum4)
-        self.checksums.append(self.checksum5)
-        self.checksums.append(self.checksum6)
+        if self.version == 6:
+            self.offsets.append(self.offset5)
+            self.offsets.append(self.offset6)
+            self.checksums.append(self.checksum1)
+            self.checksums.append(self.checksum2)
+            self.checksums.append(self.checksum3)
+            self.checksums.append(self.checksum4)
+            self.checksums.append(self.checksum5)
+            self.checksums.append(self.checksum6)
+        return result
 
     def validate(self):
         if self.signature not in (b"IDA1", b"IDA2"):
             raise ValueError("bad signature")
         if self.sig2 != 0xAABBCCDD:
             raise ValueError("bad sig2")
-        if self.version != 0x6:
+        if self.version not in (0x6, 0x4):
             raise ValueError("unsupported version")
         return True
 
@@ -81,10 +97,16 @@ class COMPRESSION_METHOD:
 
 
 class SectionHeader(vstruct.VStruct):
-    def __init__(self):
+    def __init__(self, version):
         vstruct.VStruct.__init__(self)
+        self.version = version
         self.compression_method = v_uint8()
-        self.length = v_uint64()
+        if self.version == 4:
+            self.length = v_uint32()
+        elif self.version == 6:
+            self.length = v_uint64()
+        else:
+            raise ValueError("unsupported version")
         self.is_compressed = False
 
     def pcb_compression_method(self):
@@ -95,19 +117,12 @@ class SectionHeader(vstruct.VStruct):
 
 
 class Section(vstruct.VStruct):
-    def __init__(self):
+    def __init__(self, version):
         vstruct.VStruct.__init__(self)
-        self.header = SectionHeader()
+        self.version = version
+        self.header = SectionHeader(self.version)
         self._contents = v_bytes()
         self.contents = b""
-
-    def vsEmit(self, **kwargs):
-        if self.header.is_compressed:
-            raise NotImplementedError(
-                "Section may not be serialized because it was compressed"
-            )
-
-        vstruct.VStruct.vsEmit(self, **kwargs)
 
     def pcb_header(self):
         self["_contents"].vsSetLength(self.header.length)
@@ -846,6 +861,9 @@ class ID1(vstruct.VStruct):
     """
 
     PAGE_SIZE = 0x2000
+    SegmentDescriptor = namedtuple("SegmentDescriptor", ["bounds", "offset"])
+    SignatureV6 = b"Va4\x00"
+    Signature = b"VA*\x00"
 
     def __init__(self, wordsize, buf=None):
         vstruct.VStruct.__init__(self)
@@ -858,20 +876,30 @@ class ID1(vstruct.VStruct):
         else:
             raise RuntimeError("unexpected wordsize")
 
+        self.segments = []
+        # version >= v6.95 signature = "VA*\x00"
+        # else v6.x signature = "Va4\x00"
         self.signature = v_bytes(size=0x04)
-        self.unk04 = v_uint32()  # 0x3
-        self.segment_count = v_uint32()
-        self.unk0C = v_uint32()  # 0x800
-        self.page_count = v_uint32()
+        # more version-specific
+
+    def pcb_signature(self):
+        if self.signature == ID1.Signature:
+            self.vsAddField("unk04", v_uint32())  # 0x3
+            self.vsAddField("segment_count", v_uint32())
+            self.vsAddField("unk0C", v_uint32())  # 0x800
+            self.vsAddField("page_count", v_uint32())
+        elif self.signature == ID1.SignatureV6:
+            self.vsAddField("segment_count", v_uint16())
+            self.vsAddField("page_count", v_uint16())
+        else:
+            raise ValueError("unsupported version")
+
         # varrays are not actually very list-like,
         #  so the struct field will be ._segments
         #  and the property will be .segments.
-        self._segments = vstruct.VArray()
-        self.segments = []
-        self.padding = v_bytes()
-        self.buffer = v_bytes()
-
-    SegmentDescriptor = namedtuple("SegmentDescriptor", ["bounds", "offset"])
+        self.vsAddField("_segments", vstruct.VArray())
+        self.vsAddField("padding", v_bytes())
+        self.vsAddField("buffer", v_bytes())
 
     def pcb_segment_count(self):
         self["_segments"].vsAddElements(
@@ -956,12 +984,8 @@ class ID1(vstruct.VStruct):
         return struct.unpack_from("<I", self.buffer, offset)[0]
 
     def validate(self):
-        if self.signature != b"VA*\x00":
+        if self.signature not in (ID1.Signature, ID1.SignatureV6):
             raise ValueError("bad signature")
-        if self.unk04 != 0x3:
-            raise ValueError("unexpected unk04 value")
-        if self.unk0C != 0x800:
-            raise ValueError("unexpected unk0C value")
         for segment in self.segments:
             if segment.bounds.start > segment.bounds.end:
                 raise ValueError("segment ends before it starts")
@@ -1056,6 +1080,18 @@ SECTIONS = [
     SectionDescriptor("id2", None),
 ]
 
+# section order:
+#   - id0
+#   - id1
+#   - nam
+#   - til
+SECTIONS6x = [
+    SectionDescriptor("id0", ID0),
+    SectionDescriptor("id1", ID1),
+    SectionDescriptor("nam", NAM),
+    SectionDescriptor("til", TIL),
+]
+
 
 class IDB(vstruct.VStruct):
     def __init__(self, buf):
@@ -1091,9 +1127,7 @@ class IDB(vstruct.VStruct):
             self.wordsize = 8
             self.uint = idb.netnode.uint64
         else:
-            raise RuntimeError(
-                "unexpected file signature: %s" % (self.header.signature)
-            )
+            raise RuntimeError("unexpected file signature: %s" % self.header.signature)
 
         # TODO: pass along checksum
         for offset in self.header.offsets:
@@ -1102,11 +1136,12 @@ class IDB(vstruct.VStruct):
                 continue
 
             sectionbuf = self.buf[offset:]
-            section = Section()
+            section = Section(self.header.version)
             section.vsParse(sectionbuf)
             self.sections.append(section)
 
-        for i, sectiondef in enumerate(SECTIONS):
+        sections = SECTIONS if self.header.version == 6 else SECTIONS6x
+        for i, sectiondef in enumerate(sections):
             if i > len(self.sections):
                 logger.debug("missing section: %s", sectiondef.name)
                 continue

@@ -2,9 +2,9 @@ import os
 import os.path
 
 import pytest
+import six
 
 import idb
-import six
 
 if six.PY2:
     from functools32 import lru_cache
@@ -105,6 +105,18 @@ def kern32_test(specs=None):
     """
     if specs is None:
         specs = [
+            # (630, 32, None),
+            # (630, 64, None),
+            # (640, 32, None),
+            # (640, 64, None),
+            # (650, 32, None),
+            # (650, 64, None),
+            # (660, 32, None),
+            # (660, 64, None),
+            # (670, 32, None),
+            # (670, 64, None),
+            # (680, 32, None),
+            # (680, 64, None),
             (695, 32, None),
             (695, 64, None),
             (700, 32, None),
@@ -125,10 +137,23 @@ def kern32_test(specs=None):
 
         version_map = {
             500: "v5.0",
+            600: "v6.0",
+            610: "v6.1",
+            620: "v6.2",
+            630: "v6.3",
+            640: "v6.4",
+            650: "v6.5",
+            660: "v6.6",
+            670: "v6.7",
+            680: "v6.8",
+            690: "v6.9",
             695: "v6.95",
             700: "v7.0b",
+            710: "v7.1",
             720: "v7.2",
             730: "v7.3",
+            740: "v7.4",
+            750: "v7.5",
         }
         sversion = version_map[version] if version in version_map else str(version)
 
