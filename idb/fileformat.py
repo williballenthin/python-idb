@@ -15,6 +15,15 @@ import idb
 import idb.netnode
 from idb.typeinf import TIL
 
+try:
+    from re import fullmatch
+except ImportError:
+
+    def fullmatch(regex, string, flags=0):
+        """Emulate python-3.4 re.fullmatch()."""
+        return re.match("(?:" + regex + r")\Z", string, flags=flags)
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -804,7 +813,7 @@ class ID0(vstruct.VStruct):
         self.btree_version = float(btree_vs)
 
     def validate(self):
-        if re.fullmatch(ID0.SignaturePattern, self.signature) is None:
+        if fullmatch(ID0.SignaturePattern, self.signature) is None:
             raise ValueError("bad signature")
         return True
 
