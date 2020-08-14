@@ -3,6 +3,14 @@ import re
 import idb.analysis
 from fixtures import *
 
+try:
+    from re import fullmatch
+except ImportError:
+
+    def fullmatch(regex, string, flags=0):
+        """Emulate python-3.4 re.fullmatch()."""
+        return re.match("(?:" + regex + r")\Z", string, flags=flags)
+
 
 def pluck(prop, s):
     """
@@ -45,7 +53,7 @@ def test_root_timestamp(kernel32_idb, version, bitness, expected):
     root = idb.analysis.Root(kernel32_idb)
     actual = root.created.isoformat()
     pattern = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"
-    assert re.fullmatch(pattern, actual) is not None
+    assert fullmatch(pattern, actual) is not None
 
 
 @kern32_test()
