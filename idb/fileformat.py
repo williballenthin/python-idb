@@ -12,7 +12,7 @@ from vstruct.primitives import *
 
 import idb
 import idb.netnode
-from analysis import name_generator
+from idb.analysis import name_generator
 from idb.typeinf import TIL
 
 logger = logging.getLogger(__name__)
@@ -1152,7 +1152,7 @@ class IDB(vstruct.VStruct):
                 continue
 
             if not sectiondef.cls:
-                logger.warn("section class not implemented: %s", sectiondef.name)
+                logger.warning("section class not implemented: %s", sectiondef.name)
                 continue
 
             s = sectiondef.cls(buf=section.contents, wordsize=self.wordsize)
