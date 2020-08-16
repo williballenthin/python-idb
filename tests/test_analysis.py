@@ -38,7 +38,7 @@ def lpluck(prop, s):
 def test_root(kernel32_idb, version, bitness, expected):
     root = idb.analysis.Root(kernel32_idb)
 
-    assert root.version in (610, 640, 650, 670, 680, 695, 700)
+    assert root.version in (480, 610, 640, 650, 670, 680, 695, 700)
     assert root.get_field_tag("version") == "A"
     assert root.get_field_index("version") == -1
 
@@ -140,7 +140,7 @@ def test_struct(kernel32_idb, version, bitness, expected):
         "lpReserved",
     ]
 
-    assert members[2].get_type() == "HINSTANCE"
+    assert members[2].get_type() == ("HINSTANCE" if version > 500 else None)
 
 
 @kern32_test()
@@ -170,7 +170,7 @@ def test_function(kernel32_idb, version, bitness, expected):
     # .text:689016B8 8B EC                                   mov     ebp, esp
     # .text:689016BA 81 EC 14 02 00 00                       sub     esp, 214h
     sub_689016B5 = idb.analysis.Function(kernel32_idb, 0x689016B5)
-    if version <= 700:
+    if 500 < version <= 700:
         assert sub_689016B5.get_name() == "sub_689016B5"
     else:
         assert sub_689016B5.get_name() == "__BaseDllInitialize@12"
@@ -319,11 +319,15 @@ def test_segments(kernel32_idb, version, bitness, expected):
         0x689DB000,
         0x689DD000,
     ]
-    assert list(sorted(map(lambda s: s.endEA, segs.values()))) == [
-        0x689DB000,
-        0x689DD000,
-        0x689DE230,
-    ]
+    end_ea = list(sorted(map(lambda s: s.endEA, segs.values())))
+    if version > 500:
+        assert end_ea == [
+            0x689DB000,
+            0x689DD000,
+            0x689DE230,
+        ]
+    else:
+        assert end_ea == [1755164672, 1755169504, 1755177520]
 
 
 @kern32_test(
@@ -621,21 +625,24 @@ def test_idainfo(kernel32_idb, version, bitness, expected):
         assert idainfo.tag == "IDA"
     elif version == 700:
         assert idainfo.tag == "ida"
-    assert 610 <= idainfo.version <= 700
+    assert 480 <= idainfo.version <= 700
     assert idainfo.procname == "metapc"
 
     # Portable Executable (PE)
     assert idainfo.filetype == 11
-    if version == 695:
+    if version <= 695:
         assert idainfo.af == 0xFFFF
         assert idainfo.ascii_break == ord("\n")
-        # Visual C++
-        assert idainfo.compiler == 0x01
+        if version == 630:
+            assert idainfo.compiler == 129
+        else:
+            assert idainfo.compiler == 0x01
         assert idainfo.sizeof_int == 4
-        assert idainfo.sizeof_bool == 1
+        assert idainfo.sizeof_bool in (1, 4)
         assert idainfo.sizeof_long == 4
         assert idainfo.sizeof_llong == 8
-        assert idainfo.sizeof_ldbl == 8
+        if version > 500:
+            assert idainfo.sizeof_ldbl == 8
     elif version >= 700:
         assert idainfo.af == 0xDFFFFFF7
         assert idainfo.strlit_break == ord("\n")

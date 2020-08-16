@@ -337,8 +337,10 @@ def test_func_t(kernel32_idb, version, bitness, expected):
     assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_THUNK) is False
     assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_BOTTOMBP) is False
     assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_NORET_PENDING) is False
-    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_SP_READY) is True
-    assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_PURGED_OK) is True
+
+    if version > 500:
+        assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_SP_READY) is True
+        assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_PURGED_OK) is True
     assert idb.idapython.is_flag_set(flags, api.ida_funcs.FUNC_TAIL) is False
     # also demonstrate finding the func from an address it may contain.
     # note: this can be a pretty slow search, since we do everything on demand
@@ -554,6 +556,9 @@ def test_get_mnem(kernel32_idb, version, bitness, expected):
 
 @kern32_test()
 def test_functions(kernel32_idb, version, bitness, expected):
+    if version <= 500:
+        return
+
     api = idb.IDAPython(kernel32_idb)
 
     funcs = api.idautils.Functions()
@@ -577,13 +582,14 @@ def test_function_names(kernel32_idb, version, bitness, expected):
     )
     assert (
         api.idc.GetFunctionName(0x689016B5) == "sub_689016b5"
-        if version <= 700
+        if 500 < version <= 700
         else "__BaseDllInitialize@12"
     )
 
-    with pytest.raises(KeyError):
-        # this is issue #7.
-        _ = api.idc.GetFunctionName(0x689018E5)
+    if version > 500:
+        with pytest.raises(KeyError):
+            # this is issue #7.
+            _ = api.idc.GetFunctionName(0x689018E5)
 
 
 @pytest.mark.slow
@@ -651,7 +657,7 @@ def test_all_comments(kernel32_idb, version, bitness, expected):
 def test_LocByName(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
-    if version <= 700:
+    if 500 < version <= 700:
         assert api.idc.LocByName("CancelIo") == 0x6892E70A
         assert api.idc.GetFunctionName(api.idc.LocByName("CancelIo")) == "CancelIo"
 
@@ -976,7 +982,9 @@ def test_ida_structs(kernel32_idb, version, bitness, expected):
     idapy = idb.IDAPython(kernel32_idb)
     assert idapy.ida_struct.get_first_struc_idx() == 0
     last_idx = idapy.ida_struct.get_last_struc_idx()
-    if version <= 630:
+    if version == 500:
+        assert last_idx == 23
+    elif version <= 630:
         assert last_idx == 31
     elif version <= 700:
         assert last_idx == 0x29

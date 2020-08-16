@@ -485,7 +485,7 @@ class IdaInfo(vstruct.VStruct):
         v_ea_t = v_word
         v_sel_t = v_word
 
-        if 610 <= self.version < 700:
+        if 480 <= self.version < 700:
             self.vsAddField("lflags", v_uint8())  # 0x0d
             self.vsAddField("demnames", v_uint8())
 
@@ -573,9 +573,9 @@ class IdaInfo(vstruct.VStruct):
             self.vsAddField("margin", v_uint16())
             self.vsAddField("lenxref", v_uint16())
 
-            self.vsAddField("lprefix", v_str(size=16))
+            self.vsAddField("lprefix", v_str(size=16))  # 167
 
-            self.vsAddField("lprefixlen", v_uint8())
+            self.vsAddField("lprefixlen", v_uint8())  # 183
             self.vsAddField("compiler", v_uint8())
             self.vsAddField("model", v_uint8())
             self.vsAddField("sizeof_int", v_uint8())
@@ -586,7 +586,10 @@ class IdaInfo(vstruct.VStruct):
             self.vsAddField("sizeof_long", v_uint8())
             self.vsAddField("sizeof_llong", v_uint8())
 
-            self.vsAddField("change_counter", v_uint32())
+            if self.len_sbytes < 193:
+                return
+
+            self.vsAddField("change_counter", v_uint32())  # 193
 
             self.vsAddField("sizeof_ldbl", v_uint8())
 
@@ -1051,10 +1054,13 @@ class StructMember:
         # nodeid: ff000078 tag: S index: 0x3000
         # 00000000: 3D 0A 48 49 4E 53 54 41  4E 43 45 00              =.HINSTANCE.
 
-        v = self.netnode.supval(tag="S", index=0x3000)
-        s = TypeString()
-        s.vsParse(v)
-        return s.s
+        try:
+            v = self.netnode.supval(tag="S", index=0x3000)
+            s = TypeString()
+            s.vsParse(v)
+            return s.s
+        except KeyError:
+            return None
 
     def get_enum_id(self):
         return self.netnode.altval(tag="A", index=0xB)
@@ -1122,6 +1128,14 @@ class Struct:
     """
 
     def __init__(self, db, identity):
+        """from https://github.com/nlitsme/pyidbutil/blob/7705bcde167fd34a5800bfe54ba99d195b44bbbb/idblib.py#L1380
+            Decodes info for structures
+            (structnode, N)          = structname
+            (structnode, D, address) = xref-type
+            (structnode, M, 0)       = packed struct info
+            (structnode, S, 27)      = packed value(addr, byte)
+        """
+
         self.idb = db
 
         if isinstance(identity, six.integer_types):
@@ -1145,9 +1159,6 @@ class Struct:
         u = Unpacker(v, wordsize=self.idb.wordsize)
         flags = u.dd()
         count = u.dd()
-
-        if not flags & STRUCT_FLAGS.SF_FRAME:
-            raise RuntimeError("unexpected frame header")
 
         for i in range(count):
             nodeid_offset = u.addr()
