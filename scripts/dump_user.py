@@ -111,7 +111,7 @@ def print_userdata(api, tag="$ original user"):
         print("ts2:  %s" % data["ts2"].isoformat(" ") + "Z")
     except KeyError:
         logger.warning("can' find {}".format(tag))
-    except NotImplementedError or ValueError as e:
+    except (NotImplementedError, ValueError) as e:
         logger.warning(e)
 
 
