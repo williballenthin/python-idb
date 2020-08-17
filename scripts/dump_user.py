@@ -10,6 +10,7 @@ import datetime
 import logging
 import struct
 import sys
+import binascii
 
 from vstruct.primitives import v_zstr_utf8
 
@@ -40,9 +41,9 @@ def decrypt(buf):
     Returns:
       bytes: 0x80 bytes of decrypted data.
     """
-    enc = int.from_bytes(buf[:0x80], "little")
+    enc = int(binascii.hexlify(buf[127::-1]), 16)
     dec = pow(enc, 0x13, HEXRAYS_PUBKEY)
-    return dec.to_bytes(0x80, "big")
+    return binascii.a2b_hex("%0256x" % dec)
 
 
 def parse_user_data(buf):

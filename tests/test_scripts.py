@@ -55,6 +55,5 @@ def test_slow_scripts(kernel32_idb_path, version, bitness, expected, script):
 
 @kern32_script_test(Scripts)
 def test_scripts(kernel32_idb_path, version, bitness, expected, script):
-    assert not isinstance(script, list)
     with not_raises(Exception):
         script.main([kernel32_idb_path])
