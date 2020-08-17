@@ -1633,8 +1633,10 @@ class v_zbytes(v_zstr):
 
 
 class TILTypeInfo(VStruct):
-    def __init__(self):
+    def __init__(self, format):
         VStruct.__init__(self)
+        self.format = format
+
         self.flags = v_uint32()
         self.name = v_zstr_utf8()
         self.ordinal = v_uint32()
@@ -1645,6 +1647,9 @@ class TILTypeInfo(VStruct):
         self.sclass = v_uint8()
 
     def pcb_flags(self):
+        # Format below 0x12 does not have 64 bit ordinal's
+        if self.format < 0x12:
+            self.flags &= 0x7FFFFFFF
         if self.flags >> 31:
             self.vsSetField("ordinal", v_uint64())
         if self.flags not in (0x7FFFFFFF, 0xFFFFFFFF):
@@ -1667,10 +1672,11 @@ class TILTypeInfo(VStruct):
 
 
 class TILBucket(VStruct):
-    def __init__(self, flags):
+    def __init__(self, flags, format):
         VStruct.__init__(self)
 
         self.flags = flags
+        self.format = format
         self.defs = None
 
         self.ndefs = v_uint32()
@@ -1700,7 +1706,7 @@ class TILBucket(VStruct):
         defs = []
         offset = 0
         for _ in range(self.ndefs):
-            _def = TILTypeInfo()
+            _def = TILTypeInfo(self.format)
             offset = _def.vsParse(buf, offset=offset)
             defs.append(_def)
         self.defs = defs
@@ -1770,13 +1776,13 @@ class TIL(VStruct):
         if self.flags & TIL_SLD:
             self.vsAddField("size_ldbl", v_uint8())
 
-        self.vsAddField("syms", TILBucket(flags=self.flags))
+        self.vsAddField("syms", TILBucket(self.flags, self.format))
 
         if self.flags & TIL_ORD:
             self.vsAddField("type_ordinal_numbers", v_uint32())
 
-        self.vsAddField("types", TILBucket(flags=self.flags))
-        self.vsAddField("macros", TILBucket(flags=self.flags))
+        self.vsAddField("types", TILBucket(self.flags, self.format))
+        self.vsAddField("macros", TILBucket(self.flags, self.format))
 
     def pcb_title_len(self):
         self["title"].vsSetLength(self.title_len)
