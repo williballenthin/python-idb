@@ -385,7 +385,8 @@ class TInfo:
                 t += ")"
             elif self.is_decl_udt() or self.is_decl_enum():
                 ref = self.type_details.ref
-                t += self.get_name() if ref is None else ref.get_refname()
+                refname = "" if ref is None else ref.get_refname()
+                t += self.get_name() if refname == "" else refname
             elif self.is_decl_bitfield():
                 if self.type_details.is_unsigned:
                     t += "unsigned "
@@ -825,8 +826,11 @@ class TInfo:
 
 
 class ErrorTInfo:
+    def __init__(self, name):
+        self.name = name
+
     def get_typestr(self, indent=2):
-        return "Error"
+        return "{} Error".format(self.name)
 
 
 def create_tinfo(til, type_info, fields=None, fieldcmts=None, ttf=None):
@@ -1213,7 +1217,7 @@ class TILTypeInfo(VStruct):
                 til, self.type_info, self.fields, self.fieldcmts, ttf=self
             )
         except OverflowError:
-            _type = ErrorTInfo()
+            _type = ErrorTInfo(self.name)
         object.__setattr__(self, "type", _type)
 
     @cached_property
