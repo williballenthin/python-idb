@@ -10,6 +10,9 @@ import datetime
 import logging
 import struct
 import sys
+import binascii
+
+from vstruct.primitives import v_zstr_utf8
 
 import idb
 import idb.netnode
@@ -18,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 def is_encrypted(buf):
-    return buf.find(b"\x00" * 4) >= 0x80
+    return buf.find(b"\x00" * 4) >= 0x7F
 
 
 HEXRAYS_PUBKEY = 0x93AF7A8E3A6EB93D1B4D1FB7EC29299D2BC8F3CE5F84BFE88E47DDBDD5550C3CE3D2B16A2E2FBD0FBD919E8038BB05752EC92DD1498CB283AA087A93184F1DD9DD5D5DF7857322DFCD70890F814B58448071BBABB0FC8A7868B62EB29CC2664C8FE61DFBC5DB0EE8BF6ECF0B65250514576C4384582211896E5478F95C42FDED
@@ -38,9 +41,9 @@ def decrypt(buf):
     Returns:
       bytes: 0x80 bytes of decrypted data.
     """
-    enc = int.from_bytes(buf[:0x80], "little")
+    enc = int(binascii.hexlify(buf[127::-1]), 16)
     dec = pow(enc, 0x13, HEXRAYS_PUBKEY)
-    return dec.to_bytes(0x80, "big")
+    return binascii.a2b_hex("%0256x" % dec)
 
 
 def parse_user_data(buf):
@@ -57,16 +60,18 @@ def parse_user_data(buf):
         - id (str): the ID of the license.
         - name (str): the name of the user and organization that owns the license.
     """
-    if len(buf) != 0x80:
+    if len(buf) != 0x7F:
         raise ValueError("invalid user blob.")
 
-    version = struct.unpack_from("<H", buf, 0x3)
-    if version == 0:
+    version = struct.unpack_from("<H", buf, 0x2)[0]
+    if version == 0 or version > 750:
         raise NotImplementedError("user blob version not supported.")
 
-    ts1, _, ts2 = struct.unpack_from("<III", buf, 0x11)
-    id = "%02X-%02X%02X-%02X%02X-%02X" % struct.unpack_from("6B", buf, 0x1D)
-    name = buf[0x23 : buf.find(b"\x00", 0x23)].decode("utf-8")
+    ts1, _, ts2 = struct.unpack_from("<III", buf, 0x10)
+    id = "%02X-%02X%02X-%02X%02X-%02X" % struct.unpack_from("6B", buf, 0x1C)
+
+    name = v_zstr_utf8()
+    name.vsParse(buf[0x22:])
 
     return {
         # unknown if these are in UTC or not. right now, assuming so.
@@ -90,11 +95,25 @@ def get_userdata(netnode):
     userdata = netnode.supval(0x0)
 
     if is_encrypted(userdata):
-        userdata = decrypt(userdata)
+        userdata = decrypt(userdata)[1:]
     else:
-        userdata = userdata[:0x80]
+        userdata = userdata[:0x7F]
 
     return parse_user_data(userdata)
+
+
+def print_userdata(api, tag="$ original user"):
+    try:
+        netnode = api.ida_netnode.netnode(tag)
+        data = get_userdata(netnode)
+        print("user: %s" % data["name"])
+        print("id:   %s" % data["id"])
+        print("ts1:  %s" % data["ts1"].isoformat(" ") + "Z")
+        print("ts2:  %s" % data["ts2"].isoformat(" ") + "Z")
+    except KeyError:
+        logger.warning("can' find {}".format(tag))
+    except (NotImplementedError, ValueError) as e:
+        logger.warning(e)
 
 
 def main(argv=None):
@@ -125,13 +144,8 @@ def main(argv=None):
 
     with idb.from_file(args.idbpath) as db:
         api = idb.IDAPython(db)
-        data = get_userdata(api.ida_netnode.netnode("$ original user"))
-
-        print("user: %s" % data["name"])
-        print("id:   %s" % data["id"])
-        print("ts1:  %s" % data["ts1"].isoformat(" ") + "Z")
-        print("ts2:  %s" % data["ts2"].isoformat(" ") + "Z")
-
+        print_userdata(api)
+        print_userdata(api, "$ user1")
     return 0
 
 

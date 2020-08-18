@@ -42,23 +42,26 @@ def main(argv=None):
         logging.getLogger().setLevel(logging.INFO)
 
     with idb.from_file(args.idbpath) as db:
-        for script in idb.analysis.enumerate_script_snippets(db):
-            logger.debug("script: %s", script.name)
-            logger.debug("language: %s", script.language)
-            logger.debug("code: \n%s", script.code)
-            if script.language == "Python":
-                ext = ".py"
-            elif script.language == "IDC":
-                ext = ".idc"
-            else:
-                raise ValueError("unexpected script language: " + script.language)
+        try:
+            for script in idb.analysis.enumerate_script_snippets(db):
+                logger.debug("script: %s", script.name)
+                logger.debug("language: %s", script.language)
+                logger.debug("code: \n%s", script.code)
+                if script.language == "Python":
+                    ext = ".py"
+                elif script.language == "IDC":
+                    ext = ".idc"
+                else:
+                    raise ValueError("unexpected script language: " + script.language)
 
-            filename = script.name + ext
-            logger.info(
-                "writing %s script %s to %s", script.language, script.name, filename
-            )
-            with open(filename, "wb") as f:
-                f.write(script.code.encode("utf-8"))
+                filename = script.name + ext
+                logger.info(
+                    "writing %s script %s to %s", script.language, script.name, filename
+                )
+                with open(filename, "wb") as f:
+                    f.write(script.code.encode("utf-8"))
+        except KeyError:
+            logger.warning("not found script snippets")
 
     return 0
 
