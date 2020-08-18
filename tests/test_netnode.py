@@ -22,16 +22,16 @@ def test_valobj(kernel32_idb, version, bitness, expected):
     # Out[29]: 'Z:\\home\\user\\Downloads\\kernel32\\kernel32.dll\x00'
     root = idb.netnode.Netnode(kernel32_idb, ROOT_NODEID)
     assert root.value_exists() is True
-    if version > 500:
-        assert root.valobj().endswith(b"kernel32.dll\x00")
-        assert root.valstr().endswith("kernel32.dll")
-    else:
-        assert root.valobj().endswith(
+    if version >= 740 or version == 500:
+        root.valobj().endswith(
             b"ba1bc09b7bb290656582b4e4d896105caf00825b557ce45621e76741cd5dc262\x00"
         )
-        assert root.valstr().endswith(
+        root.valstr().endswith(
             "ba1bc09b7bb290656582b4e4d896105caf00825b557ce45621e76741cd5dc262"
         )
+    else:
+        assert root.valobj().endswith(b"kernel32.dll\x00")
+        assert root.valstr().endswith("kernel32.dll")
 
 
 @kern32_test(
