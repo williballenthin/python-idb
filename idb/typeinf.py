@@ -1272,6 +1272,11 @@ class TInfo:
         return is_type_volatile(self.get_realtype())
 
 
+class ErrorTInfo:
+    def get_typestr(self, indent=2):
+        return "Error"
+
+
 def create_tinfo(til, type_info, fields=None, fieldcmts=None, ttf=None):
     type_string = (
         type_info if isinstance(type_info, TypeString) else TypeString(type_info)
@@ -1656,7 +1661,12 @@ class TILTypeInfo(VStruct):
             raise Exception("unsupported format {}".format(self.flags))
 
     def deserialize(self, til):
-        _type = create_tinfo(til, self.type_info, self.fields, self.fieldcmts, ttf=self)
+        try:
+            _type = create_tinfo(
+                til, self.type_info, self.fields, self.fieldcmts, ttf=self
+            )
+        except OverflowError:
+            _type = ErrorTInfo()
         object.__setattr__(self, "type", _type)
 
     @cached_property
