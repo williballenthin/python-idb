@@ -886,7 +886,7 @@ class SegmentBounds(vstruct.VStruct):
     specifies the range of a segment.
     """
 
-    def __init__(self, wordsize):
+    def __init__(self, wordsize, sig):
         vstruct.VStruct.__init__(self)
 
         self.wordsize = wordsize
@@ -899,6 +899,9 @@ class SegmentBounds(vstruct.VStruct):
 
         self.start = self.v_word()
         self.end = self.v_word()
+
+        if sig == ID1.SignatureV6:
+            self.ofs = self.v_word()
 
 
 class ID1(vstruct.VStruct):
@@ -949,7 +952,8 @@ class ID1(vstruct.VStruct):
 
     def pcb_segment_count(self):
         self["_segments"].vsAddElements(
-            self.segment_count, functools.partial(SegmentBounds, self.wordsize)
+            self.segment_count,
+            functools.partial(SegmentBounds, self.wordsize, self.signature),
         )
 
     def pcb__segments(self):
