@@ -851,10 +851,6 @@ class IdaInfo(vstruct.VStruct):
     def pcb_strlit_pref_size(self):
         self["strlit_pref"].vsSetLength(self.strlit_pref_size)
 
-    @property
-    def procName(self):
-        return self.procname
-
     def vsParse(self, sbytes, offset=0, fast=False):
         self.sbytes = sbytes
         self.len_sbytes = len(sbytes)
