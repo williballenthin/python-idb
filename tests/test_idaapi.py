@@ -583,10 +583,13 @@ def test_function_names(kernel32_idb, version, bitness, expected):
         else "__BaseDllInitialize@12"
     )
 
-    if version > 500:
-        with pytest.raises(KeyError):
-            # this is issue #7.
-            _ = api.idc.GetFunctionName(0x689018E5)
+    if version >= 720:
+        assert api.idc.GetFunctionName(0x689018E5) == "_InternalFindAtom@12"
+    # elif version > 500:
+    #     # TODO: It might be wrong
+    #     assert api.idc.GetFunctionName(0x689018E5) == "sub_689017d4"
+    elif version == 500:
+        assert api.idc.GetFunctionName(0x689018E5) == "sub_689018e5"
 
 
 @pytest.mark.slow
@@ -917,7 +920,7 @@ def test_GetType(kernel32_idb, version, bitness, expected):
 def test_inf_structure(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     inf_structure = api.idaapi.get_inf_structure()
-    assert inf_structure.procName == "metapc"
+    assert inf_structure.procname == "metapc"
 
 
 @requires_capstone
