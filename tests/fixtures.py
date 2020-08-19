@@ -112,6 +112,7 @@ VersionMap = {
     750: "v7.5",
 }
 DefaultKern32Specs = [
+    (500, 32, None),
     (630, 32, None),
     (630, 64, None),
     (640, 32, None),

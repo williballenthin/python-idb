@@ -562,10 +562,11 @@ def test_functions(kernel32_idb, version, bitness, expected):
     # exact number of detected functions varies by IDA version,
     # but the first and last addresses should remain constant.
     assert funcs[0] == 0x68901010
-    assert funcs[-1] == 0x689BD410
+    assert funcs[-1] == 0x689BD410 if version > 500 else 0x689CD6BA
 
     # this is a function chunk. should not be reported.
-    assert 0x689018E5 not in funcs
+    if version > 500:
+        assert 0x689018E5 not in funcs
 
 
 @kern32_test()
