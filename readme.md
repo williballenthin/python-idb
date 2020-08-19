@@ -3,7 +3,7 @@
 # python-idb
 
 python-idb is a library for accessing the contents of [IDA Pro](https://www.hex-rays.com/products/ida/) databases (.idb files).
-It provides read-only access to internal structures such as the B-tree (ID0 section), name address index (NAM section), and flags index (ID2 section).
+It provides read-only access to internal structures such as the B-tree (ID0 section), name address index (NAM section), flags index (ID2 section), and types (TIL section).
 The library also provides analysis of B-tree entries to expose logical structures like functions, cross references, bytes, and disassembly (via [Capstone](http://www.capstone-engine.org/)).
 An example use for python-idb might be to run IDA scripts in a pure-Python environment.
 
@@ -54,11 +54,12 @@ The target script `yara_fn.py` has only been slightly modified:
 ## what works
 
   - ~250 unit tests that demonstrate functionality including file format, B-tree, analysis, and idaapi features.
-  - read-only parsing of .idb and .i64 files from IDA Pro v6.95 and v7.0
+  - read-only parsing of .idb and .i64 files from IDA Pro v5.0 to v7.5
     - extraction of file sections
     - B-tree lookups and queries (ID0 section)
     - flag enumeration (ID1 section)
     - named address listing (NAM section)
+    - types parsing (TIL section)
   - analysis of artifacts that reconstructs logical elements, including:
     - root metadata
     - loader metadata
@@ -78,15 +79,6 @@ The target script `yara_fn.py` has only been slightly modified:
     - lots and lots of flags
   - Python 2.7 & 3.x compatibility
   - zlib-packed idb/i64 files
-
-
-## what doesn't quite work
-
-support for the following features are feasible and planned, but not yet implemented:
-
-  - databases from versions other than v6.95 and v7.0b
-  - parsing TIL section
-
 
 ## what will never work
 
