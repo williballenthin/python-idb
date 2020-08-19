@@ -556,9 +556,6 @@ def test_get_mnem(kernel32_idb, version, bitness, expected):
 
 @kern32_test()
 def test_functions(kernel32_idb, version, bitness, expected):
-    if version <= 500:
-        return
-
     api = idb.IDAPython(kernel32_idb)
 
     funcs = api.idautils.Functions()
