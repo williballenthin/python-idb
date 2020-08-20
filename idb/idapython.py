@@ -950,7 +950,7 @@ class idc:
         inst_buf = self.GetManyBytes(ea, size)
         segment = self._get_segment(ea)
         bitness = 16 << segment.bitness  # 16, 32, 64
-        procname = self.api.idaapi.get_inf_structure().procName.lower()
+        procname = self.api.idaapi.get_inf_structure().procname.lower()
 
         dis = None
         if procname == "arm" and bitness == 64:
