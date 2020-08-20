@@ -1,4 +1,5 @@
 import re
+import sys
 
 import idb.analysis
 from fixtures import *
@@ -299,6 +300,7 @@ def test_xrefs(kernel32_idb, version, bitness, expected):
     )
 
 
+@pytest.mark.skipif(six.PY2, reason="it consumes too much memory")
 @kern32_test()
 def test_fixups(kernel32_idb, version, bitness, expected):
     fixups = idb.analysis.Fixups(kernel32_idb).fixups
