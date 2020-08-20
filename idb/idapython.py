@@ -1821,12 +1821,11 @@ class ida_funcs:
         if func is None:
             return ""
 
-        ea = func.startEA
-
         # shouldn't be a chunk
-        if is_flag_set(func.flags, func.FUNC_TAIL):
+        if is_flag_set(func.flags, func.FUNC_TAIL) or ea != func.startEA:
             raise KeyError(ea)
 
+        ea = func.startEA
         nn = self.api.ida_netnode.netnode(ea)
         try:
             return nn.name()
