@@ -255,12 +255,19 @@ def test_function(kernel32_idb, version, bitness, expected):
         assert check_functype(
             0x68904AED, "int (__thiscall sub_68904AED)(HANDLE FileHandle, int, int)"
         )
-    elif version >= 600:
+    elif version > 630:
         assert check_functype(
             0x68915529, "int (__cdecl sub_68915529)(LPCWSTR lpString1, int, int)"
         )
         assert check_functype(
             0x68904AED, "int (__thiscall sub_68904AED)(HANDLE FileHandle, int, int)"
+        )
+    elif 630 == version:
+        assert check_functype(
+            0x68915529, "int (__cdecl sub_68915529)(PCNZWCH Buf1, int, int)"
+        )
+        assert check_functype(
+            0x689172CF, "int (__thiscall sub_689172CF)(DWORD Size, int, int, int, int)"
         )
     elif version == 500:
         assert check_functype(
