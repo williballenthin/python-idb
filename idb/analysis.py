@@ -1261,9 +1261,11 @@ class Function:
             names = create_pstring_list(namebuf)
             typedata = idb.typeinf.FuncTypeData()
             ts = idb.typeinf.TypeString(typebuf)
-            typedata.deserialize(None, ts, names, [])
+            typedata.deserialize(self.idb.til, ts, names, [])
 
-            return idb.typeinf.TInfo(typ, typedata, name=self.get_name())
+            return idb.typeinf.TInfo(
+                typ, typedata, til=self.idb.til, name=self.get_name()
+            )
         except KeyError:
             return None
 

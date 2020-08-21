@@ -1,8 +1,8 @@
 import re
 
 import idb.analysis
-from idb.typeinf_flags import *
 from fixtures import *
+from idb.typeinf_flags import *
 
 try:
     from re import fullmatch
@@ -209,12 +209,67 @@ def test_function(kernel32_idb, version, bitness, expected):
     else:
         assert (
             sig.get_typestr()
-            == "BOOL (__stdcall _BaseDllInitialize@12)(HINSTANCE hinstDLL, #5 fdwReason, LPVOID lpReserved)"
+            == "BOOL (__stdcall _BaseDllInitialize@12)(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)"
         )
 
     assert sig.get_cc() == CM_CC_STDCALL
     assert sig.get_rettype().get_typename() == "BOOL"
     assert len(sig.type_details.args) == 3
+
+    check_functype = (
+        lambda fva, _type: idb.analysis.Function(kernel32_idb, fva)
+        .get_signature()
+        .get_typestr()
+        == _type
+    )
+
+    if version >= 730:
+        assert check_functype(
+            0x68901551,
+            "void (__fastcall @__security_check_cookie@4)(uintptr_t StackCookie)",
+        )
+        assert check_functype(
+            0x68901637, "void* (__cdecl _memset)(void*, int Val, size_t Size)"
+        )
+        assert check_functype(
+            0x689031AE,
+            "int (__thiscall ?NotifyLoadStringResource@CMessageMapper@FSPErrorMessages@@QAEJPAUHINSTANCE__@@IPBGKPAPAX@Z)(FSPErrorMessages::CMessageMapper* this, HINSTANCE CriticalSection, unsigned int, unsigned int16*, unsigned int, void**)",
+        )
+    elif version >= 720:
+        assert check_functype(
+            0x68936AEC,
+            "int (__stdcall _BasepProcessInvalidImage@84)(NTSTATUS Status, int, int, int, int, int, int, int, int, int, int, int, int, int, PUNICODE_STRING, int, int, int, int, int, int)",
+        )
+        assert check_functype(
+            0x68901637, "void* (__cdecl _memset)(void* Dst, int Val, size_t Size)"
+        )
+        assert check_functype(
+            0x689031AE,
+            "int (__thiscall ?NotifyLoadStringResource@CMessageMapper@FSPErrorMessages@@QAEJPAUHINSTANCE__@@IPBGKPAPAX@Z)(FSPErrorMessages::CMessageMapper* this, HINSTANCE CriticalSection, unsigned int, unsigned int16*, unsigned int, void**)",
+        )
+    elif version >= 700:
+        assert check_functype(
+            0x68936AEC,
+            "int (__cdecl BasepProcessInvalidImage)(NTSTATUS NtStatus, int, int, int, int, int, int, int, int, int, int, int, int, int, PUNICODE_STRING, int, int, int, int, int, int)",
+        )
+        assert check_functype(
+            0x68904AED, "int (__thiscall sub_68904AED)(HANDLE FileHandle, int, int)"
+        )
+    elif version >= 600:
+        assert check_functype(
+            0x68915529, "int (__cdecl sub_68915529)(LPCWSTR lpString1, int, int)"
+        )
+        assert check_functype(
+            0x68904AED, "int (__thiscall sub_68904AED)(HANDLE FileHandle, int, int)"
+        )
+    elif version == 500:
+        assert check_functype(
+            0x68903158,
+            "int (__fastcall _BasepNotifyLoadStringResource@16)(int, int, int, int, int, int)",
+        )
+        assert check_functype(
+            0x68906511, "int (__cdecl _StringCbPrintfW)(wchar_t*, int, wchar_t*, int8)"
+        )
 
 
 @kern32_test()

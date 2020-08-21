@@ -220,10 +220,10 @@ class TInfo:
                 )
             else:
                 return nex.get_name()
-        return "{name}"
+        raise ValueError
 
     def get_name(self):
-        if self.name == "":
+        if self.name == "" and self.is_decl_typedef():
             return self.get_refname()
         return self.name
 
@@ -286,6 +286,29 @@ class TInfo:
         # TODO:
         raise NotImplementedError()
 
+    def get_conv(self):
+        if not self.is_func():
+            return ""
+        cc = self.get_cc()
+        conv = ""
+        if cc == CM_CC_CDECL:
+            conv = "__cdecl"
+        # elif cc == CM_CC_ELLIPSIS:
+        #     conv = "call"
+        elif cc == CM_CC_STDCALL:
+            conv = "__stdcall"
+        elif cc == CM_CC_PASCAL:
+            conv = "__pascal"
+        elif cc == CM_CC_FASTCALL:
+            conv = "__fastcall"
+        elif cc == CM_CC_THISCALL:
+            conv = "__thiscall"
+        # elif cc == CM_CC_MANUAL:
+        #     conv = "__manual"
+        elif cc == CM_CC_SPOILED:
+            conv = "__spoiled"
+        return conv
+
     def get_typename(self):
         t = ""
         base = get_base_type(self.get_decltype())
@@ -328,44 +351,35 @@ class TInfo:
         else:
             if self.is_funcptr():
                 func = self.get_pointed_object()
-                t += func.get_typename().format(name="*{}".format(self.get_name()))
+                conv = func.get_conv()
+                t += "{} ({}*{})(".format(
+                    func.get_rettype().get_typename(),
+                    conv + " " if conv != "" else "",
+                    self.get_name(),
+                )
+                args = func.type_details.args
+                for arg in args:
+                    argtype = arg.type
+                    t += "{}{}, ".format(
+                        argtype.get_typename(),
+                        " " + arg.name if arg.name != "" else "",
+                    )
+                if len(args) > 0:
+                    t = t[:-2]
+                t += ")"
             elif self.is_decl_ptr():
-                t += "{}*".format(self.get_pointed_object().get_typename())
+                ptr = self.get_pointed_object()
+                t += "{}*".format(ptr.get_typename())
             elif self.is_decl_array():
                 n_elems = self.type_details.n_elems
+                arrobj = self.get_arr_object()
                 t += (
-                    "{}[]".format(self.get_arr_object().get_typename())
+                    "{}[]".format(arrobj.get_typename())
                     if n_elems == 0
                     else "{}[{}]".format(self.get_arr_object().get_typename(), n_elems)
                 )
             elif self.is_decl_func():
-                cc = self.get_cc()
-                # CM_CC_CDECL
-                # CM_CC_ELLIPSIS
-                # CM_CC_STDCALL
-                # CM_CC_PASCAL
-                # CM_CC_FASTCALL
-                # CM_CC_THISCALL
-                # CM_CC_MANUAL
-                # CM_CC_SPOILED
-                conv = ""
-                if cc == CM_CC_CDECL:
-                    conv = "__cdecl"
-                # elif cc == CM_CC_ELLIPSIS:
-                #     conv = "call"
-                elif cc == CM_CC_STDCALL:
-                    conv = "__stdcall"
-                elif cc == CM_CC_PASCAL:
-                    conv = "__pascal"
-                elif cc == CM_CC_FASTCALL:
-                    conv = "__fastcall"
-                elif cc == CM_CC_THISCALL:
-                    conv = "__thiscall"
-                # elif cc == CM_CC_MANUAL:
-                #     conv = "__manual"
-                elif cc == CM_CC_SPOILED:
-                    conv = "__spoiled"
-
+                conv = self.get_conv()
                 t += "{} ({}{})(".format(
                     self.get_rettype().get_typename(),
                     conv + " " if conv != "" else "",
@@ -373,8 +387,9 @@ class TInfo:
                 )
                 args = self.type_details.args
                 for arg in args:
+                    argtype = arg.type
                     t += "{}{}, ".format(
-                        arg.type.get_typename(),
+                        argtype.get_typename(),
                         " " + arg.name if arg.name != "" else "",
                     )
                 if len(args) > 0:
@@ -835,9 +850,9 @@ def create_tinfo(til, type_info, fields=None, fieldcmts=None, name=None):
         type_info if isinstance(type_info, TypeString) else TypeString(type_info)
     )
     typ = type_string.peek_u8()
+    tinfo = TInfo(typ, til=til, name=name)
     if is_typeid_last(typ) or get_base_type(typ) == BT_RESERVED:
         type_string.seek(1)
-        tinfo = TInfo(typ, til=til, name=name)
     else:
         type_data = None
         if is_type_ptr(typ):
@@ -854,12 +869,8 @@ def create_tinfo(til, type_info, fields=None, fieldcmts=None, name=None):
             type_data = EnumTypeData()
         elif is_type_bitfld(typ):
             type_data = BitfieldTypeData()
-        tinfo = TInfo(
-            typ,
-            type_data.deserialize(til, type_string, fields, fieldcmts),
-            til=til,
-            name=name,
-        )
+        type_data.deserialize(til, type_string, fields, fieldcmts)
+        tinfo.type_details = type_data
     return tinfo
 
 
@@ -981,9 +992,6 @@ class FuncTypeData(TypeData):
         n = ts.dt()
         for i in range(n):
             arg = FuncArg()
-            arg.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
-            if is_cm_cc_special_pe(self.cc):
-                arg.argloc = self.deserialize_argloc(ts.get())
             if ts.has_next() and ts.peek_u8() == FAH_BYTE:
                 ts.seek(1)
                 arg.flags = ts.de()
@@ -991,6 +999,10 @@ class FuncTypeData(TypeData):
                 arg.name = fields[i]
             if fieldcmts is not None and i < len(fieldcmts):
                 arg.cmt = fieldcmts[i]
+
+            arg.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
+            if is_cm_cc_special_pe(self.cc):
+                arg.argloc = self.deserialize_argloc(ts.get())
             self.args.append(arg)
         return self
 
@@ -1009,8 +1021,8 @@ class UdtMember:
     def __init__(self):
         self.offset = 0
         self.size = 0
-        self.name = None  # qstring
-        self.cmt = None  # qstring
+        self.name = ""  # qstring
+        self.cmt = ""  # qstring
         self.type = None  # tinfo_t
         self.effalign = 0
         self.tafld_bits = 0
@@ -1075,16 +1087,17 @@ class UdtTypeData(TypeData):
             field_i = 0
             for i in range(member_cnt):
                 member = UdtMember()
-                member.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
-                attr = ts.sdacl_attr() if not self.is_union else 0
-                member.tafld_bits = attr
-                member.fda = attr
                 if not member.is_baseclass():
                     if len(fields) > field_i:
                         member.name = fields[field_i]
                     if n < len(fieldcmts):
                         member.cmt = fieldcmts[field_i]
                     field_i += 1
+
+                member.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
+                attr = ts.sdacl_attr() if not self.is_union else 0
+                member.tafld_bits = attr
+                member.fda = attr
                 self.members.append(member)
         return self
 
