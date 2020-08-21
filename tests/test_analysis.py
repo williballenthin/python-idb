@@ -1,7 +1,7 @@
 import re
-import sys
 
 import idb.analysis
+from idb.typeinf_flags import *
 from fixtures import *
 
 try:
@@ -201,19 +201,20 @@ def test_function(kernel32_idb, version, bitness, expected):
     DllEntryPoint = idb.analysis.Function(kernel32_idb, 0x68901695)
 
     sig = DllEntryPoint.get_signature()
-    assert sig.calling_convention == "__stdcall"
-    assert sig.rtype == "BOOL"
-    assert len(sig.parameters) == 3
-    assert (
-        list(map(lambda p: p.type, sig.parameters)) == ["HINSTANCE", "DWORD", "LPVOID",]
-        if version <= 700
-        else ["HINSTANCE", "#E", "LPVOID",]
-    )
-    assert list(map(lambda p: p.name, sig.parameters)) == [
-        "hinstDLL",
-        "fdwReason",
-        "lpReserved",
-    ]
+    if version <= 700:
+        assert (
+            sig.get_typestr()
+            == "BOOL (__stdcall DllEntryPoint)(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)"
+        )
+    else:
+        assert (
+            sig.get_typestr()
+            == "BOOL (__stdcall _BaseDllInitialize@12)(HINSTANCE hinstDLL, #5 fdwReason, LPVOID lpReserved)"
+        )
+
+    assert sig.get_cc() == CM_CC_STDCALL
+    assert sig.get_rettype().get_typename() == "BOOL"
+    assert len(sig.type_details.args) == 3
 
 
 @kern32_test()

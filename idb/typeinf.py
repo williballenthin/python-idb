@@ -201,15 +201,12 @@ class TypeData:
 
 
 class TInfo:
-    def __init__(
-        self, base_type=BT_UNK, type_details=None, til=None, ttf=None,
-    ):
+    def __init__(self, base_type=BT_UNK, type_details=None, til=None, name=None):
         self.base_type = base_type
         self.flags = 0
         self.type_details = type_details
         self.til = til
-        self.ttf = ttf
-
+        self.name = name if name is not None else ""
         self._types = til.types if til is not None else None
 
     def get_refname(self):
@@ -226,9 +223,9 @@ class TInfo:
         return "{name}"
 
     def get_name(self):
-        if self.ttf is None:
+        if self.name == "":
             return self.get_refname()
-        return self.ttf.name
+        return self.name
 
     def get_next_tinfo(self):
         if self.is_decl_typedef() and self._types is not None:
@@ -833,14 +830,14 @@ class ErrorTInfo:
         return "{} Error".format(self.name)
 
 
-def create_tinfo(til, type_info, fields=None, fieldcmts=None, ttf=None):
+def create_tinfo(til, type_info, fields=None, fieldcmts=None, name=None):
     type_string = (
         type_info if isinstance(type_info, TypeString) else TypeString(type_info)
     )
     typ = type_string.peek_u8()
     if is_typeid_last(typ) or get_base_type(typ) == BT_RESERVED:
         type_string.seek(1)
-        tinfo = TInfo(typ, til=til, ttf=ttf)
+        tinfo = TInfo(typ, til=til, name=name)
     else:
         type_data = None
         if is_type_ptr(typ):
@@ -861,7 +858,7 @@ def create_tinfo(til, type_info, fields=None, fieldcmts=None, ttf=None):
             typ,
             type_data.deserialize(til, type_string, fields, fieldcmts),
             til=til,
-            ttf=ttf,
+            name=name,
         )
     return tinfo
 
@@ -925,6 +922,12 @@ class FuncArg:
         self.flags = 0
 
 
+class RegInfo:
+    def __init__(self):
+        self.reg = 0
+        self.size = 0
+
+
 class FuncTypeData(TypeData):
     def __init__(self):
         TypeData.__init__(self)
@@ -933,17 +936,39 @@ class FuncTypeData(TypeData):
         self.rettype = None  # tinfo_t
         self.retloc = None  # argloc_t
         self.stkargs = None  # uval_t
-        self.spoiled = None  # reginfovec_t
+        self.spoiled = []  # reginfovec_t
         self.cc = 0
 
     def deserialize(self, til, ts, fields, fieldcmts):
         typ = ts.u8()
         self.flags |= 4 * get_type_flags(typ)
 
+        cm = ts.peek_u8()
+        if is_cc_spoiled(cm):
+            while is_cc_spoiled(cm):
+                ts.seek(1)
+                nspoiled = cm & ~CM_CC_MASK
+                if nspoiled == 15:
+                    f = 2 * (ts.u8() & 0x1F)
+                else:
+                    for n in range(nspoiled):
+                        reginfo = RegInfo()
+                        b = ts.read_db()
+                        if bool(b & 0x80):
+                            size = ts.u8()
+                            reg = b & 0x7F
+                        else:
+                            size = (b >> 4) + 1
+                            reg = (b & 0xF) - 1
+                        reginfo.size = size
+                        reginfo.reg = reg
+                        self.spoiled.append(reginfo)
+                    f = 1
+                cm = ts.peek_u8()
+                self.flags |= f
+
         self.cc = ts.u8()
-        if is_cm_cc_special(self.cc):
-            raise NotImplementedError()
-            # TODO: spoiled
+        cc = self.cc & CM_CC_MASK
 
         ts.tah_attr()
         self.rettype = create_tinfo(til, ts.ref(), fields, fieldcmts)
@@ -954,22 +979,19 @@ class FuncTypeData(TypeData):
         if is_cm_cc_voidarg(self.cc):
             return self
         n = ts.dt()
-        if n > 256:
-            raise ValueError("invalid arg count!")
-        else:
-            for i in range(n):
-                arg = FuncArg()
-                arg.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
-                if is_cm_cc_special_pe(self.cc):
-                    arg.argloc = self.deserialize_argloc(ts.get())
-                if ts.has_next() and ts.peek_u8() == FAH_BYTE:
-                    ts.seek(1)
-                    arg.flags = ts.de()
-                if fields is not None and i < len(fields):
-                    arg.name = fields[i]
-                if fieldcmts is not None and i < len(fieldcmts):
-                    arg.cmt = fieldcmts[i]
-                self.args.append(arg)
+        for i in range(n):
+            arg = FuncArg()
+            arg.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
+            if is_cm_cc_special_pe(self.cc):
+                arg.argloc = self.deserialize_argloc(ts.get())
+            if ts.has_next() and ts.peek_u8() == FAH_BYTE:
+                ts.seek(1)
+                arg.flags = ts.de()
+            if fields is not None and i < len(fields):
+                arg.name = fields[i]
+            if fieldcmts is not None and i < len(fieldcmts):
+                arg.cmt = fieldcmts[i]
+            self.args.append(arg)
         return self
 
     def deserialize_argloc(self, type_string):
@@ -1214,7 +1236,7 @@ class TILTypeInfo(VStruct):
     def deserialize(self, til):
         try:
             _type = create_tinfo(
-                til, self.type_info, self.fields, self.fieldcmts, ttf=self
+                til, self.type_info, self.fields, self.fieldcmts, name=self.name
             )
         except OverflowError:
             _type = ErrorTInfo(self.name)

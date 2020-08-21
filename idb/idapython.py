@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 import collections
+import logging
 import os
 import re
 import struct
-import logging
-import re
 import weakref
 
 import six
@@ -1213,23 +1212,8 @@ class idc:
         except Exception as e:
             logger.warning("failed to fetch function for GetType: %s", e)
             return None
-
-        try:
-            name = f.get_name()
-            sig = f.get_signature()
-        except KeyError:
-            return None
-
-        params = []
-        for param in sig.parameters:
-            params.append("%s %s" % (param.type, param.name))
-
-        return "{rtype:s} {cc:s} {name:s}({params:s})".format(
-            rtype=sig.rtype,
-            cc=sig.calling_convention,
-            name=name,
-            params=", ".join(params),
-        )
+        sig = f.get_signature()
+        return sig.get_typestr() if sig is not None else None
 
     @staticmethod
     def hasValue(flags):

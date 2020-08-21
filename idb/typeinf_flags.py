@@ -424,6 +424,10 @@ def is_cm_cc_special_pe(t):
     return t & CM_CC_MASK in (CM_CC_SPECIAL, CM_CC_SPECIALP, CM_CC_SPECIALE)
 
 
+def is_cc_spoiled(t):
+    return get_cc(t) == CM_CC_SPOILED
+
+
 def get_cc(cm):
     return cm & CM_CC_MASK
 
