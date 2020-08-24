@@ -1,3 +1,4 @@
+import functools
 import re
 
 import idb.analysis
@@ -144,6 +145,10 @@ def test_struct(kernel32_idb, version, bitness, expected):
     assert members[2].get_type() == ("HINSTANCE" if version > 500 else None)
 
 
+def _check_functype(db, fva, _type):
+    return idb.analysis.Function(db, fva).get_signature().get_typestr() == _type
+
+
 @kern32_test()
 def test_function(kernel32_idb, version, bitness, expected):
     # .text:689016B5                         sub_689016B5    proc near
@@ -216,12 +221,7 @@ def test_function(kernel32_idb, version, bitness, expected):
     assert sig.get_rettype().get_typename() == "BOOL"
     assert len(sig.type_details.args) == 3
 
-    check_functype = (
-        lambda fva, _type: idb.analysis.Function(kernel32_idb, fva)
-        .get_signature()
-        .get_typestr()
-        == _type
-    )
+    check_functype = functools.partial(_check_functype, kernel32_idb)
 
     if version >= 730:
         assert check_functype(
@@ -277,6 +277,21 @@ def test_function(kernel32_idb, version, bitness, expected):
         assert check_functype(
             0x68906511, "int (__cdecl _StringCbPrintfW)(wchar_t*, int, wchar_t*, int8)"
         )
+
+
+def test_function_usercall():
+    _db = load_idb(os.path.join(CD, "data", "thumb", "ls.idb"))
+    check_functype = functools.partial(_check_functype, _db)
+    assert check_functype(
+        0x181F8,
+        "unsigned int8* (__usercall human_readable)(uintmax_t n, void buf, int64 opts, int64 from_block_size, unsigned int8* to_block_size)",
+    )
+    assert check_functype(
+        0x18D94, "unsigned int8* (__usercall imaxtostr)(intmax_t i, void buf)"
+    )
+    assert check_functype(
+        0x18E00, "unsigned int8* (__usercall umaxtostr)(uintmax_t i, void buf)"
+    )
 
 
 @kern32_test()
