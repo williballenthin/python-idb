@@ -879,7 +879,7 @@ class ArgPart:
 
 class ArgLoc(ArgPart):
     def __init__(self):
-        super(ArgLoc, self).__init__()
+        ArgPart.__init__(self)
         self.type = 0
         # union
         # {
@@ -975,25 +975,28 @@ class FuncTypeData(TypeData):
         argloc = ArgLoc()
         t = ts.u8()
         if t == 0xFF:
-            argloc.type = ts.dt()
-            if argloc.type in (ALOC_STACK, ALOC_STATIC):
+            typ = ts.dt()
+            typ0 = (typ & 0xF0) >> 4
+            argloc.type = typ0
+            if typ0 in (ALOC_STACK, ALOC_STATIC):
                 argloc.sval = ts.de()  # sval
-            elif argloc.type == ALOC_REG1:
+            elif typ0 == ALOC_REG1:
                 argloc.reginfo = ts.dt()
-            elif argloc.type == ALOC_REG2:
-                reg1 = ts.dt()
-                reg2 = ts.dt()  # reginfo << 16
-                argloc.reginfo = reg1 | (reg2 << 16)
-            elif argloc.type == ALOC_RREL:
+            elif typ0 == ALOC_REG2:
+                # offset1:reg1:offset2:reg2
+                argloc.reginfo = struct.unpack("<L", ts.read(4))[0]
+                # guess
+                argloc.biggest = struct.unpack("<H", ts.read(2))[0]
+            elif typ0 == ALOC_RREL:
                 rrel = RRel()
                 rrel.reg = ts.dt()  # rrel_t->reg
                 rrel.off = ts.de()  # rrel_t->off
                 argloc.rrel = rrel
-            elif argloc.type in (ALOC_DIST, ALOC_CUSTOM):
+            elif typ0 in (ALOC_DIST, ALOC_CUSTOM):
                 raise NotImplementedError
         else:
             b = (t & 0x7F) - 1
-            if b <= 0x80:
+            if t <= 0x80:
                 if b > 0:
                     argloc.type = ALOC_REG1
                     argloc.reginfo = b
