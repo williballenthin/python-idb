@@ -291,6 +291,8 @@ class TInfo:
             return ""
         cc = self.get_cc()
         conv = ""
+        if cc == CM_CC_INVALID:
+            conv += "__bad_cc"
         if cc == CM_CC_CDECL:
             conv = "__cdecl"
         # elif cc == CM_CC_ELLIPSIS:
@@ -307,6 +309,10 @@ class TInfo:
         #     conv = "__manual"
         elif cc == CM_CC_SPOILED:
             conv = "__spoiled"
+        elif cc in (CM_CC_SPECIALE, CM_CC_SPECIAL):
+            conv += "__usercall"
+        elif cc == CM_CC_SPECIALP:
+            conv += "__userpurge"
         return conv
 
     def get_typename(self):
@@ -933,6 +939,40 @@ class FuncArg:
         self.flags = 0
 
 
+# Register-relative argument location
+class RRel:
+    def __init__(self):
+        self.off = 0
+        self.reg = 0
+
+
+class ArgPart:
+    def __init__(self):
+        self.off = 0  # ushort
+        self.size = 0  # ushort
+
+
+class ArgLoc(ArgPart):
+    def __init__(self):
+        super(ArgLoc, self).__init__()
+        self.type = 0
+        # union
+        # {
+        #   sval_t sval;                // ::ALOC_STACK, ::ALOC_STATIC
+        #   uint32 reginfo;             // ::ALOC_REG1, ::ALOC_REG2
+        #   rrel_t *rrel;               // ::ALOC_RREL
+        #   scattered_aloc_t *dist;     // ::ALOC_DIST
+        #   void *custom;               // ::ALOC_CUSTOM
+        #   biggest_t biggest;          // to facilitate manipulation of this union
+        # };
+        self.sval = 0
+        self.reginfo = 0
+        self.rrel = None
+        self.dist = None  # maybe ArgPart[]
+        self.custom = None
+        self.biggest = None
+
+
 class RegInfo:
     def __init__(self):
         self.reg = 0
@@ -984,7 +1024,7 @@ class FuncTypeData(TypeData):
         ts.tah_attr()
         self.rettype = create_tinfo(til, ts.ref(), fields, fieldcmts)
         if is_cm_cc_special_pe(self.cc) and not self.rettype.is_void():
-            self.retloc = self.deserialize_argloc(ts.get())
+            self.retloc = self.deserialize_argloc(ts.ref())
 
         # args
         if is_cm_cc_voidarg(self.cc):
@@ -1002,13 +1042,45 @@ class FuncTypeData(TypeData):
 
             arg.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
             if is_cm_cc_special_pe(self.cc):
-                arg.argloc = self.deserialize_argloc(ts.get())
+                arg.argloc = self.deserialize_argloc(ts.ref())
             self.args.append(arg)
         return self
 
-    def deserialize_argloc(self, type_string):
-        # TODO: deserialize_argloc
-        raise NotImplementedError("deserialize_argloc() not implemented.")
+    def deserialize_argloc(self, ts):
+        argloc = ArgLoc()
+        t = ts.u8()
+        if t == 0xFF:
+            argloc.type = ts.dt()
+            if argloc.type in (ALOC_STACK, ALOC_STATIC):
+                argloc.sval = ts.de()  # sval
+            elif argloc.type == ALOC_REG1:
+                argloc.reginfo = ts.dt()
+            elif argloc.type == ALOC_REG2:
+                reg1 = ts.dt()
+                reg2 = ts.dt()  # reginfo << 16
+                argloc.reginfo = reg1 | (reg2 << 16)
+            elif argloc.type == ALOC_RREL:
+                rrel = RRel()
+                rrel.reg = ts.dt()  # rrel_t->reg
+                rrel.off = ts.de()  # rrel_t->off
+                argloc.rrel = rrel
+            elif argloc.type == (ALOC_DIST, ALOC_CUSTOM):
+                raise NotImplementedError
+        else:
+            b = (t & 0x7F) - 1
+            if b <= 0x80:
+                if b > 0:
+                    argloc.type = ALOC_REG1
+                    argloc.reginfo = b
+                else:
+                    argloc.type = ALOC_STACK
+                    argloc.sval = 0
+            else:
+                c = ts.u8() - 1
+                if c != -1:
+                    argloc.type = ALOC_REG2
+                    argloc.reginfo = b | (c << 16)
+        return argloc
 
 
 # tattr_field Type attributes for udt fields

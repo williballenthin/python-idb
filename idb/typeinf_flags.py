@@ -182,6 +182,15 @@ CM_CC_SPECIALE = 0xD0
 CM_CC_SPECIALP = 0xE0
 CM_CC_SPECIAL = 0xF0
 
+ALOC_NONE = 0  # none
+ALOC_STACK = 1  # stack offset
+ALOC_DIST = 2  # distributed (scattered)
+ALOC_REG1 = 3  # one register (and offset within it)
+ALOC_REG2 = 4  # register pair
+ALOC_RREL = 5  # register relative
+ALOC_STATIC = 6  # global address
+ALOC_CUSTOM = 7  # custom argloc (7 or higher)
+
 
 # convenience functions:
 
