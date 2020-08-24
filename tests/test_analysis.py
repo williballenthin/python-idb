@@ -292,18 +292,19 @@ def test_function_usercall():
     # )
     assert check_functype(
         0x181F8,
-        "unsigned int8* (__usercall human_readable)(uintmax_t n, unsigned int8* buf, int opts, uintmax_t from_block_size, uintmax_t to_block_size)",
+        "unsigned int8* (__usercall human_readable@<R0>)(uintmax_t n@<0:R0, 4:R1>, unsigned int8* buf@<R2>, int opts@<R3>, uintmax_t from_block_size, uintmax_t to_block_size)",
     )
 
     # unsigned __int8 *__usercall imaxtostr@<R0>(intmax_t i@<0:R0, 4:R1>, unsigned __int8 *buf@<R2>)
     assert check_functype(
-        0x18D94, "unsigned int8* (__usercall imaxtostr)(intmax_t i, unsigned int8* buf)"
+        0x18D94,
+        "unsigned int8* (__usercall imaxtostr@<R0>)(intmax_t i@<0:R0, 4:R1>, unsigned int8* buf@<R2>)",
     )
 
     # unsigned __int8 *__usercall umaxtostr@<R0>(uintmax_t i@<0:R0, 4:R1>, unsigned __int8 *buf@<R2>)
     assert check_functype(
         0x18E00,
-        "unsigned int8* (__usercall umaxtostr)(uintmax_t i, unsigned int8* buf)",
+        "unsigned int8* (__usercall umaxtostr@<R0>)(uintmax_t i@<0:R0, 4:R1>, unsigned int8* buf@<R2>)",
     )
 
     # uintmax_t __usercall xnumtoumax@<R1:R0>(
@@ -317,7 +318,7 @@ def test_function_usercall():
     # )
     assert check_functype(
         0x1B944,
-        "uintmax_t (__usercall xnumtoumax)(unsigned int8* n_str, int base, uintmax_t min, uintmax_t max, unsigned int8* suffixes, unsigned int8* err, int err_exit)",
+        "uintmax_t (__usercall xnumtoumax@<R1:R0>)(unsigned int8* n_str@<R0>, int base@<R1>, uintmax_t min@<0:R2, 4:R3>, uintmax_t max, unsigned int8* suffixes, unsigned int8* err, int err_exit)",
     )
 
     # uintmax_t __usercall xdectoumax@<R1:R0>(
@@ -330,7 +331,7 @@ def test_function_usercall():
     # )
     assert check_functype(
         0x1BA54,
-        "uintmax_t (__usercall xdectoumax)(unsigned int8* n_str, uintmax_t min, uintmax_t max, unsigned int8* suffixes, unsigned int8* err, int err_exit)",
+        "uintmax_t (__usercall xdectoumax@<R1:R0>)(unsigned int8* n_str@<R0>, uintmax_t min@<0:R2, 4:R3>, uintmax_t max, unsigned int8* suffixes, unsigned int8* err, int err_exit)",
     )
 
 

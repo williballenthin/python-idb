@@ -1,7 +1,6 @@
 """
 migrate from ida sdk and https://github.com/aerosoul94/tilutil
 """
-
 import zlib
 from abc import ABCMeta, abstractmethod
 
@@ -200,13 +199,19 @@ class TypeData:
         pass
 
 
+global_inf = None
+
+
 class TInfo:
-    def __init__(self, base_type=BT_UNK, type_details=None, til=None, name=None):
+    def __init__(
+        self, base_type=BT_UNK, type_details=None, til=None, name=None, inf=None
+    ):
         self.base_type = base_type
         self.flags = 0
         self.type_details = type_details
         self.til = til
         self.name = name if name is not None else ""
+        self.inf = inf
         self._types = til.types if til is not None else None
 
     def get_refname(self):
@@ -316,6 +321,8 @@ class TInfo:
         return conv
 
     def get_typename(self):
+        global global_inf
+        global_inf = self.inf if self.inf is not None else global_inf
         t = ""
         base = get_base_type(self.get_decltype())
         flags = get_type_flags(self.get_decltype())
@@ -355,23 +362,40 @@ class TInfo:
                 else:
                     t += "unknown float"
         else:
-            if self.is_funcptr():
-                func = self.get_pointed_object()
+            if self.is_funcptr() or self.is_decl_func():
+                if self.is_funcptr():
+                    func = self.get_pointed_object()
+                    star = "*"
+                else:
+                    func = self
+                    star = ""
+
+                t += func.get_rettype().get_typename() + " "
+
                 conv = func.get_conv()
-                t += "{} ({}*{})(".format(
-                    func.get_rettype().get_typename(),
-                    conv + " " if conv != "" else "",
-                    self.get_name(),
-                )
+                t += "(" + conv
+                if conv != "":
+                    t += " "
+                t += star + self.get_name()
+                if func.is_user_cc() and not func.get_rettype().is_void():
+                    loc = print_argloc(func.type_details.retloc)
+                    if loc is not None:
+                        t += "@<{}>".format(loc)
+                t += ")"
+
                 args = func.type_details.args
-                for arg in args:
+                t += "("
+                for i in range(len(args)):
+                    arg = args[i]
                     argtype = arg.type
-                    t += "{}{}, ".format(
-                        argtype.get_typename(),
-                        " " + arg.name if arg.name != "" else "",
-                    )
-                if len(args) > 0:
-                    t = t[:-2]
+                    t += argtype.get_typename()
+                    t += " " + arg.name if arg.name != "" else ""
+                    if self.is_user_cc():
+                        loc = print_argloc(arg.argloc)
+                        if loc is not None:
+                            t += "@<{}>".format(loc)
+                    if i < len(args) - 1:
+                        t += ", "
                 t += ")"
             elif self.is_decl_ptr():
                 ptr = self.get_pointed_object()
@@ -384,23 +408,6 @@ class TInfo:
                     if n_elems == 0
                     else "{}[{}]".format(self.get_arr_object().get_typename(), n_elems)
                 )
-            elif self.is_decl_func():
-                conv = self.get_conv()
-                t += "{} ({}{})(".format(
-                    self.get_rettype().get_typename(),
-                    conv + " " if conv != "" else "",
-                    self.get_name(),
-                )
-                args = self.type_details.args
-                for arg in args:
-                    argtype = arg.type
-                    t += "{}{}, ".format(
-                        argtype.get_typename(),
-                        " " + arg.name if arg.name != "" else "",
-                    )
-                if len(args) > 0:
-                    t = t[:-2]
-                t += ")"
             elif self.is_decl_udt() or self.is_decl_enum():
                 ref = self.type_details.ref
                 refname = "" if ref is None else ref.get_refname()
@@ -776,12 +783,12 @@ class ErrorTInfo:
         return "{} Error".format(self.name)
 
 
-def create_tinfo(til, type_info, fields=None, fieldcmts=None, name=None):
+def create_tinfo(til, type_info, fields=None, fieldcmts=None, name=None, inf=None):
     type_string = (
         type_info if isinstance(type_info, TypeString) else TypeString(type_info)
     )
     typ = type_string.peek_u8()
-    tinfo = TInfo(typ, til=til, name=name)
+    tinfo = TInfo(typ, til=til, name=name, inf=inf)
     if is_typeid_last(typ) or get_base_type(typ) == BT_RESERVED:
         type_string.seek(1)
     else:
@@ -805,10 +812,10 @@ def create_tinfo(til, type_info, fields=None, fieldcmts=None, name=None):
     return tinfo
 
 
-def create_ref(til, type_info):
+def create_ref(til, type_info, inf=None):
     if not type_info.startswith(b"="):
         type_info = b"=" + serialize_dt(len(type_info)) + type_info
-    return create_tinfo(til, type_info)
+    return create_tinfo(til, type_info, inf=inf)
 
 
 class PointerTypeData(TypeData):
@@ -871,15 +878,8 @@ class RRel:
         self.reg = 0
 
 
-class ArgPart:
+class ArgLoc:
     def __init__(self):
-        self.off = 0  # ushort
-        self.size = 0  # ushort
-
-
-class ArgLoc(ArgPart):
-    def __init__(self):
-        ArgPart.__init__(self)
         self.type = 0
         # union
         # {
@@ -893,9 +893,54 @@ class ArgLoc(ArgPart):
         self.sval = 0
         self.reginfo = 0
         self.rrel = None
-        self.dist = None  # maybe ArgPart[]
+        self.dist = []  # maybe ArgPart[]
         self.custom = None
         self.biggest = None
+
+    def get_reg1(self):
+        return self.reginfo & 0xFFFF
+
+    def get_reg2(self):
+        return (self.reginfo >> 16) & 0xFFFF
+
+    def get_reginfo(self):
+        return self.reginfo
+
+    def get_stkoff(self):
+        return self.sval
+
+
+class ArgPart(ArgLoc):
+    def __init__(self):
+        ArgLoc.__init__(self)
+        self.off = 0  # ushort
+        self.size = 0  # ushort
+
+
+def print_reg(ind):
+    global global_inf
+    regs = REGS[global_inf.procname] if global_inf is not None else REGS_METAPC
+    r = regs[ind] if ind < len(regs) else None
+    return "R{}".format(ind) if r is None else r
+
+
+def print_argloc(argloc):
+    typ = argloc.type
+    t = ""
+    if typ in (ALOC_STATIC, ALOC_STACK):
+        return None
+    elif typ == ALOC_REG1:
+        t += print_reg(argloc.get_reg1())
+    elif typ == ALOC_REG2:
+        t += "{}:{}".format(print_reg(argloc.get_reg2()), print_reg(argloc.get_reg1()))
+    elif typ == ALOC_DIST:
+        dst = []
+        for d in argloc.dist:
+            dst.append("{}:{}".format(d.off, print_argloc(d)))
+        t += ", ".join(dst)
+    else:
+        raise NotImplementedError
+    return t
 
 
 class RegInfo:
@@ -944,7 +989,6 @@ class FuncTypeData(TypeData):
                 self.flags |= f
 
         self.cc = ts.u8()
-        cc = self.cc & CM_CC_MASK
 
         ts.tah_attr()
         self.rettype = create_tinfo(til, ts.ref(), fields, fieldcmts)
@@ -976,33 +1020,39 @@ class FuncTypeData(TypeData):
         t = ts.u8()
         if t == 0xFF:
             typ = ts.dt()
-            typ0 = (typ & 0xF0) >> 4
+            typ0 = typ & 0xF
             argloc.type = typ0
             if typ0 in (ALOC_STACK, ALOC_STATIC):
                 argloc.sval = ts.de()  # sval
+            elif typ0 == ALOC_DIST:
+                # maybe N?
+                N = (typ >> 5) & 0x7
+                for _ in range(N):
+                    argpart = ArgPart()
+                    argpart.type = ALOC_REG1
+                    argpart.reginfo = ts.dt()
+                    argpart.off = ts.dt()
+                    argpart.size = ts.dt()
+                    argloc.dist.append(argpart)
             elif typ0 == ALOC_REG1:
-                argloc.reginfo = ts.dt()
+                argloc.reginfo = ts.dt() | (ts.dt << 0x100)
             elif typ0 == ALOC_REG2:
-                # offset1:reg1:offset2:reg2
-                argloc.reginfo = struct.unpack("<L", ts.read(4))[0]
-                # guess
-                argloc.biggest = struct.unpack("<H", ts.read(2))[0]
+                argloc.reginfo = ts.dt()
             elif typ0 == ALOC_RREL:
                 rrel = RRel()
                 rrel.reg = ts.dt()  # rrel_t->reg
                 rrel.off = ts.de()  # rrel_t->off
                 argloc.rrel = rrel
-            elif typ0 in (ALOC_DIST, ALOC_CUSTOM):
+            elif typ0 == ALOC_CUSTOM:
                 raise NotImplementedError
         else:
             b = (t & 0x7F) - 1
             if t <= 0x80:
-                if b > 0:
+                if b >= 0:
                     argloc.type = ALOC_REG1
                     argloc.reginfo = b
                 else:
                     argloc.type = ALOC_STACK
-                    argloc.sval = 0
             else:
                 c = ts.u8() - 1
                 if c != -1:
@@ -1246,10 +1296,15 @@ class TILTypeInfo(VStruct):
         if self.flags not in (0x7FFFFFFF, 0xFFFFFFFF):
             raise Exception("unsupported format {}".format(self.flags))
 
-    def deserialize(self, til):
+    def deserialize(self, til, inf):
         try:
             _type = create_tinfo(
-                til, self.type_info, self.fields, self.fieldcmts, name=self.name
+                til,
+                self.type_info,
+                self.fields,
+                self.fieldcmts,
+                name=self.name,
+                inf=inf,
             )
         except OverflowError:
             _type = ErrorTInfo(self.name)
@@ -1337,9 +1392,11 @@ TIL_SLD = 0x0100  # sizeof(long double)
 
 
 class TIL(VStruct):
-    def __init__(self, buf=None, wordsize=4):
+    def __init__(self, buf=None, wordsize=4, inf=None):
         VStruct.__init__(self)
         self.wordsize = wordsize
+        self.inf = inf
+
         self.signature = v_str(size=0x06)
 
         # https://github.com/aerosoul94/tilutil/blob/master/distil.py#L545
@@ -1403,7 +1460,7 @@ class TIL(VStruct):
 
     def deserialize_bucket(self, bucket):
         for t in bucket.defs:
-            t.deserialize(til=self)
+            t.deserialize(self, self.inf)
 
     def validate(self):
         if self.signature != "IDATIL":

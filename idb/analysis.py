@@ -1262,9 +1262,10 @@ class Function:
             typedata = idb.typeinf.FuncTypeData()
             ts = idb.typeinf.TypeString(typebuf)
             typedata.deserialize(self.idb.til, ts, names, [])
+            inf = Root(self.idb).idainfo
 
             return idb.typeinf.TInfo(
-                typ, typedata, til=self.idb.til, name=self.get_name()
+                typ, typedata, til=self.idb.til, name=self.get_name(), inf=inf
             )
         except KeyError:
             return None
