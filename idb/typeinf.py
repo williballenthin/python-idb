@@ -493,9 +493,6 @@ class TInfo:
     def is_decl_bool(self):
         return is_type_bool(self.get_decltype())
 
-    def is_decl_castable_to(self, target):
-        raise NotImplementedError()
-
     def is_decl_char(self):
         return is_type_char(self.get_decltype())
 
@@ -505,23 +502,11 @@ class TInfo:
     def is_decl_const(self):
         return is_type_const(self.get_decltype())
 
-    def is_decl_correct(self):
-        raise NotImplementedError()
-
     def is_decl_double(self):
         return is_type_double(self.get_decltype())
 
-    def is_decl_empty_udt(self):
-        raise NotImplementedError()
-
     def is_decl_enum(self):
         return is_type_enum(self.get_decltype())
-
-    def is_decl_ext_arithmetic(self):
-        return is_type_ext_arithmetic(self.get_decltype())
-
-    def is_decl_ext_integral(self):
-        return is_type_ext_integral(self.get_decltype())
 
     def is_decl_float(self):
         return is_type_float(self.get_decltype())
@@ -529,17 +514,8 @@ class TInfo:
     def is_decl_floating(self):
         return is_type_floating(self.get_decltype())
 
-    def is_decl_forward_decl(self):
-        raise NotImplementedError()
-
-    def is_decl_from_subtil(self):
-        raise NotImplementedError()
-
     def is_decl_func(self):
         return is_type_func(self.get_decltype())
-
-    def is_decl_high_func(self):
-        raise NotImplementedError()
 
     def is_decl_int(self):
         return is_type_int(self.get_decltype())
@@ -556,18 +532,6 @@ class TInfo:
     def is_decl_int64(self):
         return is_type_int64(self.get_decltype())
 
-    def is_decl_integral(self):
-        return is_type_integral(self.get_decltype())
-
-    def is_decl_ldouble(self):
-        return is_type_ldouble(self.get_decltype())
-
-    def is_decl_manually_castable_to(self, target):
-        raise NotImplementedError()
-
-    def is_decl_one_fpval(self):
-        raise NotImplementedError()
-
     def is_decl_paf(self):
         return is_type_paf(self.get_decltype())
 
@@ -580,35 +544,11 @@ class TInfo:
     def is_decl_ptr_or_array(self):
         return is_type_ptr_or_array(self.get_decltype())
 
-    def is_decl_purging_cc(self):
-        raise NotImplementedError()
-
-    def is_decl_pvoid(self):
-        raise NotImplementedError()
-
-    def is_decl_scalar(self):
-        raise NotImplementedError()
-
-    def is_decl_shifted_ptr(self):
-        raise NotImplementedError()
-
-    def is_decl_signed(self):
-        raise NotImplementedError()
-
-    def is_decl_small_udt(self):
-        raise NotImplementedError()
-
-    def is_decl_sse_type(self):
-        raise NotImplementedError()
-
     def is_decl_struct(self):
         return is_type_struct(self.get_decltype())
 
     def is_decl_sue(self):
         return is_type_sue(self.get_decltype())
-
-    def is_decl_typeref(self):
-        raise NotImplementedError()
 
     def is_decl_uchar(self):
         return is_type_uchar(self.get_decltype())
@@ -636,21 +576,6 @@ class TInfo:
 
     def is_decl_unknown(self):
         return is_type_unknown(self.get_decltype())
-
-    def is_decl_unsigned(self):
-        return get_type_flags(self.get_decltype()) == BTMT_UNSIGNED
-
-    def is_decl_user_cc(self):
-        raise NotImplementedError()
-
-    def is_decl_vararg_cc(self):
-        raise NotImplementedError()
-
-    def is_decl_varstruct(self):
-        raise NotImplementedError()
-
-    def is_decl_vftable(self):
-        raise NotImplementedError()
 
     def is_decl_void(self):
         return is_type_void(self.get_decltype())
@@ -825,7 +750,7 @@ class TInfo:
         raise NotImplementedError()
 
     def is_user_cc(self):
-        raise NotImplementedError()
+        return is_user_cc(self.get_cc())
 
     def is_vararg_cc(self):
         raise NotImplementedError()

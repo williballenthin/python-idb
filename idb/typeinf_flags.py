@@ -451,7 +451,7 @@ def is_user_cc(cm):
 
 def is_vararg_cc(cm):
     cc = get_cc(cm)
-    return cc in (CM_CC_ELLIPSIS, cc == CM_CC_SPECIALE)
+    return cc in (CM_CC_ELLIPSIS, CM_CC_SPECIALE)
 
 
 # Does the calling convention clean the stack arguments upon return?.
