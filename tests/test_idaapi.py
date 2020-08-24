@@ -78,8 +78,7 @@ def test_bytes(kernel32_idb, version, bitness, expected):
     # assert idc.hasValue(idc.GetFlags(0x88888888)) is False
 
     assert idc.ItemSize(0x68901010) == 2
-    with pytest.raises(ValueError):
-        idc.ItemSize(0x68901011)
+    assert idc.ItemSize(0x68901011) == 1
     assert idc.ItemSize(0x68901012) == 1
 
     assert idc.GetManyBytes(0x68901010, 0x3) == b"\x8B\xFF\x55"
@@ -586,8 +585,9 @@ def test_function_names(kernel32_idb, version, bitness, expected):
 
     if version > 500:
         with pytest.raises(KeyError):
-            # this is issue #7.
-            _ = api.idc.GetFunctionName(0x689018E5)
+            api.idc.GetFunctionName(0x689018E5)
+    else:
+        assert api.idc.GetFunctionName(0x689018E5) == "sub_689018e5"
 
 
 @pytest.mark.slow
@@ -842,6 +842,20 @@ def test_XrefsFrom(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test()
+def test_FindFuncEnd(kernel32_idb, version, bitness, expected):
+    api = idb.IDAPython(kernel32_idb)
+
+    # this is the start of a function
+    assert api.idc.FindFuncEnd(0x68901C31) == 0x68901C3D
+
+    # this is in the middle of a function
+    assert api.idc.FindFuncEnd(0x6890443F) == 0x6890445C
+
+    # this is not inside a function
+    assert api.idc.FindFuncEnd(0x6896EBF4) == api.idc.BADADDR
+
+
+@kern32_test()
 def test_imports(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     assert api.ida_nalt.get_import_module_qty() == 47
@@ -904,7 +918,7 @@ def test_GetType(kernel32_idb, version, bitness, expected):
 def test_inf_structure(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     inf_structure = api.idaapi.get_inf_structure()
-    assert inf_structure.procName == "metapc"
+    assert inf_structure.procname == "metapc"
 
 
 @requires_capstone

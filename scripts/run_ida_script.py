@@ -8,6 +8,7 @@ email: willi.ballenthin@gmail.com
 import argparse
 import logging
 import os.path
+import shlex
 import sys
 
 import idb
@@ -25,7 +26,14 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Dump an IDB B-tree to a textual representation."
     )
-    parser.add_argument("script_path", type=str, help="Path to script file")
+    parser.add_argument(
+        "script_path",
+        type=str,
+        help="""Path to script file.
+                Command line arguments can be passed using quotes:
+                "myscrypt.py arg1 arg2 "arg3 arg3""
+        """,
+    )
     parser.add_argument("idbpath", type=str, help="Path to input idb file")
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable debug logging"
@@ -61,12 +69,15 @@ def main(argv=None):
 
         hooks = idb.shim.install(db, ScreenEA=screenea)
 
+        script_args = shlex.split(args.script_path)
         # update sys.path to point to directory containing script.
         # so scripts can import .py files in the same directory.
-        script_dir = os.path.dirname(args.script_path)
+        script_dir = os.path.dirname(script_args[0])
         sys.path.insert(0, script_dir)
+        # update idc.ARGV
+        hooks["idc"].ARGV = script_args
 
-        with open(args.script_path, "rb") as f:
+        with open(script_args[0], "rb") as f:
             g = {
                 "__name__": "__main__",
             }

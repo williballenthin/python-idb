@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 import collections
+import os
+import re
+import struct
 import logging
 import re
 import weakref
@@ -37,6 +40,37 @@ def memoized_method(*lru_args, **lru_kwargs):
 
             setattr(self, func.__name__, cached_method)
             return cached_method(*args, **kwargs)
+
+        return wrapped_func
+
+    return decorator
+
+
+# This decorator is meant to wrap a module in another one like IDA does with
+# ida_* wrapped in idaapi and/or idc.
+# We could use __getattr__ in idaapi to act as a proxy but that will break
+# statements like "from idaapi import *" or "from idc import *", a quite common
+# pattern in IDAPython scripts.
+# We do it here instead of shim.py:HookedImporter to get the same wraps in
+# situations where the shim is not needed
+# Use it on ida_* __init__()
+# XXX: This is mostly a prototype. Needs further considerations.
+def wrap_module(into, full=True):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapped_func(self, *args, **kwargs):
+            func(self, *args, **kwargs)
+            mod = self.api.__dict__[into]
+            for attr in dir(self):
+                # Do not set private fields and api/idb objs already present in
+                # every module
+                if attr.startswith("_") or attr == "api" or attr == "idb":
+                    continue
+                obj = getattr(self, attr)
+                # If full is False, only set "constants"
+                if not full and callable(obj):
+                    continue
+                setattr(mod, attr, obj)
 
         return wrapped_func
 
@@ -379,6 +413,7 @@ class AFLAGS:
 
 
 class ida_netnode:
+    @wrap_module("idaapi")
     def __init__(self, db, api):
         self.idb = db
         self.api = api
@@ -388,6 +423,8 @@ class ida_netnode:
 
 
 class ida_ida:
+    @wrap_module("idaapi")
+    @wrap_module("idc", full=False)
     def __init__(self, db, api):
         self.idb = db
         self.api = api
@@ -576,6 +613,32 @@ class ida_ida:
         self.IDB_EXT = "idb"
 
 
+class ida_ua:
+    # op_t
+    # via: https://www.hex-rays.com/products/ida/support/sdkdoc/group__o__.html
+
+    o_void = 0  # No operand
+    o_reg = 1  # General register
+    o_mem = 2  # Direct memory reference
+    o_phrase = 3  # Memory reference using registers
+    o_displ = 4  # Memory reference using registers and displacement
+    o_imm = 5  # Immediate value
+    o_far = 6  # Immediate far address
+    o_near = 7  # Immediate near  address
+    o_idpspec0 = 8  # Processor specific
+    o_idpspec1 = 9
+    o_idpspec2 = 10
+    o_idpspec3 = 11
+    o_idpspec4 = 12
+    o_idpspec5 = 13
+
+    @wrap_module("idaapi")
+    @wrap_module("idc", full=False)
+    def __init__(self, db, api):
+        self.idb = db
+        self.api = api
+
+
 class idc:
     SEGPERM_EXEC = 1  # Execute
     SEGPERM_WRITE = 2  # Write
@@ -668,6 +731,7 @@ class idc:
             self.SEGATTR_COLOR = 100
 
             self.BADADDR = 0xFFFFFFFF
+            self.__EA64__ = False
 
         elif self.idb.wordsize == 8:
             self.FUNCATTR_START = 0
@@ -701,8 +765,19 @@ class idc:
             self.SEGATTR_COLOR = 188
 
             self.BADADDR = 0xFFFFFFFFFFFFFFFF
+            self.__EA64__ = True
         else:
             raise RuntimeError("unexpected wordsize")
+
+        # Command line arguments passed to idapython scripts. Args passed via -S
+        # switch in IDA
+        self.ARGV = []
+
+        ## Mantain API compatibility for API < 7
+        self.GetMnem = self.print_insn_mnem
+        self.GetOpnd = self.print_operand
+        self.GetOpType = self.get_operand_type
+        self.FindFuncEnd = self.find_func_end
 
     def ScreenEA(self):
         return self.api.ScreenEA
@@ -806,20 +881,7 @@ class idc:
         return ea
 
     def ItemSize(self, ea):
-        oea = ea
-        flags = self.GetFlags(ea)
-        if not self.api.ida_bytes.is_head(flags):
-            raise ValueError("ItemSize must only be called on a head address.")
-
-        ea += 1
-        flags = self.GetFlags(ea)
-        while (
-            flags is not None and flags != 0 and not self.api.ida_bytes.is_head(flags)
-        ):
-            ea += 1
-            # TODO: handle Index/KeyError here when we overrun a segment
-            flags = self.GetFlags(ea)
-        return ea - oea
+        return self.api.ida_bytes.get_item_end(ea) - ea
 
     def NextHead(self, ea):
         ea += 1
@@ -888,7 +950,7 @@ class idc:
         inst_buf = self.GetManyBytes(ea, size)
         segment = self._get_segment(ea)
         bitness = 16 << segment.bitness  # 16, 32, 64
-        procname = self.api.idaapi.get_inf_structure().procName.lower()
+        procname = self.api.idaapi.get_inf_structure().procname.lower()
 
         dis = None
         if procname == "arm" and bitness == 64:
@@ -945,6 +1007,38 @@ class idc:
                     capstone.CS_ARCH_MIPS,
                     capstone.CS_MODE_MIPS64 | capstone.CS_MODE_LITTLE_ENDIAN,
                 )
+        elif procname == "ppc":
+            if bitness == 32:
+                dis = self._load_dis(
+                    capstone.CS_ARCH_PPC,
+                    capstone.CS_MODE_32 | capstone.CS_MODE_BIG_ENDIAN,
+                )
+            elif bitness == 64:
+                dis = self._load_dis(
+                    capstone.CS_ARCH_PPC,
+                    capstone.CS_MODE_64 | capstone.CS_MODE_BIG_ENDIAN,
+                )
+        elif procname == "ppcl":
+            if bitness == 32:
+                dis = self._load_dis(
+                    capstone.CS_ARCH_PPC,
+                    capstone.CS_MODE_32 | capstone.CS_MODE_LITTLE_ENDIAN,
+                )
+            elif bitness == 64:
+                dis = self._load_dis(
+                    capstone.CS_ARCH_PPC,
+                    capstone.CS_MODE_64 | capstone.CS_MODE_LITTLE_ENDIAN,
+                )
+        elif procname == "sparcb":
+            if bitness == 32:
+                dis = self._load_dis(
+                    capstone.CS_ARCH_SPARC, capstone.CS_MODE_BIG_ENDIAN
+                )
+        elif procname == "sparcl":
+            if bitness == 32:
+                dis = self._load_dis(
+                    capstone.CS_ARCH_SPARC, capstone.CS_MODE_LITTLE_ENDIAN
+                )
 
         if dis is None:
             raise NotImplementedError(
@@ -960,13 +1054,61 @@ class idc:
         else:
             return op
 
-    def GetMnem(self, ea):
+    def print_insn_mnem(self, ea):
         op = self._disassemble(ea)
         return op.mnemonic
 
     def GetDisasm(self, ea):
         op = self._disassemble(ea)
         return "%s\t%s" % (op.mnemonic, op.op_str)
+
+    def print_operand(self, ea, n):
+        op = self._disassemble(ea)
+        opnds = op.op_str.split(", ")
+        n_opnds = len(opnds)
+
+        if 0 <= n < n_opnds:
+            return opnds[n]
+        else:
+            return ""
+
+    def get_operand_type(self, ea, n):
+        from capstone import CS_OP_INVALID, CS_OP_REG, CS_OP_MEM, CS_OP_IMM
+
+        op = self._disassemble(ea)
+        opnds = op.operands
+        n_opnds = len(opnds)
+
+        # capstone produces 2 operands for immediate far jmp/call, IDA only 1
+        # TODO: we need better handling of o_far recognition
+        is_far = False
+        if op.mnemonic in ["ljmp", "lcall"]:
+            n_opnds = 1
+            is_far = True
+        # continue normal operand type check
+        if 0 <= n < n_opnds:
+            op_n = opnds[n]
+            if op_n.type == CS_OP_INVALID:
+                return -1
+            elif op_n.type == CS_OP_REG:
+                return self.api.ida_ua.o_reg
+            elif op_n.type == CS_OP_MEM:
+                op_mem = op_n.value.mem
+                if op_mem.base == 0:
+                    return self.api.ida_ua.o_mem
+                if op_mem.base != 0 and op_mem.disp == 0:
+                    return self.api.ida_ua.o_phrase
+                if op_mem.base != 0 and op_mem.disp != 0:
+                    return self.api.ida_ua.o_displ
+            elif op_n.type == CS_OP_IMM:
+                if is_far:
+                    return self.api.ida_ua.o_far
+                elif self.api.ida_bytes.is_code(self.GetFlags(op_n.value.imm)):
+                    return self.api.ida_ua.o_near
+                else:
+                    return self.api.ida_ua.o_imm
+        else:
+            return self.api.ida_ua.o_void
 
     # one instruction or data
     CIC_ITEM = 1
@@ -1032,6 +1174,13 @@ class idc:
     def GetFunctionName(self, ea):
         return self.api.ida_funcs.get_func_name(ea)
 
+    def find_func_end(self, ea):
+        func = self.api.ida_funcs.get_func(ea)
+        if not func:
+            return self.BADADDR
+        else:
+            return func.endEA
+
     def LocByName(self, name):
         try:
             key = ("N" + name).encode("utf-8")
@@ -1047,7 +1196,7 @@ class idc:
         return self.api.ida_nalt.retrieve_input_file_sha256()
 
     def GetInputFile(self):
-        return self.api.ida_nalt.get_input_file_path()
+        return os.path.basename(self.api.ida_nalt.get_input_file_path())
 
     def Comment(self, ea):
         return self.api.ida_bytes.get_cmt(ea, False)
@@ -1204,9 +1353,13 @@ class idc:
 
 
 class ida_bytes:
+    @wrap_module("idaapi")
     def __init__(self, db, api):
         self.idb = db
         self.api = api
+
+        ## Mantain API compatibility for API < 7
+        self.get_long = self.get_dword
 
     def get_cmt(self, ea, repeatable):
         flags = self.api.idc.GetFlags(ea)
@@ -1389,8 +1542,45 @@ class ida_bytes:
     def next_inited(self, ea, maxea):
         return self.next_that(ea, maxea, lambda flags: ida_bytes.has_value(flags))
 
+    def get_item_end(self, ea):
+        ea += 1
+        flags = self.api.idc.GetFlags(ea)
+        while (
+            flags is not None
+            and not self.api.ida_bytes.is_head(flags)
+            and self.api.idc.SegEnd(ea)
+        ):
+            ea += 1
+            flags = self.api.idc.GetFlags(ea)
+        return ea
+
+    def get_byte(self, ea):
+        return ord(self.get_bytes(ea, 1))
+
+    def get_word(self, ea):
+        if self.api.idaapi.get_inf_structure().is_be:
+            fmt = ">H"
+        else:
+            fmt = "<H"
+        return struct.unpack(fmt, self.get_bytes(ea, 2))[0]
+
+    def get_dword(self, ea):
+        if self.api.idaapi.get_inf_structure().is_be:
+            fmt = ">I"
+        else:
+            fmt = "<I"
+        return struct.unpack(fmt, self.get_bytes(ea, 4))[0]
+
+    def get_qword(self, ea):
+        if self.api.idaapi.get_inf_structure().is_be:
+            fmt = ">Q"
+        else:
+            fmt = "<Q"
+        return struct.unpack(fmt, self.get_bytes(ea, 8))[0]
+
 
 class ida_nalt:
+    @wrap_module("idaapi")
     def __init__(self, db, api):
         self.idb = db
         self.api = api
@@ -1556,6 +1746,8 @@ class ida_funcs:
     # This is a function tail. More...
     FUNC_TAIL = 0x00008000
 
+    @wrap_module("idaapi")
+    @wrap_module("idc", full=False)
     def __init__(self, db, api):
         self.idb = db
         self.api = api
@@ -1627,16 +1819,13 @@ class ida_funcs:
     def get_func_name(self, ea):
         func = self.get_func(ea)
         if func is None:
-            raise KeyError(ea)
-
-        # ensure this is a function
-        if func.startEA != ea:
-            raise KeyError(ea)
+            return ""
 
         # shouldn't be a chunk
-        if is_flag_set(func.flags, func.FUNC_TAIL):
+        if is_flag_set(func.flags, func.FUNC_TAIL) or ea != func.startEA:
             raise KeyError(ea)
 
+        ea = func.startEA
         nn = self.api.ida_netnode.netnode(ea)
         try:
             return nn.name()
@@ -1647,6 +1836,12 @@ class ida_funcs:
                 return "sub_%08x" % (ea)
             else:
                 raise RuntimeError("unexpected wordsize")
+
+    def get_func_qty(self):
+        return len(idb.analysis.Functions(self.idb).functions)
+
+    def getn_func(self, n):
+        return idb.analysis.Functions(self.idb).functions.values()[n]
 
 
 class BasicBlock(object):
@@ -1729,6 +1924,8 @@ class idaapi:
     def __init__(self, db, api):
         self.idb = db
         self.api = api
+
+        self.BADADDR = self.api.idc.BADADDR
 
     def _find_bb_end(self, ea):
         """
@@ -1988,7 +2185,7 @@ class idaapi:
             return self.inf.version
 
         @property
-        def procName(self):
+        def procname(self):
             return self.inf.procname
 
         @property
@@ -2462,6 +2659,7 @@ class idautils:
 
 
 class ida_entry:
+    @wrap_module("idaapi")
     def __init__(self, db, api):
         self.idb = db
         self.api = api
@@ -2499,6 +2697,7 @@ class ida_entry:
 
 
 class ida_name:
+    @wrap_module("idaapi")
     def __init__(self, db, api):
         self.idb = db
         self.api = api
@@ -2506,6 +2705,12 @@ class ida_name:
     def get_name(self, ea):
         flags = self.api.ida_bytes.get_flags(ea)
         if not self.api.ida_bytes.has_name(flags):
+            func = self.api.ida_funcs.get_func(ea)
+            if func and func.startEA == ea:
+                return self.api.ida_funcs.get_func_name(ea)
+            refs = self.api.idautils.CodeRefsTo(ea, 0)
+            if next(refs, None):
+                return "loc_%X" % (ea)
             return ""
 
         try:
@@ -2691,3 +2896,4 @@ class IDAPython:
         self.ida_name = ida_name(db, self)
         self.ida_struct = ida_struct(db, self)
         self.ida_typeinf = ida_typeinf(db, self)
+        self.ida_ua = ida_ua(db, self)
