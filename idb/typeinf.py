@@ -327,7 +327,7 @@ class TInfo:
                 t += "void"
             # 2-7
             elif BT_INT8 <= base <= BT_INT:
-                if self.is_decl_unsigned():
+                if self.is_unsigned():
                     t += "unsigned "
                 if base == BT_INT8:
                     t += "int8"
@@ -705,7 +705,7 @@ class TInfo:
         raise NotImplementedError()
 
     def is_signed(self):
-        raise NotImplementedError()
+        return get_type_flags(self.get_realtype()) == BTMT_SIGNED
 
     def is_small_udt(self):
         raise NotImplementedError()
@@ -747,7 +747,7 @@ class TInfo:
         return is_type_unknown(self.get_realtype())
 
     def is_unsigned(self):
-        raise NotImplementedError()
+        return get_type_flags(self.get_realtype()) == BTMT_UNSIGNED
 
     def is_user_cc(self):
         return is_user_cc(self.get_cc())
@@ -989,7 +989,7 @@ class FuncTypeData(TypeData):
                 rrel.reg = ts.dt()  # rrel_t->reg
                 rrel.off = ts.de()  # rrel_t->off
                 argloc.rrel = rrel
-            elif argloc.type == (ALOC_DIST, ALOC_CUSTOM):
+            elif argloc.type in (ALOC_DIST, ALOC_CUSTOM):
                 raise NotImplementedError
         else:
             b = (t & 0x7F) - 1
