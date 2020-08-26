@@ -98,19 +98,19 @@ class TypeString:
         base = 0
         nelem = 0
         while True:
-            typ = self.db()
+            typ = self.peek_u8()
             if typ & 0x80 == 0:
                 break
             self.seek(1)
             da = (da << 7) | typ & 0x7F
             b += 1
             if b >= 4:
-                z = self.db()
+                z = self.peek_u8()
                 if z != 0:
                     base = 0x10 * da | z & 0xF
-                nelem = (self.db() >> 4) & 7
+                nelem = (self.u8() >> 4) & 7
                 while True:
-                    y = self.db()
+                    y = self.peek_u8()
                     if (y & 0x80) == 0:
                         break
                     self.seek(1)
@@ -853,10 +853,7 @@ class ArrayTypeData(TypeData):
             self.base = 0
             self.n_elems = ts.dt()
         else:
-            ok, self.n_elems, self.base = ts.da()
-            if not ok:
-                raise ValueError()
-            return self
+            _, self.n_elems, self.base = ts.da()
         ts.tah_attr()
         self.elem_type = create_tinfo(til, ts.ref(), fields, fieldcmts)
         return self
@@ -1137,17 +1134,16 @@ class UdtTypeData(TypeData):
             field_i = 0
             for i in range(member_cnt):
                 member = UdtMember()
+                member.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
+                attr = ts.sdacl_attr() if not self.is_union else 0
+                member.tafld_bits = attr
+                member.fda = attr
                 if not member.is_baseclass():
                     if len(fields) > field_i:
                         member.name = fields[field_i]
                     if n < len(fieldcmts):
                         member.cmt = fieldcmts[field_i]
                     field_i += 1
-
-                member.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
-                attr = ts.sdacl_attr() if not self.is_union else 0
-                member.tafld_bits = attr
-                member.fda = attr
                 self.members.append(member)
         return self
 
