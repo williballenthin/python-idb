@@ -22,7 +22,7 @@ class TypeString:
         if self.parent is not None:
             self.parent.seek(n)
         if self.pos > len(self.buf) or self.pos < 0:
-            raise OverflowError
+            raise OverflowError("at offset {}".format(self.pos))
 
     def read(self, n):
         val = self.buf[self.pos : self.pos + n]
@@ -50,7 +50,7 @@ class TypeString:
     def u16(self):
         return struct.unpack("<H", self.read(2))[0]
 
-    def db(self, pos=0):
+    def db(self):
         """ read 1 byte as u8"""
         return self.u8()
 
