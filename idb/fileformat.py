@@ -13,6 +13,7 @@ from vstruct.primitives import *
 
 import idb
 import idb.netnode
+from idb.analysis import Root
 from idb.typeinf import TIL
 
 try:
@@ -1194,6 +1195,8 @@ class IDB(vstruct.VStruct):
 
             s = sectiondef.cls(buf=section.contents, wordsize=self.wordsize)
             s.vsParse(section.contents)
+            if isinstance(s, TIL):
+                s.inf = Root(self).idainfo
             # vivisect doesn't allow you to assign vstructs to
             #  attributes that are not part of the struct,
             # so we need to override and use the default object behavior.

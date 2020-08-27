@@ -3,8 +3,7 @@ import datetime
 import itertools
 import logging
 import types
-from collections import Counter
-from collections import namedtuple
+from collections import Counter, namedtuple
 from random import randint
 
 import six
@@ -13,6 +12,8 @@ from vstruct.primitives import *
 
 import idb
 import idb.netnode
+import idb.typeinf
+import idb.typeinf_flags
 
 logger = logging.getLogger(__name__)
 
@@ -1217,6 +1218,18 @@ FunctionSignature = namedtuple(
 StackChangePoint = namedtuple("StackChangePoint", ["effective_address", "change"])
 
 
+def create_pstring_list(buf):
+    _lst = []
+    ofs = 0
+    while ofs < len(buf.strip(b"\x00")):
+        _len = struct.unpack_from("<B", buf, ofs)[0]
+        _lst.append(buf[ofs : ofs + _len][1:].decode("utf-8"))
+        ofs += _len
+        if _len == 0:
+            ofs += 1
+    return _lst
+
+
 class Function:
     """
     Example::
@@ -1238,41 +1251,24 @@ class Function:
             return "sub_%X" % (self.nodeid)
 
     def get_signature(self):
-        typebuf = self.netnode.supval(tag="S", index=0x3000)
-        namebuf = self.netnode.supval(tag="S", index=0x3001)
+        try:
+            typebuf = self.netnode.supval(tag="S", index=0x3000)
+            namebuf = self.netnode.supval(tag="S", index=0x3001)
+            typ = six.indexbytes(typebuf, 0x0)
+            if not idb.typeinf_flags.is_type_func(typ):
+                raise RuntimeError("is not function")
 
-        if six.indexbytes(typebuf, 0x0) != 0xC:
-            raise RuntimeError("unexpected signature header")
+            names = create_pstring_list(namebuf)
+            typedata = idb.typeinf.FuncTypeData()
+            ts = idb.typeinf.TypeString(typebuf)
+            typedata.deserialize(self.idb.til, ts, names, [])
+            inf = Root(self.idb).idainfo
 
-        if six.indexbytes(typebuf, 0x1) == ord("S"):
-            # this is just a guess...
-            conv = "__stdcall"
-        else:
-            raise NotImplementedError()
-
-        rtype = TypeString()
-        rtype.vsParse(typebuf, offset=2)
-
-        # this is a guess???
-        sp_delta = typebuf[2 + len(rtype)]
-
-        params = []
-        typeoffset = 0x2 + len(rtype) + 0x1
-        nameoffset = 0x0
-        while typeoffset < len(typebuf):
-            if six.indexbytes(typebuf, typeoffset) == 0x0:
-                break
-            typename = TypeString()
-            typename.vsParse(typebuf, offset=typeoffset)
-            typeoffset += len(typename)
-
-            paramname = PString()
-            paramname.vsParse(namebuf, offset=nameoffset)
-            nameoffset += len(paramname)
-
-            params.append(FunctionParameter(typename.s, paramname.s))
-
-        return FunctionSignature(conv, rtype.s, sp_delta, params)
+            return idb.typeinf.TInfo(
+                typ, typedata, til=self.idb.til, name=self.get_name(), inf=inf
+            )
+        except KeyError:
+            return None
 
     def get_chunks(self):
         v = self.netnode.supval(tag="S", index=0x7000)

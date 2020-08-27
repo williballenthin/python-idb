@@ -900,9 +900,9 @@ def test_GetType(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
     assert (
         api.idc.GetType(0x68901695)
-        == "BOOL __stdcall DllEntryPoint(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)"
+        == "BOOL (__stdcall DllEntryPoint)(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)"
         if version <= 700
-        else "BOOL __stdcall _BaseDllInitialize@12(HINSTANCE hinstDLL, #E fdwReason, LPVOID lpReserved)"
+        else "BOOL (__stdcall _BaseDllInitialize@12)(HINSTANCE hinstDLL, #5 fdwReason, LPVOID lpReserved)"
     )
 
     # valid function, but no type data associated...

@@ -1,7 +1,6 @@
 """
 migrate from ida sdk and https://github.com/aerosoul94/tilutil
 """
-
 import zlib
 from abc import ABCMeta, abstractmethod
 
@@ -200,16 +199,19 @@ class TypeData:
         pass
 
 
+global_inf = None
+
+
 class TInfo:
     def __init__(
-        self, base_type=BT_UNK, type_details=None, til=None, ttf=None,
+        self, base_type=BT_UNK, type_details=None, til=None, name=None, inf=None
     ):
         self.base_type = base_type
         self.flags = 0
         self.type_details = type_details
         self.til = til
-        self.ttf = ttf
-
+        self.name = name if name is not None else ""
+        self.inf = inf
         self._types = til.types if til is not None else None
 
     def get_refname(self):
@@ -223,12 +225,12 @@ class TInfo:
                 )
             else:
                 return nex.get_name()
-        return "{name}"
+        raise ValueError
 
     def get_name(self):
-        if self.ttf is None:
+        if self.name == "" and self.is_decl_typedef():
             return self.get_refname()
-        return self.ttf.name
+        return self.name
 
     def get_next_tinfo(self):
         if self.is_decl_typedef() and self._types is not None:
@@ -289,7 +291,38 @@ class TInfo:
         # TODO:
         raise NotImplementedError()
 
+    def get_conv(self):
+        if not self.is_func():
+            return ""
+        cc = self.get_cc()
+        conv = ""
+        if cc == CM_CC_INVALID:
+            conv += "__bad_cc"
+        if cc == CM_CC_CDECL:
+            conv = "__cdecl"
+        # elif cc == CM_CC_ELLIPSIS:
+        #     conv = "call"
+        elif cc == CM_CC_STDCALL:
+            conv = "__stdcall"
+        elif cc == CM_CC_PASCAL:
+            conv = "__pascal"
+        elif cc == CM_CC_FASTCALL:
+            conv = "__fastcall"
+        elif cc == CM_CC_THISCALL:
+            conv = "__thiscall"
+        # elif cc == CM_CC_MANUAL:
+        #     conv = "__manual"
+        elif cc == CM_CC_SPOILED:
+            conv = "__spoiled"
+        elif cc in (CM_CC_SPECIALE, CM_CC_SPECIAL):
+            conv += "__usercall"
+        elif cc == CM_CC_SPECIALP:
+            conv += "__userpurge"
+        return conv
+
     def get_typename(self):
+        global global_inf
+        global_inf = self.inf if self.inf is not None else global_inf
         t = ""
         base = get_base_type(self.get_decltype())
         flags = get_type_flags(self.get_decltype())
@@ -301,7 +334,7 @@ class TInfo:
                 t += "void"
             # 2-7
             elif BT_INT8 <= base <= BT_INT:
-                if self.is_decl_unsigned():
+                if self.is_unsigned():
                     t += "unsigned "
                 if base == BT_INT8:
                     t += "int8"
@@ -329,60 +362,52 @@ class TInfo:
                 else:
                     t += "unknown float"
         else:
-            if self.is_funcptr():
-                func = self.get_pointed_object()
-                t += func.get_typename().format(name="*{}".format(self.get_name()))
+            if self.is_funcptr() or self.is_decl_func():
+                if self.is_funcptr():
+                    func = self.get_pointed_object()
+                    star = "*"
+                else:
+                    func = self
+                    star = ""
+
+                t += func.get_rettype().get_typename() + " "
+
+                conv = func.get_conv()
+                t += "(" + conv
+                if conv != "":
+                    t += " "
+                t += star + self.get_name()
+                if func.is_user_cc() and not func.get_rettype().is_void():
+                    loc = print_argloc(func.type_details.retloc)
+                    if loc is not None:
+                        t += "@<{}>".format(loc)
+                t += ")"
+
+                args = func.type_details.args
+                t += "("
+                for i in range(len(args)):
+                    arg = args[i]
+                    argtype = arg.type
+                    t += argtype.get_typename()
+                    t += " " + arg.name if arg.name != "" else ""
+                    if self.is_user_cc():
+                        loc = print_argloc(arg.argloc)
+                        if loc is not None:
+                            t += "@<{}>".format(loc)
+                    if i < len(args) - 1:
+                        t += ", "
+                t += ")"
             elif self.is_decl_ptr():
-                t += "{}*".format(self.get_pointed_object().get_typename())
+                ptr = self.get_pointed_object()
+                t += "{}*".format(ptr.get_typename())
             elif self.is_decl_array():
                 n_elems = self.type_details.n_elems
+                arrobj = self.get_arr_object()
                 t += (
-                    "{}[]".format(self.get_arr_object().get_typename())
+                    "{}[]".format(arrobj.get_typename())
                     if n_elems == 0
                     else "{}[{}]".format(self.get_arr_object().get_typename(), n_elems)
                 )
-            elif self.is_decl_func():
-                cc = self.get_cc()
-                # CM_CC_CDECL
-                # CM_CC_ELLIPSIS
-                # CM_CC_STDCALL
-                # CM_CC_PASCAL
-                # CM_CC_FASTCALL
-                # CM_CC_THISCALL
-                # CM_CC_MANUAL
-                # CM_CC_SPOILED
-                conv = ""
-                if cc == CM_CC_CDECL:
-                    conv = "__cdecl"
-                # elif cc == CM_CC_ELLIPSIS:
-                #     conv = "call"
-                elif cc == CM_CC_STDCALL:
-                    conv = "__stdcall"
-                elif cc == CM_CC_PASCAL:
-                    conv = "__pascal"
-                elif cc == CM_CC_FASTCALL:
-                    conv = "__fastcall"
-                elif cc == CM_CC_THISCALL:
-                    conv = "__thiscall"
-                # elif cc == CM_CC_MANUAL:
-                #     conv = "__manual"
-                elif cc == CM_CC_SPOILED:
-                    conv = "__spoiled"
-
-                t += "{} ({}{})(".format(
-                    self.get_rettype().get_typename(),
-                    conv + " " if conv != "" else "",
-                    self.get_name(),
-                )
-                args = self.type_details.args
-                for arg in args:
-                    t += "{}{}, ".format(
-                        arg.type.get_typename(),
-                        " " + arg.name if arg.name != "" else "",
-                    )
-                if len(args) > 0:
-                    t = t[:-2]
-                t += ")"
             elif self.is_decl_udt() or self.is_decl_enum():
                 ref = self.type_details.ref
                 refname = "" if ref is None else ref.get_refname()
@@ -475,9 +500,6 @@ class TInfo:
     def is_decl_bool(self):
         return is_type_bool(self.get_decltype())
 
-    def is_decl_castable_to(self, target):
-        raise NotImplementedError()
-
     def is_decl_char(self):
         return is_type_char(self.get_decltype())
 
@@ -487,23 +509,11 @@ class TInfo:
     def is_decl_const(self):
         return is_type_const(self.get_decltype())
 
-    def is_decl_correct(self):
-        raise NotImplementedError()
-
     def is_decl_double(self):
         return is_type_double(self.get_decltype())
 
-    def is_decl_empty_udt(self):
-        raise NotImplementedError()
-
     def is_decl_enum(self):
         return is_type_enum(self.get_decltype())
-
-    def is_decl_ext_arithmetic(self):
-        return is_type_ext_arithmetic(self.get_decltype())
-
-    def is_decl_ext_integral(self):
-        return is_type_ext_integral(self.get_decltype())
 
     def is_decl_float(self):
         return is_type_float(self.get_decltype())
@@ -511,17 +521,8 @@ class TInfo:
     def is_decl_floating(self):
         return is_type_floating(self.get_decltype())
 
-    def is_decl_forward_decl(self):
-        raise NotImplementedError()
-
-    def is_decl_from_subtil(self):
-        raise NotImplementedError()
-
     def is_decl_func(self):
         return is_type_func(self.get_decltype())
-
-    def is_decl_high_func(self):
-        raise NotImplementedError()
 
     def is_decl_int(self):
         return is_type_int(self.get_decltype())
@@ -538,18 +539,6 @@ class TInfo:
     def is_decl_int64(self):
         return is_type_int64(self.get_decltype())
 
-    def is_decl_integral(self):
-        return is_type_integral(self.get_decltype())
-
-    def is_decl_ldouble(self):
-        return is_type_ldouble(self.get_decltype())
-
-    def is_decl_manually_castable_to(self, target):
-        raise NotImplementedError()
-
-    def is_decl_one_fpval(self):
-        raise NotImplementedError()
-
     def is_decl_paf(self):
         return is_type_paf(self.get_decltype())
 
@@ -562,35 +551,11 @@ class TInfo:
     def is_decl_ptr_or_array(self):
         return is_type_ptr_or_array(self.get_decltype())
 
-    def is_decl_purging_cc(self):
-        raise NotImplementedError()
-
-    def is_decl_pvoid(self):
-        raise NotImplementedError()
-
-    def is_decl_scalar(self):
-        raise NotImplementedError()
-
-    def is_decl_shifted_ptr(self):
-        raise NotImplementedError()
-
-    def is_decl_signed(self):
-        raise NotImplementedError()
-
-    def is_decl_small_udt(self):
-        raise NotImplementedError()
-
-    def is_decl_sse_type(self):
-        raise NotImplementedError()
-
     def is_decl_struct(self):
         return is_type_struct(self.get_decltype())
 
     def is_decl_sue(self):
         return is_type_sue(self.get_decltype())
-
-    def is_decl_typeref(self):
-        raise NotImplementedError()
 
     def is_decl_uchar(self):
         return is_type_uchar(self.get_decltype())
@@ -618,21 +583,6 @@ class TInfo:
 
     def is_decl_unknown(self):
         return is_type_unknown(self.get_decltype())
-
-    def is_decl_unsigned(self):
-        return get_type_flags(self.get_decltype()) == BTMT_UNSIGNED
-
-    def is_decl_user_cc(self):
-        raise NotImplementedError()
-
-    def is_decl_vararg_cc(self):
-        raise NotImplementedError()
-
-    def is_decl_varstruct(self):
-        raise NotImplementedError()
-
-    def is_decl_vftable(self):
-        raise NotImplementedError()
 
     def is_decl_void(self):
         return is_type_void(self.get_decltype())
@@ -762,7 +712,7 @@ class TInfo:
         raise NotImplementedError()
 
     def is_signed(self):
-        raise NotImplementedError()
+        return get_type_flags(self.get_realtype()) == BTMT_SIGNED
 
     def is_small_udt(self):
         raise NotImplementedError()
@@ -804,10 +754,10 @@ class TInfo:
         return is_type_unknown(self.get_realtype())
 
     def is_unsigned(self):
-        raise NotImplementedError()
+        return get_type_flags(self.get_realtype()) == BTMT_UNSIGNED
 
     def is_user_cc(self):
-        raise NotImplementedError()
+        return is_user_cc(self.get_cc())
 
     def is_vararg_cc(self):
         raise NotImplementedError()
@@ -833,14 +783,14 @@ class ErrorTInfo:
         return "{} Error".format(self.name)
 
 
-def create_tinfo(til, type_info, fields=None, fieldcmts=None, ttf=None):
+def create_tinfo(til, type_info, fields=None, fieldcmts=None, name=None, inf=None):
     type_string = (
         type_info if isinstance(type_info, TypeString) else TypeString(type_info)
     )
     typ = type_string.peek_u8()
+    tinfo = TInfo(typ, til=til, name=name, inf=inf)
     if is_typeid_last(typ) or get_base_type(typ) == BT_RESERVED:
         type_string.seek(1)
-        tinfo = TInfo(typ, til=til, ttf=ttf)
     else:
         type_data = None
         if is_type_ptr(typ):
@@ -857,19 +807,15 @@ def create_tinfo(til, type_info, fields=None, fieldcmts=None, ttf=None):
             type_data = EnumTypeData()
         elif is_type_bitfld(typ):
             type_data = BitfieldTypeData()
-        tinfo = TInfo(
-            typ,
-            type_data.deserialize(til, type_string, fields, fieldcmts),
-            til=til,
-            ttf=ttf,
-        )
+        type_data.deserialize(til, type_string, fields, fieldcmts)
+        tinfo.type_details = type_data
     return tinfo
 
 
-def create_ref(til, type_info):
+def create_ref(til, type_info, inf=None):
     if not type_info.startswith(b"="):
         type_info = b"=" + serialize_dt(len(type_info)) + type_info
-    return create_tinfo(til, type_info)
+    return create_tinfo(til, type_info, inf=inf)
 
 
 class PointerTypeData(TypeData):
@@ -925,6 +871,84 @@ class FuncArg:
         self.flags = 0
 
 
+# Register-relative argument location
+class RRel:
+    def __init__(self):
+        self.off = 0
+        self.reg = 0
+
+
+class ArgLoc:
+    def __init__(self):
+        self.type = 0
+        # union
+        # {
+        #   sval_t sval;                // ::ALOC_STACK, ::ALOC_STATIC
+        #   uint32 reginfo;             // ::ALOC_REG1, ::ALOC_REG2
+        #   rrel_t *rrel;               // ::ALOC_RREL
+        #   scattered_aloc_t *dist;     // ::ALOC_DIST
+        #   void *custom;               // ::ALOC_CUSTOM
+        #   biggest_t biggest;          // to facilitate manipulation of this union
+        # };
+        self.sval = 0
+        self.reginfo = 0
+        self.rrel = None
+        self.dist = []  # maybe ArgPart[]
+        self.custom = None
+        self.biggest = None
+
+    def get_reg1(self):
+        return self.reginfo & 0xFFFF
+
+    def get_reg2(self):
+        return (self.reginfo >> 16) & 0xFFFF
+
+    def get_reginfo(self):
+        return self.reginfo
+
+    def get_stkoff(self):
+        return self.sval
+
+
+class ArgPart(ArgLoc):
+    def __init__(self):
+        ArgLoc.__init__(self)
+        self.off = 0  # ushort
+        self.size = 0  # ushort
+
+
+def print_reg(ind):
+    global global_inf
+    regs = REGS[global_inf.procname] if global_inf is not None else REGS_METAPC
+    r = regs[ind] if ind < len(regs) else None
+    return "R{}".format(ind) if r is None else r
+
+
+def print_argloc(argloc):
+    typ = argloc.type
+    t = ""
+    if typ in (ALOC_STATIC, ALOC_STACK):
+        return None
+    elif typ == ALOC_REG1:
+        t += print_reg(argloc.get_reg1())
+    elif typ == ALOC_REG2:
+        t += "{}:{}".format(print_reg(argloc.get_reg2()), print_reg(argloc.get_reg1()))
+    elif typ == ALOC_DIST:
+        dst = []
+        for d in argloc.dist:
+            dst.append("{}:{}".format(d.off, print_argloc(d)))
+        t += ", ".join(dst)
+    else:
+        raise NotImplementedError
+    return t
+
+
+class RegInfo:
+    def __init__(self):
+        self.reg = 0
+        self.size = 0
+
+
 class FuncTypeData(TypeData):
     def __init__(self):
         TypeData.__init__(self)
@@ -933,48 +957,108 @@ class FuncTypeData(TypeData):
         self.rettype = None  # tinfo_t
         self.retloc = None  # argloc_t
         self.stkargs = None  # uval_t
-        self.spoiled = None  # reginfovec_t
+        self.spoiled = []  # reginfovec_t
         self.cc = 0
 
     def deserialize(self, til, ts, fields, fieldcmts):
         typ = ts.u8()
         self.flags |= 4 * get_type_flags(typ)
 
+        cm = ts.peek_u8()
+        if is_cc_spoiled(cm):
+            while is_cc_spoiled(cm):
+                ts.seek(1)
+                nspoiled = cm & ~CM_CC_MASK
+                if nspoiled == 15:
+                    f = 2 * (ts.u8() & 0x1F)
+                else:
+                    for n in range(nspoiled):
+                        reginfo = RegInfo()
+                        b = ts.read_db()
+                        if bool(b & 0x80):
+                            size = ts.u8()
+                            reg = b & 0x7F
+                        else:
+                            size = (b >> 4) + 1
+                            reg = (b & 0xF) - 1
+                        reginfo.size = size
+                        reginfo.reg = reg
+                        self.spoiled.append(reginfo)
+                    f = 1
+                cm = ts.peek_u8()
+                self.flags |= f
+
         self.cc = ts.u8()
-        if is_cm_cc_special(self.cc):
-            raise NotImplementedError()
-            # TODO: spoiled
 
         ts.tah_attr()
         self.rettype = create_tinfo(til, ts.ref(), fields, fieldcmts)
         if is_cm_cc_special_pe(self.cc) and not self.rettype.is_void():
-            self.retloc = self.deserialize_argloc(ts.get())
+            self.retloc = self.deserialize_argloc(ts.ref())
 
         # args
         if is_cm_cc_voidarg(self.cc):
             return self
         n = ts.dt()
-        if n > 256:
-            raise ValueError("invalid arg count!")
-        else:
-            for i in range(n):
-                arg = FuncArg()
-                arg.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
-                if is_cm_cc_special_pe(self.cc):
-                    arg.argloc = self.deserialize_argloc(ts.get())
-                if ts.has_next() and ts.peek_u8() == FAH_BYTE:
-                    ts.seek(1)
-                    arg.flags = ts.de()
-                if fields is not None and i < len(fields):
-                    arg.name = fields[i]
-                if fieldcmts is not None and i < len(fieldcmts):
-                    arg.cmt = fieldcmts[i]
-                self.args.append(arg)
+        for i in range(n):
+            arg = FuncArg()
+            if ts.has_next() and ts.peek_u8() == FAH_BYTE:
+                ts.seek(1)
+                arg.flags = ts.de()
+            if fields is not None and i < len(fields):
+                arg.name = fields[i]
+            if fieldcmts is not None and i < len(fieldcmts):
+                arg.cmt = fieldcmts[i]
+
+            arg.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
+            if is_cm_cc_special_pe(self.cc):
+                arg.argloc = self.deserialize_argloc(ts.ref())
+            self.args.append(arg)
         return self
 
-    def deserialize_argloc(self, type_string):
-        # TODO: deserialize_argloc
-        raise NotImplementedError("deserialize_argloc() not implemented.")
+    def deserialize_argloc(self, ts):
+        argloc = ArgLoc()
+        t = ts.u8()
+        if t == 0xFF:
+            typ = ts.dt()
+            typ0 = typ & 0xF
+            argloc.type = typ0
+            if typ0 in (ALOC_STACK, ALOC_STATIC):
+                argloc.sval = ts.de()  # sval
+            elif typ0 == ALOC_DIST:
+                # maybe N?
+                N = (typ >> 5) & 0x7
+                for _ in range(N):
+                    argpart = ArgPart()
+                    argpart.type = ALOC_REG1
+                    argpart.reginfo = ts.dt()
+                    argpart.off = ts.dt()
+                    argpart.size = ts.dt()
+                    argloc.dist.append(argpart)
+            elif typ0 == ALOC_REG1:
+                argloc.reginfo = ts.dt() | (ts.dt << 0x100)
+            elif typ0 == ALOC_REG2:
+                argloc.reginfo = ts.dt()
+            elif typ0 == ALOC_RREL:
+                rrel = RRel()
+                rrel.reg = ts.dt()  # rrel_t->reg
+                rrel.off = ts.de()  # rrel_t->off
+                argloc.rrel = rrel
+            elif typ0 == ALOC_CUSTOM:
+                raise NotImplementedError
+        else:
+            b = (t & 0x7F) - 1
+            if t <= 0x80:
+                if b >= 0:
+                    argloc.type = ALOC_REG1
+                    argloc.reginfo = b
+                else:
+                    argloc.type = ALOC_STACK
+            else:
+                c = ts.u8() - 1
+                if c != -1:
+                    argloc.type = ALOC_REG2
+                    argloc.reginfo = b | (c << 16)
+        return argloc
 
 
 # tattr_field Type attributes for udt fields
@@ -987,8 +1071,8 @@ class UdtMember:
     def __init__(self):
         self.offset = 0
         self.size = 0
-        self.name = None  # qstring
-        self.cmt = None  # qstring
+        self.name = ""  # qstring
+        self.cmt = ""  # qstring
         self.type = None  # tinfo_t
         self.effalign = 0
         self.tafld_bits = 0
@@ -1053,16 +1137,17 @@ class UdtTypeData(TypeData):
             field_i = 0
             for i in range(member_cnt):
                 member = UdtMember()
-                member.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
-                attr = ts.sdacl_attr() if not self.is_union else 0
-                member.tafld_bits = attr
-                member.fda = attr
                 if not member.is_baseclass():
                     if len(fields) > field_i:
                         member.name = fields[field_i]
                     if n < len(fieldcmts):
                         member.cmt = fieldcmts[field_i]
                     field_i += 1
+
+                member.type = create_tinfo(til, ts.ref(), fields, fieldcmts)
+                attr = ts.sdacl_attr() if not self.is_union else 0
+                member.tafld_bits = attr
+                member.fda = attr
                 self.members.append(member)
         return self
 
@@ -1211,10 +1296,15 @@ class TILTypeInfo(VStruct):
         if self.flags not in (0x7FFFFFFF, 0xFFFFFFFF):
             raise Exception("unsupported format {}".format(self.flags))
 
-    def deserialize(self, til):
+    def deserialize(self, til, inf):
         try:
             _type = create_tinfo(
-                til, self.type_info, self.fields, self.fieldcmts, ttf=self
+                til,
+                self.type_info,
+                self.fields,
+                self.fieldcmts,
+                name=self.name,
+                inf=inf,
             )
         except OverflowError:
             _type = ErrorTInfo(self.name)
@@ -1302,9 +1392,11 @@ TIL_SLD = 0x0100  # sizeof(long double)
 
 
 class TIL(VStruct):
-    def __init__(self, buf=None, wordsize=4):
+    def __init__(self, buf=None, wordsize=4, inf=None):
         VStruct.__init__(self)
         self.wordsize = wordsize
+        self.inf = inf
+
         self.signature = v_str(size=0x06)
 
         # https://github.com/aerosoul94/tilutil/blob/master/distil.py#L545
@@ -1368,7 +1460,7 @@ class TIL(VStruct):
 
     def deserialize_bucket(self, bucket):
         for t in bucket.defs:
-            t.deserialize(til=self)
+            t.deserialize(self, self.inf)
 
     def validate(self):
         if self.signature != "IDATIL":

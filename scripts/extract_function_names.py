@@ -10,6 +10,7 @@ import logging
 import sys
 
 import idb
+import idb.analysis
 import idb.netnode
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,7 @@ def main(argv=None):
 
         for fva in api.idautils.Functions():
             print("%s:0x%x:%s" % (root.md5, fva, api.idc.GetFunctionName(fva)))
+            print(api.idc.GetType(fva))
 
     return 0
 

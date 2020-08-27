@@ -1,8 +1,9 @@
+import functools
 import re
-import sys
 
 import idb.analysis
 from fixtures import *
+from idb.typeinf_flags import *
 
 try:
     from re import fullmatch
@@ -144,6 +145,10 @@ def test_struct(kernel32_idb, version, bitness, expected):
     assert members[2].get_type() == ("HINSTANCE" if version > 500 else None)
 
 
+def _check_functype(db, fva, _type):
+    return idb.analysis.Function(db, fva).get_signature().get_typestr() == _type
+
+
 @kern32_test()
 def test_function(kernel32_idb, version, bitness, expected):
     # .text:689016B5                         sub_689016B5    proc near
@@ -201,19 +206,133 @@ def test_function(kernel32_idb, version, bitness, expected):
     DllEntryPoint = idb.analysis.Function(kernel32_idb, 0x68901695)
 
     sig = DllEntryPoint.get_signature()
-    assert sig.calling_convention == "__stdcall"
-    assert sig.rtype == "BOOL"
-    assert len(sig.parameters) == 3
-    assert (
-        list(map(lambda p: p.type, sig.parameters)) == ["HINSTANCE", "DWORD", "LPVOID",]
-        if version <= 700
-        else ["HINSTANCE", "#E", "LPVOID",]
+    if version <= 700:
+        assert (
+            sig.get_typestr()
+            == "BOOL (__stdcall DllEntryPoint)(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)"
+        )
+    else:
+        assert (
+            sig.get_typestr()
+            == "BOOL (__stdcall _BaseDllInitialize@12)(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)"
+        )
+
+    assert sig.get_cc() == CM_CC_STDCALL
+    assert sig.get_rettype().get_typename() == "BOOL"
+    assert len(sig.type_details.args) == 3
+
+    check_functype = functools.partial(_check_functype, kernel32_idb)
+
+    if version >= 730:
+        assert check_functype(
+            0x68901551,
+            "void (__fastcall @__security_check_cookie@4)(uintptr_t StackCookie)",
+        )
+        assert check_functype(
+            0x68901637, "void* (__cdecl _memset)(void*, int Val, size_t Size)"
+        )
+        assert check_functype(
+            0x689031AE,
+            "int (__thiscall ?NotifyLoadStringResource@CMessageMapper@FSPErrorMessages@@QAEJPAUHINSTANCE__@@IPBGKPAPAX@Z)(FSPErrorMessages::CMessageMapper* this, HINSTANCE CriticalSection, unsigned int, unsigned int16*, unsigned int, void**)",
+        )
+    elif version >= 720:
+        assert check_functype(
+            0x68936AEC,
+            "int (__stdcall _BasepProcessInvalidImage@84)(NTSTATUS Status, int, int, int, int, int, int, int, int, int, int, int, int, int, PUNICODE_STRING, int, int, int, int, int, int)",
+        )
+        assert check_functype(
+            0x68901637, "void* (__cdecl _memset)(void* Dst, int Val, size_t Size)"
+        )
+        assert check_functype(
+            0x689031AE,
+            "int (__thiscall ?NotifyLoadStringResource@CMessageMapper@FSPErrorMessages@@QAEJPAUHINSTANCE__@@IPBGKPAPAX@Z)(FSPErrorMessages::CMessageMapper* this, HINSTANCE CriticalSection, unsigned int, unsigned int16*, unsigned int, void**)",
+        )
+    elif version >= 700:
+        assert check_functype(
+            0x68936AEC,
+            "int (__cdecl BasepProcessInvalidImage)(NTSTATUS NtStatus, int, int, int, int, int, int, int, int, int, int, int, int, int, PUNICODE_STRING, int, int, int, int, int, int)",
+        )
+        assert check_functype(
+            0x68904AED, "int (__thiscall sub_68904AED)(HANDLE FileHandle, int, int)"
+        )
+    elif version > 630:
+        assert check_functype(
+            0x68915529, "int (__cdecl sub_68915529)(LPCWSTR lpString1, int, int)"
+        )
+        assert check_functype(
+            0x68904AED, "int (__thiscall sub_68904AED)(HANDLE FileHandle, int, int)"
+        )
+    elif 630 == version:
+        assert check_functype(
+            0x68915529, "int (__cdecl sub_68915529)(PCNZWCH Buf1, int, int)"
+        )
+        assert check_functype(
+            0x689172CF, "int (__thiscall sub_689172CF)(DWORD Size, int, int, int, int)"
+        )
+    elif version == 500:
+        assert check_functype(
+            0x68903158,
+            "int (__fastcall _BasepNotifyLoadStringResource@16)(int, int, int, int, int, int)",
+        )
+        assert check_functype(
+            0x68906511, "int (__cdecl _StringCbPrintfW)(wchar_t*, int, wchar_t*, int8)"
+        )
+
+
+def test_function_usercall():
+    _db = load_idb(os.path.join(CD, "data", "thumb", "ls.idb"))
+    check_functype = functools.partial(_check_functype, _db)
+
+    # unsigned __int8 *__usercall human_readable@<R0>(
+    #   uintmax_t n@<0:R0, 4:R1>,
+    #   unsigned __int8 *buf@<R2>,
+    #   int opts@<R3>,
+    #   uintmax_t from_block_size,
+    #   uintmax_t to_block_size
+    # )
+    assert check_functype(
+        0x181F8,
+        "unsigned int8* (__usercall human_readable@<R0>)(uintmax_t n@<0:R0, 4:R1>, unsigned int8* buf@<R2>, int opts@<R3>, uintmax_t from_block_size, uintmax_t to_block_size)",
     )
-    assert list(map(lambda p: p.name, sig.parameters)) == [
-        "hinstDLL",
-        "fdwReason",
-        "lpReserved",
-    ]
+
+    # unsigned __int8 *__usercall imaxtostr@<R0>(intmax_t i@<0:R0, 4:R1>, unsigned __int8 *buf@<R2>)
+    assert check_functype(
+        0x18D94,
+        "unsigned int8* (__usercall imaxtostr@<R0>)(intmax_t i@<0:R0, 4:R1>, unsigned int8* buf@<R2>)",
+    )
+
+    # unsigned __int8 *__usercall umaxtostr@<R0>(uintmax_t i@<0:R0, 4:R1>, unsigned __int8 *buf@<R2>)
+    assert check_functype(
+        0x18E00,
+        "unsigned int8* (__usercall umaxtostr@<R0>)(uintmax_t i@<0:R0, 4:R1>, unsigned int8* buf@<R2>)",
+    )
+
+    # uintmax_t __usercall xnumtoumax@<R1:R0>(
+    #   const unsigned __int8 *n_str@<R0>,
+    #   int base@<R1>,
+    #   uintmax_t min@<0:R2, 4:R3>,
+    #   uintmax_t max,
+    #   const unsigned __int8 *suffixes,
+    #   const unsigned __int8 *err,
+    #   int err_exit
+    # )
+    assert check_functype(
+        0x1B944,
+        "uintmax_t (__usercall xnumtoumax@<R1:R0>)(unsigned int8* n_str@<R0>, int base@<R1>, uintmax_t min@<0:R2, 4:R3>, uintmax_t max, unsigned int8* suffixes, unsigned int8* err, int err_exit)",
+    )
+
+    # uintmax_t __usercall xdectoumax@<R1:R0>(
+    #   const unsigned __int8 *n_str@<R0>,
+    #   uintmax_t min@<0:R2, 4:R3>,
+    #   uintmax_t max,
+    #   const unsigned __int8 *suffixes,
+    #   const unsigned __int8 *err,
+    #   int err_exit
+    # )
+    assert check_functype(
+        0x1BA54,
+        "uintmax_t (__usercall xdectoumax@<R1:R0>)(unsigned int8* n_str@<R0>, uintmax_t min@<0:R2, 4:R3>, uintmax_t max, unsigned int8* suffixes, unsigned int8* err, int err_exit)",
+    )
 
 
 @kern32_test()
