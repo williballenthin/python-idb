@@ -30,7 +30,7 @@ else:
 
 setup(
     name="python-idb",
-    version="0.6.0",
+    version="0.7.0",
     description="Pure Python parser for IDA Pro databases (.idb files)",
     author="Willi Ballenthin",
     author_email="willi.ballenthin@gmail.com",
@@ -47,5 +47,9 @@ setup(
     classifiers=[
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Operating System :: OS Independent",
+        "Topic :: Security",
+        "Topic :: Software Development :: Disassemblers"
     ],
 )
