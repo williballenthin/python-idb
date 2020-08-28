@@ -414,18 +414,75 @@ def Analysis(nodeid, fields):
     return inner
 
 
+class Reader(idb.typeinf.TypeString):
+    def __init__(self, buf, wordsize):
+        idb.typeinf.TypeString.__init__(self, buf)
+        self.word = self.u32 if wordsize == 4 else self.u64
+        self.word_ = self.u32_ if wordsize == 4 else self.u64_
+
+    def bytes(self, size):
+        return self.read(size)
+
+    def str(self, size, encoding="utf-8"):
+        return self.read(size).decode(encoding)
+
+    def u16(self, big=False):
+        if big:
+            return struct.unpack(">H", self.read(2))[0]
+        return struct.unpack("<H", self.read(2))[0]
+
+    def u32(self, big=False):
+        if big:
+            return struct.unpack(">L", self.read(4))[0]
+        return struct.unpack("<L", self.read(4))[0]
+
+    def u64(self, big=False):
+        if big:
+            return struct.unpack(">Q", self.read(8))[0]
+        return struct.unpack("<Q", self.read(8))[0]
+
+    def u8_(self):
+        return self.u8()
+
+    def u16_(self):
+        val = self.u8()
+        if val == 0xFF:
+            val = self.u16(big=True)
+        elif val & 0x80:
+            val = ((val & 0x3F) << 8) | self.u8()
+        return val
+
+    def u32_(self):
+        val = self.u8()
+        if val == 0xFF:
+            val = self.u32(big=True)
+        elif val & 0xC0 == 0xC0:
+            val = (
+                ((val & 0x1F) << 24) | (self.u8() << 16) | (self.u8() << 8) | self.u8()
+            )
+        elif val & 0x80:
+            val = ((val & 0x3F) << 8) | self.u8()
+        return val
+
+    def u64_(self):
+        val = self.u32_()
+        val = val | (self.u32_() << 32)
+        return val
+
+
 class IdaInfo(vstruct.VStruct):
+    """
+    did not use vstruct to parse, but for compatibility, just inherit VStruct, and parse in vsParse()
+    """
+
     # ref: https://www.hex-rays.com/products/ida/support/sdkdoc/structidainfo.html
 
     def __init__(self, wordsize):
         vstruct.VStruct.__init__(self)
-
         if wordsize in (4, 8):
             self.wordsize = wordsize
         else:
             raise ValueError("unexpected wordsize")
-        self.sbytes = None
-        self.len_sbytes = 0
 
         """
         v7.0:
@@ -464,398 +521,293 @@ class IdaInfo(vstruct.VStruct):
         000000F0: 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  ................
         """
 
-        self.tag = v_str(size=0x3)  # 'IDA' below 7.0, 'ida' in 7.0
-        self.zero = v_bytes(size=0x0)
-        self.version = v_uint16()
-        self.procname_size = v_bytes(size=0x0)
-        # 8 bytes for < 7.0
-        # 16 bytes for >= 7.0
-        self.procname = v_str(size=0x10)
-
-    def pcb_tag(self):
-        if self.tag == "IDA":
-            # under 7.0
-            pass
-        elif self.tag == "ida":
-            # 7.0
-            self["zero"].vsSetLength(0x1)
-        else:
-            raise NotImplementedError("raise unknown database tag: " + self.tag)
-
-    def pcb_version(self):
-        # offsets to fields in <7.0 seem to be available here:
-        # 6.95
-        # https://github.com/idapython/src/blob/31c7776117/python/idc.py#L2613
-        # offsets to fields in latest(>7.0):
-        # https://github.com/idapython/src/blob/master/python/idc.py#L1812
-        v_word = v_uint32 if self.wordsize == 4 else v_uint64
-        v_uval_t = v_uint32 if self.wordsize == 4 else v_uint64
-        v_sval_t = v_int32 if self.wordsize == 4 else v_int64
-        v_ea_t = v_word
-        v_sel_t = v_word
-
-        if 480 <= self.version < 700:
-            self.vsAddField("lflags", v_uint8())  # 0x0d
-            self.vsAddField("demnames", v_uint8())
-
-            self.vsAddField("filetype", v_int16())
-
-            self.vsAddField("fcoresize", v_word())  # 0x11
-            self.vsAddField("corestart", v_word())
-
-            self.vsAddField("ostype", v_int16())  # 0x19
-            self.vsAddField("apptype", v_int16())
-
-            self.vsAddField("start_sp", v_word())  # 0x1d
-
-            self.vsAddField("af", v_uint16())  # 0x21 Analysis Kernel options1+2
-
-            self.vsAddField("start_ip", v_word())  # 0x23
-            self.vsAddField("begin_ea", v_word())
-            self.vsAddField("min_ea", v_word())
-            self.vsAddField("max_ea", v_word())
-            self.vsAddField("omin_ea", v_word())
-            self.vsAddField("omax_ea", v_word())
-            self.vsAddField("lowoff", v_word())
-            self.vsAddField("highoff", v_word())
-            self.vsAddField("maxref", v_word())
-
-            self.vsAddField("ascii_break", v_int8())  # 71
-            self.vsAddField("wide_high_byte_first", v_int8())
-            self.vsAddField("indent", v_int8())
-            self.vsAddField("comment", v_int8())
-            self.vsAddField("xrefnum", v_int8())
-            self.vsAddField("entab", v_int8())
-            self.vsAddField("specsegs", v_int8())
-            self.vsAddField("voids", v_int8())
-
-            self.vsAddField("unknown0", v_bytes(size=1))
-
-            self.vsAddField("showauto", v_int8())  # 80
-            self.vsAddField("auto", v_int8())
-            self.vsAddField("border", v_int8())
-            self.vsAddField("null", v_int8())
-            self.vsAddField("genflags", v_int8())
-            self.vsAddField("showpref", v_int8())
-            self.vsAddField("prefseg", v_int8())
-            self.vsAddField("asmtype", v_int8())
-
-            self.vsAddField("base_addr", v_word())  # 88
-
-            self.vsAddField("xrefs", v_int8())
-
-            self.vsAddField("binpref", v_int16())
-
-            self.vsAddField("cmtflag", v_int8())  # 95
-            self.vsAddField("nametype", v_int8())
-            self.vsAddField("showbads", v_int8())
-            self.vsAddField("prefflag", v_int8())
-            self.vsAddField("packbase", v_int8())
-            self.vsAddField("asciiflags", v_uint8())
-            self.vsAddField("listnames", v_uint8())
-
-            self.vsAddField("asciipref", v_str(size=16))  # 102
-
-            self.vsAddField("asciisernum", v_word())  # 118
-
-            self.vsAddField("asciizeroes", v_int8())  # 122
-
-            self.vsAddField("unknown1", v_bytes(size=2))  # 123
-
-            self.vsAddField("tribyte_order", v_uint8())  # 125
-
-            self.vsAddField("mf", v_uint8())
-            self.vsAddField("org", v_int8())
-            self.vsAddField("assume", v_int8())
-            self.vsAddField("checkarg", v_int8())
-
-            self.vsAddField("start_ss", v_word())  # 131
-            self.vsAddField("start_cs", v_word())
-            self.vsAddField("main", v_word())
-            self.vsAddField("short_dn", v_word())  # 143
-            self.vsAddField("long_dn", v_word())
-            self.vsAddField("datatypes", v_word())
-            self.vsAddField("strtype", v_word())
-
-            self.vsAddField("af2", v_uint16())  # 159
-            self.vsAddField("namelen", v_uint16())
-            self.vsAddField("margin", v_uint16())
-            self.vsAddField("lenxref", v_uint16())
-
-            self.vsAddField("lprefix", v_str(size=16))  # 167
-
-            self.vsAddField("lprefixlen", v_uint8())  # 183
-            self.vsAddField("compiler", v_uint8())
-            self.vsAddField("model", v_uint8())
-            self.vsAddField("sizeof_int", v_uint8())
-            self.vsAddField("sizeof_bool", v_uint8())
-            self.vsAddField("sizeof_enum", v_uint8())
-            self.vsAddField("sizeof_algn", v_uint8())
-            self.vsAddField("sizeof_short", v_uint8())
-            self.vsAddField("sizeof_long", v_uint8())
-            self.vsAddField("sizeof_llong", v_uint8())
-
-            if self.len_sbytes < 193:
-                return
-
-            self.vsAddField("change_counter", v_uint32())  # 193
-
-            self.vsAddField("sizeof_ldbl", v_uint8())
-
-            self.vsAddField("unknown2", v_bytes(size=4))
-
-            self.vsAddField("abiname", v_str(size=16))
-
-            self.vsAddField("abibits", v_uint32())
-            self.vsAddField("refcmts", v_uint8())
-        elif self.version == 700:
-            if self.tag == "IDA":
-                # we have a single byte that describes how long the procname is.
-                self["procname_size"].vsSetLength(0x1)
-
-                # multibitness.idb
-                if self.len_sbytes == 119:
-                    pass
-                # 7.20 <= ver <= 7.50?
-                elif self.len_sbytes in (141, 142, 172, 173):
-                    jump_size = 1 if self.wordsize == 4 else 2
-                    jump_size2 = 0 if self.wordsize == 4 else 1
-
-                    unk = name_generator()
-
-                    if self.len_sbytes in (142, 173):
-                        self.vsAddField("genflags", v_uint16(bigend=True))  # 0x0c
-                    else:
-                        self.vsAddField("genflags", v_uint8())  # 0x0c
-
-                    self.vsAddField("lflags", v_uint16(bigend=True))
-                    self.vsAddField("database_change_count", v_uint8())
-                    self.vsAddField("filetype", v_uint8())
-
-                    self.vsAddField("ostype", v_int8())
-                    self.vsAddField("apptype", v_int8())
-                    self.vsAddField("asmtype", v_int8())
-                    self.vsAddField("specsegs", v_uint8())
-
-                    self.vsAddField(unk(), v_bytes(size=1))
-
-                    self.vsAddField("af", v_uint32(bigend=True))
-                    self.vsAddField("af2", v_uint8())
-
-                    self.vsAddField(unk(), v_bytes(size=jump_size2))
-                    self.vsAddField("baseaddr", v_uint8())
-
-                    self.vsAddField("start_ss", v_word())
-                    self.vsAddField("filler_0", v_bytes(size=jump_size))
-
-                    self.vsAddField("start_cs", v_uint8())
-                    self.vsAddField("filler_1", v_bytes(size=jump_size))
-
-                    # maybe it's just confusion, fill 1 byte 0xff or 2 bytes b"\x00\xff"
-                    self.vsAddField("start_ip", v_uint32(bigend=True))  # 0x23
-                    self.vsAddField("filler_2", v_bytes(size=jump_size))
-                    self.vsAddField("begin_ea", v_uint32(bigend=True))
-                    self.vsAddField("filler_3", v_bytes(size=jump_size))
-                    self.vsAddField("start_sp", v_word(bigend=True))
-                    self.vsAddField("filler_3", v_bytes(size=jump_size))
-                    self.vsAddField("main", v_word(bigend=True))
-                    self.vsAddField("filler_3", v_bytes(size=jump_size))
-                    self.vsAddField("min_ea", v_uint32(bigend=True))  # 0x37
-                    self.vsAddField("filler_4", v_bytes(size=jump_size))
-                    self.vsAddField("max_ea", v_uint32(bigend=True))
-                    self.vsAddField("filler_5", v_bytes(size=jump_size))
-                    self.vsAddField("omin_ea", v_uint32(bigend=True))
-                    self.vsAddField("filler_6", v_bytes(size=jump_size))
-                    self.vsAddField("omax_ea", v_uint32(bigend=True))
-                    self.vsAddField("filler_7", v_bytes(size=jump_size))
-                    self.vsAddField("lowoff", v_uint32(bigend=True))
-                    self.vsAddField("filler_8", v_bytes(size=jump_size))
-                    self.vsAddField("highoff", v_uint32(bigend=True))
-
-                    self.vsAddField(unk(), v_bytes(size=jump_size2))
-                    self.vsAddField("maxref", v_uint8())
-
-                    self.vsAddField(unk(), v_bytes(size=jump_size2))
-                    self.vsAddField(unk(), v_bytes(size=jump_size))
-
-                    self.vsAddField("privrange_start_ea", v_uint32(bigend=True))
-                    self.vsAddField("privrange_end_ea", v_uint32(bigend=True))
-
-                    self.vsAddField(unk(), v_bytes(size=jump_size2))
-                    self.vsAddField(unk(), v_bytes(size=jump_size2))
-
-                    self.vsAddField("netdelta", v_uint8())
-
-                    self.vsAddField("xrefnum", v_int8())
-                    self.vsAddField("type_xrefnum", v_int8())
-                    self.vsAddField("refcmtnum", v_uint8())
-                    self.vsAddField("xrefflag", v_uint8())
-                    self.vsAddField("max_autoname_len", v_uint8())
-                    self.vsAddField("nametype", v_uint8())
-
-                    self.vsAddField("short_demnames", v_uint32(bigend=True))
-                    self.vsAddField("long_demnames", v_uint32(bigend=True))
-
-                    self.vsAddField("demnames", v_uint8())  # 0x6d
-                    self.vsAddField("listnames", v_uint8())
-                    self.vsAddField("indent", v_uint8())
-                    self.vsAddField("comments", v_uint8())
-                    self.vsAddField("margin", v_uint8())
-                    self.vsAddField("lenxref", v_uint8())
-
-                    self.vsAddField("outflags", v_uint16(bigend=True))
-
-                    self.vsAddField("cmtflg", v_uint8())
-                    self.vsAddField("limiter", v_uint8())
-                    self.vsAddField("bin_prefix_size", v_uint8())
-                    self.vsAddField("prefflag", v_uint8())
-
-                    self.vsAddField("strlit_flags", v_uint8())
-                    self.vsAddField("strlit_break", v_uint8())
-                    self.vsAddField("strlit_zeroes", v_int8())
-
-                    self.vsAddField("strtype", v_uint8())
-                    self.vsAddField("strlit_pref_size", v_uint8())
-                    self.vsAddField("strlit_pref", v_str(16))
-
-                    self.vsAddField(unk(), v_bytes(size=jump_size2))
-                    self.vsAddField("strlit_sernum", v_uint8())
-                    self.vsAddField(unk(), v_bytes(size=jump_size2))
-                    self.vsAddField("datatypes", v_uint8())
-
-                    self.vsAddField("cc_id", v_uint8())
-                    self.vsAddField("cc_cm", v_uint8())
-                    self.vsAddField("cc_size_i", v_uint8())
-                    self.vsAddField("cc_size_b", v_uint8())
-                    self.vsAddField("cc_size_e", v_uint8())
-                    self.vsAddField("cc_defalign", v_uint8())
-                    self.vsAddField("cc_size_s", v_uint8())
-                    self.vsAddField("cc_size_l", v_uint8())
-                    self.vsAddField("cc_size_ll", v_uint8())
-                    self.vsAddField("cc_size_ldbl", v_uint8())
-
-                    self.vsAddField("abibits", v_uint8())
-                    self.vsAddField("appcall_options", v_uint8())
-
-            # just for 7.0b
-            elif self.tag == "ida":
-                self.vsAddField("genflags", v_uint16())
-                self.vsAddField("lflags", v_uint32())
-                self.vsAddField("database_change_count", v_uint32())
-
-                self.vsAddField("filetype", v_int16())
-                self.vsAddField("ostype", v_int16())
-                self.vsAddField("apptype", v_int16())
-
-                self.vsAddField("asmtype", v_int8())
-                self.vsAddField("specsegs", v_uint8())
-
-                self.vsAddField("af", v_uint32())  # Analysis Kernel options1+2
-                self.vsAddField("af2", v_uint32())
-
-                self.vsAddField("baseaddr", v_uval_t())  # 48
-
-                self.vsAddField("start_ss", v_sel_t())
-                self.vsAddField("start_cs", v_sel_t())
-
-                self.vsAddField("start_ip", v_ea_t())
-                self.vsAddField("start_ea", v_ea_t())
-                self.vsAddField("start_sp", v_ea_t())
-                self.vsAddField("main", v_ea_t())
-                self.vsAddField("min_ea", v_ea_t())
-                self.vsAddField("max_ea", v_ea_t())
-                self.vsAddField("omin_ea", v_ea_t())
-                self.vsAddField("omax_ea", v_ea_t())
-                self.vsAddField("lowoff", v_ea_t())
-                self.vsAddField("highoff", v_ea_t())
-
-                self.vsAddField("maxref", v_uval_t())
-                self.vsAddField("privrange_start_ea", v_uval_t())
-                self.vsAddField("privrange_end_ea", v_uval_t())
-
-                self.vsAddField("netdelta", v_sval_t())
-
-                self.vsAddField("xrefnum", v_int8())  # 116
-                self.vsAddField("type_xrefnum", v_int8())
-                self.vsAddField("refcmtnum", v_uint8())
-                self.vsAddField("xrefflag", v_uint8())
-
-                self.vsAddField("max_autoname_len", v_uint16())  # 120
-
-                # maybe just ignore this
-                self.vsAddField("unknown1", v_bytes(size=17))
-
-                self.vsAddField("nametype", v_int8())
-
-                self.vsAddField("short_demnames", v_uint32())  # 124
-                self.vsAddField("long_demnames", v_uint32())
-
-                self.vsAddField("demnames", v_uint8())  # 132
-                self.vsAddField("listnames", v_uint8())
-                self.vsAddField("indent", v_uint8())
-                self.vsAddField("comment", v_uint8())
-
-                self.vsAddField("margin", v_uint16())  # 136
-                self.vsAddField("lenxref", v_uint16())
-
-                self.vsAddField("outflags", v_uint32())  # 140
-
-                self.vsAddField("cmtflg", v_uint8())  # 144
-                self.vsAddField("limiter", v_uint8())
-
-                self.vsAddField("bin_prefix_size", v_int16())  # 146
-
-                self.vsAddField("prefflag", v_uint8())  # 148
-
-                self.vsAddField("strlit_flags", v_uint8())  # 149->(149+16)=165
-                self.vsAddField("strlit_break", v_uint8())
-                self.vsAddField("strlit_zeroes", v_int8())
-
-                self.vsAddField("strtype", v_int32())
-
-                self.vsAddField("strlit_pref", v_str(16))
-
-                self.vsAddField("strlit_sernum", v_uval_t())
-                self.vsAddField("datatypes", v_uval_t())
-
-                self.vsAddField("unknown2", v_bytes(size=1))
-
-                self.vsAddField("cc_id", v_uint8())  # 180->197
-                self.vsAddField("cc_cm", v_uint8())
-                self.vsAddField("cc_size_i", v_uint8())
-                self.vsAddField("cc_size_b", v_uint8())
-                self.vsAddField("cc_size_e", v_uint8())
-                self.vsAddField("cc_defalign", v_uint8())
-                self.vsAddField("cc_size_s", v_uint8())
-                self.vsAddField("cc_size_l", v_uint8())
-                self.vsAddField("cc_size_ll", v_uint8())
-                self.vsAddField("cc_size_ldbl", v_uint8())
-
-                self.vsAddField("unknown3", v_bytes(size=1))  # 190->207
-
-                self.vsAddField("abibits", v_uint32())
-                self.vsAddField("appcall_options", v_uint32())
-
-    def pcb_procname_size(self):
-        # 6.95 database upgraded to v7.0b
-        # we have a single byte that describes how long the procname is.
-        if self.procname_size:
-            size = six.indexbytes(self.procname_size, 0x0)
-            self["procname"].vsSetLength(size)
-        # pre-7.0
-        elif self.tag == "IDA":
-            self["procname"].vsSetLength(8)
-        # 7.0+
-        else:
-            self["procname"].vsSetLength(16)
-
-    def pcb_strlit_pref_size(self):
-        self["strlit_pref"].vsSetLength(self.strlit_pref_size)
+        self.tag = None
+        self.zero = None
+        self.version = None
+        self.procname_size = None
+        self.procname = None
+        self.lflags = None
+        self.demnames = None
+        self.filetype = None
+        self.fcoresize = None
+        self.corestart = None
+        self.ostype = None
+        self.apptype = None
+        self.start_sp = None
+        self.af = None
+        self.start_ip = None
+        self.begin_ea = None
+        self.min_ea = None
+        self.max_ea = None
+        self.omin_ea = None
+        self.omax_ea = None
+        self.lowoff = None
+        self.highoff = None
+        self.maxref = None
+        self.ascii_break = None
+        self.wide_high_byte_first = None
+        self.indent = None
+        self.comment = None
+        self.xrefnum = None
+        self.entab = None
+        self.specsegs = None
+        self.voids = None
+        self.showauto = None
+        self.auto = None
+        self.border = None
+        self.null = None
+        self.genflags = None
+        self.showpref = None
+        self.prefseg = None
+        self.asmtype = None
+        self.xrefs = None
+        self.binpref = None
+        self.cmtflag = None
+        self.nametype = None
+        self.showbads = None
+        self.prefflag = None
+        self.packbase = None
+        self.asciiflags = None
+        self.listnames = None
+        self.asciipref = None
+        self.asciisernum = None
+        self.asciizeroes = None
+        self.tribyte_order = None
+        self.mf = None
+        self.org = None
+        self.assume = None
+        self.checkarg = None
+        self.start_ss = None
+        self.start_cs = None
+        self.main = None
+        self.short_dn = None
+        self.long_dn = None
+        self.datatypes = None
+        self.strtype = None
+        self.af2 = None
+        self.namelen = None
+        self.margin = None
+        self.lenxref = None
+        self.lprefix = None
+        self.lprefixlen = None
+        self.compiler = None
+        self.model = None
+        self.sizeof_int = None
+        self.sizeof_bool = None
+        self.sizeof_enum = None
+        self.sizeof_algn = None
+        self.sizeof_short = None
+        self.sizeof_long = None
+        self.sizeof_llong = None
+        self.change_counter = None
+        self.sizeof_ldbl = None
+        self.abiname = None
+        self.abibits = None
+        self.refcmts = None
+        self.database_change_count = None
 
     def vsParse(self, sbytes, offset=0, fast=False):
-        self.sbytes = sbytes
-        self.len_sbytes = len(sbytes)
-        return vstruct.VStruct.vsParse(self, sbytes, offset, fast)
+        reader = Reader(sbytes, wordsize=self.wordsize)
+        reader.pos = offset
+        u8 = reader.u8
+        u16 = reader.u16
+        u32 = reader.u32
+        u64 = reader.u64
+        word = reader.word
+
+        self.tag = reader.str(3)  # 'IDA' below 7.0, 'ida' in 7.0
+        if self.tag == "ida":
+            self.zero = u8()
+        elif self.tag != "IDA":
+            raise NotImplementedError("raise unknown database tag: " + self.tag)
+
+        self.version = u16()
+        if self.version == 700 and self.tag == "IDA":
+            self.procname_size = u8()
+        # 8 bytes for < 7.0
+        # 16 bytes for > 7.0
+        # 6.95 database upgraded to v7.0b
+        # we have a single byte that describes how long the procname is.
+        if self.procname_size is not None:
+            self.procname = reader.str(self.procname_size)
+        elif self.version < 700:
+            self.procname = reader.str(8)
+        elif self.version >= 700:
+            self.procname = reader.str(16)
+        import re
+
+        self.procname = re.sub(r"\x00.*", "", self.procname)
+
+        if self.version < 700:
+            self.lflags = u8()
+            self.demnames = u8()
+            self.filetype = u16()
+            self.fcoresize = word()  # 0x11
+            self.corestart = word()
+            self.ostype = u16()  # 0x19
+            self.apptype = u16()
+            self.start_sp = word()  # 0x1d
+            self.af = u16()  # 0x21 Analysis Kernel options1+2
+            self.start_ip = word()  # 0x23
+            self.begin_ea = word()
+            self.min_ea = word()
+            self.max_ea = word()
+            self.omin_ea = word()
+            self.omax_ea = word()
+            self.lowoff = word()
+            self.highoff = word()
+            self.maxref = word()
+            self.ascii_break = u8()  # 71
+            self.wide_high_byte_first = u8()
+            self.indent = u8()
+            self.comment = u8()
+            self.xrefnum = u8()
+            self.entab = u8()
+            self.specsegs = u8()
+            self.voids = u8()
+            reader.seek(1)
+            self.showauto = u8()  # 80
+            self.auto = u8()
+            self.border = u8()
+            self.null = u8()
+            self.genflags = u8()
+            self.showpref = u8()
+            self.prefseg = u8()
+            self.asmtype = u8()
+            self.baseaddr = word()  # 88
+            self.xrefs = u8()
+            self.binpref = u16()
+            self.cmtflag = u8()  # 95
+            self.nametype = u8()
+            self.showbads = u8()
+            self.prefflag = u8()
+            self.packbase = u8()
+            self.asciiflags = u8()
+            self.listnames = u8()
+            self.asciipref = reader.bytes(16)  # 102
+            self.asciisernum = word()  # 118
+            self.asciizeroes = u8()  # 122
+            reader.seek(2)  # 123
+            self.tribyte_order = u8()  # 125
+            self.mf = u8()
+            self.org = u8()
+            self.assume = u8()
+            self.checkarg = u8()
+            self.start_ss = word()  # 131
+            self.start_cs = word()
+            self.main = word()
+            self.short_dn = word()  # 143
+            self.long_dn = word()
+            self.datatypes = word()
+            self.strtype = word()
+            self.af2 = u16()  # 159
+            self.namelen = u16()
+            self.margin = u16()
+            self.lenxref = u16()
+            self.lprefix = reader.str(16)  # 167
+            self.lprefixlen = u8()  # 183
+            self.compiler = u8()
+            self.model = u8()
+            self.sizeof_int = u8()
+            self.sizeof_bool = u8()
+            self.sizeof_enum = u8()
+            self.sizeof_algn = u8()
+            self.sizeof_short = u8()
+            self.sizeof_long = u8()
+            self.sizeof_llong = u8()
+            if len(sbytes) < 193:
+                return reader.pos
+
+            self.change_counter = u32()  # 193 0xc0
+            self.sizeof_ldbl = u8()
+            reader.seek(4)
+            self.abiname = reader.str(size=16)
+            self.abibits = u32()
+            self.refcmts = u8()
+        else:
+            if self.tag == "IDA":
+                u8 = reader.u8_
+                u16 = reader.u16_
+                u32 = reader.u32_
+                u64 = reader.u64_
+                word = reader.word_
+
+            self.genflags = u16()
+            self.lflags = u32()
+            self.database_change_count = u32()
+            self.filetype = u16()
+            self.ostype = u16()
+            self.apptype = u16()
+            self.asmtype = u8()
+            self.specsegs = u8()
+            self.af = u32()
+            self.af2 = u32()
+            self.baseaddr = word()  # 48
+            self.start_ss = word()
+            self.start_cs = word()
+            self.start_ip = word()
+            self.start_ea = word()
+            self.start_sp = word()
+            self.main = word()
+            self.min_ea = word()
+            self.max_ea = word()
+            self.omin_ea = word()
+            self.omax_ea = word()
+            self.lowoff = word()
+            self.highoff = word()
+            self.maxref = word()
+            self.privrange_start_ea = word()
+            self.privrange_end_ea = word()
+            self.netdelta = word()
+            self.xrefnum = u8()  # 116
+            self.type_xrefnum = u8()
+            self.refcmtnum = u8()
+            self.xrefflag = u8()
+            self.max_autoname_len = u16()  # 120
+
+            if self.tag == "ida":
+                reader.seek(17)
+
+            self.nametype = u8()
+            self.short_demnames = u32()  # 124
+            self.long_demnames = u32()
+            self.demnames = u8()  # 132
+            self.listnames = u8()
+            self.indent = u8()
+            self.comment = u8()
+            self.marzgin = u16()  # 136
+            self.lenxref = u16()
+            self.outflags = u32()  # 140
+            self.cmtflg = u8()  # 144
+            self.limiter = u8()
+            self.bin_prefix_size = u16()  # 146
+            self.prefflag = u8()  # 148
+            self.strlit_flags = u8()
+            self.strlit_break = u8()
+            self.strlit_zeroes = u8()
+            self.strtype = u32()
+
+            self.strlit_pref_size = u8()
+            if self.tag == "ida":
+                self.strlit_pref = reader.str(16)
+            else:
+                self.strlit_pref = reader.str(self.strlit_pref_size)
+
+            self.strlit_sernum = word()
+            self.datatypes = word()
+            self.cc_id = u8()
+            self.cc_cm = u8()
+            self.cc_size_i = u8()
+            self.cc_size_b = u8()
+            self.cc_size_e = u8()
+            self.cc_defalign = u8()
+            self.cc_size_s = u8()
+            self.cc_size_l = u8()
+            self.cc_size_ll = u8()
+            self.cc_size_ldbl = u8()
+            self.abibits = u32()
+            self.appcall_options = u32()
+        return reader.pos
 
 
 Root = Analysis(
