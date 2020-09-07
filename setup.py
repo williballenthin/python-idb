@@ -34,7 +34,7 @@ def readme():
 
 setup(
     name="python-idb",
-    version="0.7.0",
+    version="0.7.1",
     description="Pure Python parser for IDA Pro databases (.idb files)",
     long_description=readme(),
     long_description_content_type='text/markdown',
