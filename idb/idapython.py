@@ -2485,9 +2485,9 @@ class idautils:
                 yield ftf.frm
 
         # get all the code xrefs to this instruction.
-        # a code xref is like a fallthrough or jump, not like a call.
+        # a code xref is like a fallthrough, jump or call.
         for xref in idb.analysis.get_crefs_to(
-            self.idb, ea, types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]
+            self.idb, ea, types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F, idaapi.fl_CN, idaapi.fl_CF]
         ):
             yield xref.frm
 
@@ -2509,9 +2509,9 @@ class idautils:
                 yield ftf.to
 
         # get all the code xrefs from this instruction.
-        # a code xref is like a fallthrough or jump, not like a call.
+        # a code xref is like a fallthrough, jump or call
         for xref in idb.analysis.get_crefs_from(
-            self.idb, ea, types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F]
+            self.idb, ea, types=[idaapi.fl_JN, idaapi.fl_JF, idaapi.fl_F, idaapi.fl_CN, idaapi.fl_CF]
         ):
             yield xref.to
 
