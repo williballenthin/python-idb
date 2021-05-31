@@ -2265,8 +2265,8 @@ class _Strings:
     LEN4_16 = 0xD
 
     ASCII_BYTE = (
-        b" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`"
-        b"abcdefghijklmnopqrstuvwxyz{|}\\~\t"
+        b" !\"#\$%&\'\(\)\*\+,-\./0123456789:;<=>\?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\[\]\^_`"
+        b"abcdefghijklmnopqrstuvwxyz\{\|\}\\\~\t"
     )
 
     def __init__(self, db, api):
