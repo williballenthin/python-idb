@@ -622,7 +622,7 @@ class IdaInfo(vstruct.VStruct):
             raise NotImplementedError("raise unknown database tag: " + self.tag)
 
         self.version = u16()
-        if self.version == 700 and self.tag == "IDA":
+        if self.version >= 700 and self.tag == "IDA":
             self.procname_size = u8()
         # 8 bytes for < 7.0
         # 16 bytes for > 7.0
