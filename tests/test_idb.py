@@ -37,14 +37,24 @@ def h(number):
 
 
 @kern32_test(
-    [(695, 32, 4), (695, 64, 8), (700, 32, 4), (700, 64, 8),]
+    [
+        (695, 32, 4),
+        (695, 64, 8),
+        (700, 32, 4),
+        (700, 64, 8),
+    ]
 )
 def test_wordsize(kernel32_idb, version, bitness, expected):
     assert kernel32_idb.wordsize == expected
 
 
 @kern32_test(
-    [(695, 32, None), (695, 64, None), (700, 32, None), (700, 64, None),]
+    [
+        (695, 32, None),
+        (695, 64, None),
+        (700, 32, None),
+        (700, 64, None),
+    ]
 )
 def test_validate(kernel32_idb, version, bitness, expected):
     # should be no ValueErrors here.
@@ -70,7 +80,12 @@ def test_compressed(compressed_idb, compressed_i64):
 
 
 @kern32_test(
-    [(695, 32, b"IDA1"), (695, 64, b"IDA2"), (700, 32, b"IDA1"), (700, 64, b"IDA2"),]
+    [
+        (695, 32, b"IDA1"),
+        (695, 64, b"IDA2"),
+        (700, 32, b"IDA1"),
+        (700, 64, b"IDA2"),
+    ]
 )
 def test_header_magic(kernel32_idb, version, bitness, expected):
     assert kernel32_idb.header.signature == expected
@@ -78,14 +93,24 @@ def test_header_magic(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test(
-    [(695, 32, 0x2000), (695, 64, 0x2000), (700, 32, 0x2000), (700, 64, 0x2000),]
+    [
+        (695, 32, 0x2000),
+        (695, 64, 0x2000),
+        (700, 32, 0x2000),
+        (700, 64, 0x2000),
+    ]
 )
 def test_id0_page_size(kernel32_idb, version, bitness, expected):
     assert kernel32_idb.id0.page_size == expected
 
 
 @kern32_test(
-    [(695, 32, 0x1), (695, 64, 0x1), (700, 32, 0x1), (700, 64, 0x1),]
+    [
+        (695, 32, 0x1),
+        (695, 64, 0x1),
+        (700, 32, 0x1),
+        (700, 64, 0x1),
+    ]
 )
 def test_id0_root_page(kernel32_idb, version, bitness, expected):
     assert kernel32_idb.id0.root_page == expected
@@ -118,7 +143,12 @@ def test_id0_record_count(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test(
-    [(695, 32, None), (695, 64, None), (700, 32, None), (700, 64, None),]
+    [
+        (695, 32, None),
+        (695, 64, None),
+        (700, 32, None),
+        (700, 64, None),
+    ]
 )
 def test_id0_root_entries(kernel32_idb, version, bitness, expected):
     """
@@ -185,7 +215,10 @@ def test_cursor_max(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test(
-    [(695, 32, None), (700, 32, None),]
+    [
+        (695, 32, None),
+        (700, 32, None),
+    ]
 )
 def test_find_exact_match1(kernel32_idb, version, bitness, expected):
     # this is found in the root node, first index
@@ -195,7 +228,10 @@ def test_find_exact_match1(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test(
-    [(695, 32, None), (700, 32, None),]
+    [
+        (695, 32, None),
+        (700, 32, None),
+    ]
 )
 def test_find_exact_match2(kernel32_idb, version, bitness, expected):
     # this is found in the second level, third index
@@ -218,7 +254,10 @@ def test_find_exact_match3(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test(
-    [(695, 32, None), (700, 32, None),]
+    [
+        (695, 32, None),
+        (700, 32, None),
+    ]
 )
 def test_find_exact_match4(kernel32_idb, version, bitness, expected):
     # this is found on a leaf node, first index
@@ -228,7 +267,10 @@ def test_find_exact_match4(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test(
-    [(695, 32, None), (700, 32, None),]
+    [
+        (695, 32, None),
+        (700, 32, None),
+    ]
 )
 def test_find_exact_match5(kernel32_idb, version, bitness, expected):
     # this is found on a leaf node, fourth index
@@ -238,7 +280,10 @@ def test_find_exact_match5(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test(
-    [(695, 32, None), (700, 32, None),]
+    [
+        (695, 32, None),
+        (700, 32, None),
+    ]
 )
 def test_find_exact_match6(kernel32_idb, version, bitness, expected):
     # this is found on a leaf node, last index
@@ -479,7 +524,12 @@ def test_cursor_enum_all_desc(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test(
-    [(695, 32, None), (695, 64, None), (700, 32, None), (700, 64, None),]
+    [
+        (695, 32, None),
+        (695, 64, None),
+        (700, 32, None),
+        (700, 64, None),
+    ]
 )
 def test_id1(kernel32_idb, version, bitness, expected):
     id1 = kernel32_idb.id1
@@ -560,7 +610,12 @@ def test_nam_names(kernel32_idb, version, bitness, expected):
 
 
 @kern32_test(
-    [(695, 32, None), (695, 64, None), (700, 32, None), (700, 64, None),]
+    [
+        (695, 32, None),
+        (695, 64, None),
+        (700, 32, None),
+        (700, 64, None),
+    ]
 )
 def test_til(kernel32_idb, version, bitness, expected):
     til = kernel32_idb.til

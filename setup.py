@@ -28,16 +28,18 @@ elif sys.version_info[0] == 3:
 else:
     raise RuntimeError("unexpected python major version")
 
+
 def readme():
-    with open('readme.md') as f:
+    with open("readme.md") as f:
         return f.read()
+
 
 setup(
     name="python-idb",
     version="0.7.1",
     description="Pure Python parser for IDA Pro databases (.idb files)",
     long_description=readme(),
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
     author="Willi Ballenthin",
     author_email="willi.ballenthin@gmail.com",
     url="https://github.com/williballenthin/python-idb",
@@ -56,6 +58,6 @@ setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
         "Topic :: Security",
-        "Topic :: Software Development :: Disassemblers"
+        "Topic :: Software Development :: Disassemblers",
     ],
 )
