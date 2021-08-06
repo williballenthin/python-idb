@@ -666,8 +666,12 @@ def test_LocByName(kernel32_idb, version, bitness, expected):
 def test_MinMaxEA(kernel32_idb, version, bitness, expected):
     api = idb.IDAPython(kernel32_idb)
 
-    assert api.idc.MinEA() == 0x68901000
-    assert api.idc.MaxEA() == 0x689DE230
+    if version < 760:
+        assert api.idc.MinEA() == 0x68901000
+        assert api.idc.MaxEA() == 0x689DE230
+    else:
+        assert api.idc.MinEA() == 0x68900000
+        assert api.idc.MaxEA() == 0x689F8000
 
 
 @kern32_test_gt_v640()
