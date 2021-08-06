@@ -835,10 +835,20 @@ Loader = Analysis(
 )
 
 # see `scripts/dump_user.py` for intepretation.
-OriginalUser = Analysis("$ original user", [Field("data", "S", 0, bytes),])
+OriginalUser = Analysis(
+    "$ original user",
+    [
+        Field("data", "S", 0, bytes),
+    ],
+)
 
 # see `scripts/dump_user.py` for intepretation.
-User = Analysis("$ user1", [Field("data", "S", 0, bytes),])
+User = Analysis(
+    "$ user1",
+    [
+        Field("data", "S", 0, bytes),
+    ],
+)
 
 
 # this works for v6.95.
@@ -1088,11 +1098,11 @@ class Struct:
 
     def __init__(self, db, identity):
         """from https://github.com/nlitsme/pyidbutil/blob/7705bcde167fd34a5800bfe54ba99d195b44bbbb/idblib.py#L1380
-            Decodes info for structures
-            (structnode, N)          = structname
-            (structnode, D, address) = xref-type
-            (structnode, M, 0)       = packed struct info
-            (structnode, S, 27)      = packed value(addr, byte)
+        Decodes info for structures
+        (structnode, N)          = structname
+        (structnode, D, address) = xref-type
+        (structnode, M, 0)       = packed struct info
+        (structnode, S, 27)      = packed value(addr, byte)
         """
 
         self.idb = db
@@ -1438,7 +1448,12 @@ def parse_seg_strings(buf, wordsize=None):
     return strings
 
 
-SegStrings = Analysis("$ segstrings", [Field("strings", "S", 0, parse_seg_strings),])
+SegStrings = Analysis(
+    "$ segstrings",
+    [
+        Field("strings", "S", 0, parse_seg_strings),
+    ],
+)
 
 
 class Seg:

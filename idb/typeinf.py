@@ -51,11 +51,11 @@ class TypeString:
         return struct.unpack("<H", self.read(2))[0]
 
     def db(self):
-        """ read 1 byte as u8"""
+        """read 1 byte as u8"""
         return self.u8()
 
     def dt(self):
-        """ Reads 1 to 2 bytes.
+        """Reads 1 to 2 bytes.
         Value Range: 0-0xFFFE
         Usage: 16bit numbers
         :return: int
@@ -66,7 +66,7 @@ class TypeString:
         return val - 1
 
     def de(self):
-        """ Reads 1 to 5 bytes
+        """Reads 1 to 5 bytes
         Value Range: 0-0xFFFFFFFF
         Usage: Enum Deltas
         :return: int
@@ -87,7 +87,7 @@ class TypeString:
         return val
 
     def da(self):
-        """ Reads 1 to 9 bytes.
+        """Reads 1 to 9 bytes.
         ValueRange: 0x-0x7FFFFFFF, 0-0xFFFFFFFF
         Usage: Arrays
         :return: (int, int)

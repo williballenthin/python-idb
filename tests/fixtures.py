@@ -144,9 +144,10 @@ DefaultKern32Specs = [
 
 def get_kern32_path(version, bitness):
     sversion = VersionMap[version] if version in VersionMap else str(version)
-    sbitness, filename = {32: ("x32", "kernel32.idb"), 64: ("x64", "kernel32.i64"),}[
-        bitness
-    ]
+    sbitness, filename = {
+        32: ("x32", "kernel32.idb"),
+        64: ("x64", "kernel32.i64"),
+    }[bitness]
     return os.path.join(CD, "data", sversion, sbitness, filename), sversion, sbitness
 
 
