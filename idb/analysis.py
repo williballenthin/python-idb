@@ -424,7 +424,7 @@ class Reader(idb.typeinf.TypeString):
         return self.read(size)
 
     def str(self, size, encoding="utf-8"):
-        return self.read(size).decode(encoding)
+        return self.read(size).decode(encoding, errors="ignore")
 
     def u16(self, big=False):
         if big:
